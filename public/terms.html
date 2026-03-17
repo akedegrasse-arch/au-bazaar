@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .terms-page {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+    .terms-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .terms-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .terms-header p {
+      color: var(--gray);
+    }
+    .terms-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+    .terms-section h2 {
+      margin-bottom: 1rem;
+      color: var(--dark);
+    }
+    .terms-section p, .terms-section li {
+      line-height: 1.8;
+      color: var(--gray-dark);
+    }
+    .terms-section ul {
+      padding-left: 1.5rem;
+    }
+    .terms-section li {
+      margin-bottom: 0.5rem;
+    }
+    .last-updated {
+      text-align: center;
+      color: var(--gray);
+      font-size: 0.9rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">
+        <div class="logo-icon">🛒</div>
+        AU<span>Bazaar</span>
+      </a>
+      <div class="navbar-search">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search listings..." onkeypress="if(event.key==='Enter') window.location.href='/marketplace?search='+this.value">
+      </div>
+      <ul class="navbar-nav" id="guest-nav">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
+        <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+        <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
+      </ul>
+      <ul class="navbar-nav" id="user-nav" style="display:none">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+        <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+        <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+        <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="terms-page">
+      <div class="terms-header">
+        <h1>📜 Terms of Service</h1>
+        <p>Please read these terms carefully before using AUBazaar</p>
+      </div>
+
+      <div class="terms-section">
+        <h2>1. Acceptance of Terms</h2>
+        <p>
+          By accessing and using AUBazaar ("the Platform"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by these terms, please do not use this service.
+        </p>
+      </div>
+
+      <div class="terms-section">
+        <h2>2. Eligibility</h2>
+        <p>To use AUBazaar, you must:</p>
+        <ul>
+          <li>Be a current student, staff, or faculty member of Africa University</li>
+          <li>Have a valid @africau.edu or @students.africau.edu email address</li>
+          <li>Be at least 18 years old</li>
+          <li>Not be prohibited from using the service by law</li>
+        </ul>
+      </div>
+
+      <div class="terms-section">
+        <h2>3. User Accounts</h2>
+        <p>When you create an account, you agree to:</p>
+        <ul>
+          <li>Provide accurate and complete information</li>
+          <li>Keep your password secure and confidential</li>
+          <li>Accept responsibility for all activities under your account</li>
+          <li>Notify us immediately of any unauthorized use</li>
+        </ul>
+      </div>
+
+      <div class="terms-section">
+        <h2>4. Prohibited Items</h2>
+        <p>The following items are NOT allowed to be sold on AUBazaar:</p>
+        <ul>
+          <li>Illegal items or substances</li>
+          <li>Weapons, firearms, or ammunition</li>
+          <li>Alcohol or tobacco products</li>
+          <li>Prescription drugs or medications</li>
+          <li>Adult or inappropriate content</li>
+          <li>Items that violate university policies</li>
+        </ul>
+      </div>
+
+      <div class="terms-section">
+        <h2>5. Safe Trading Guidelines</h2>
+        <p>For your safety, we recommend:</p>
+        <ul>
+          <li>Meet in public places on campus (e.g., library, student center)</li>
+          <li>Never share your personal financial information</li>
+          <li>Inspect items before completing any transaction</li>
+          <li>Use the in-app messaging for all communications</li>
+          <li>Report suspicious behavior to platform administrators</li>
+        </ul>
+      </div>
+
+      <div class="terms-section">
+        <h2>6. Prohibited Behavior</h2>
+        <p>You agree NOT to:</p>
+        <ul>
+          <li>Harass, threaten, or scam other users</li>
+          <li>Post false or misleading listings</li>
+          <li>Attempt to complete transactions outside the platform</li>
+          <li>Spam or post repetitive content</li>
+          <li>Impersonate another person or entity</li>
+        </ul>
+      </div>
+
+      <div class="terms-section">
+        <h2>7. Limitation of Liability</h2>
+        <p>
+          AUBazaar is a platform for connecting buyers and sellers. We are not responsible for:
+        </p>
+        <ul>
+          <li>The quality, safety, or legality of items listed</li>
+          <li>The accuracy of listings or user representations</li>
+          <li>Any disputes between buyers and sellers</li>
+          <li>Loss or damage during in-person meetups</li>
+        </ul>
+      </div>
+
+      <div class="terms-section">
+        <h2>8. Termination</h2>
+        <p>
+          We reserve the right to suspend or terminate your account if you violate these terms or engage in any activity that harms other users or the platform.
+        </p>
+      </div>
+
+      <div class="terms-section">
+        <h2>9. Contact Us</h2>
+        <p>
+          If you have questions about these Terms of Service, please contact us at <strong>support@aubazaar.edu</strong>
+        </p>
+      </div>
+
+      <p class="last-updated">Last updated: 2024</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="logo-icon">🛒</div>
+        <span>AU<span>Bazaar</span></span>
+      </div>
+      <p>© 2024 AU Bazaar - Africa University Campus Marketplace</p>
+      <div class="footer-links">
+        <a href="/contact">Contact</a>
+        <a href="/terms">Terms</a>
+        <a href="/register">Join Now</a>
+        <a href="/marketplace">Browse</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script>
+    // Check auth state and show appropriate nav
+    AUBazaar.auth.onAuthStateChanged((user) => {
+      const guestNav = document.getElementById('guest-nav');
+      const userNav = document.getElementById('user-nav');
+      
+      if (user) {
+        guestNav.style.display = 'none';
+        userNav.style.display = 'flex';
+        
+        // Check if admin
+        AUBazaar.db.collection('users').doc(user.uid).get().then(doc => {
+          if (doc.exists && doc.data().role === 'admin') {
+            document.getElementById('admin-link').style.display = 'block';
+          }
+        });
+        
+        // Update avatar
+        const initials = (user.displayName || user.email).charAt(0).toUpperCase();
+        document.getElementById('nav-user-avatar').textContent = initials;
+      } else {
+        guestNav.style.display = 'flex';
+        userNav.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

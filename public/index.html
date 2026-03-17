@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AUBazaar - Africa University Marketplace</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .features-section {
+      background: white;
+      padding: 4rem 2rem;
+    }
+    .feature-card {
+      text-align: center;
+      padding: 2rem;
+    }
+    .feature-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      font-size: 2rem;
+      color: white;
+    }
+    .feature-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      color: var(--dark);
+    }
+    .feature-card p {
+      color: var(--gray);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+    .how-it-works {
+      padding: 4rem 2rem;
+      background: #f0f4f8;
+    }
+    .step-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 2rem;
+      text-align: center;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .step-number {
+      width: 50px;
+      height: 50px;
+      background: var(--secondary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin: 0 auto 1rem;
+    }
+    .cta-section {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 5rem 2rem;
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .cta-section p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      max-width: 500px;
+      margin: 0 auto 2rem;
+    }
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .recent-listings {
+      padding: 4rem 2rem;
+      background: white;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+    .categories-section {
+      padding: 4rem 2rem;
+      background: #f0f4f8;
+    }
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: 70px;
+      left: 0;
+      right: 0;
+      background: var(--primary-dark);
+      z-index: 999;
+      padding: 1rem;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .mobile-nav.open {
+      display: flex;
+    }
+    .mobile-nav a {
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .mobile-nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .trust-badges {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    
+    <div class="navbar-search">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Search for textbooks, electronics, and more..." id="hero-search-nav" onkeypress="handleNavSearch(event)">
+    </div>
+    
+    <ul class="navbar-nav" id="guest-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/top-sellers"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+      <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
+      <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+      <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
+    </ul>
+    
+    <ul class="navbar-nav" id="user-nav" style="display:none">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/top-sellers"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li>
+        <a href="/messages">
+          <i class="fas fa-envelope"></i>
+          <span class="notification-badge" id="msg-badge" style="display:none">0</span>
+        </a>
+      </li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li>
+        <a href="/dashboard">
+          <div class="user-avatar-nav" id="nav-user-avatar">U</div>
+        </a>
+      </li>
+    </ul>
+    
+    <div class="hamburger" onclick="toggleMobileNav()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Nav -->
+<div class="mobile-nav" id="mobile-nav">
+  <a href="/marketplace"><i class="fas fa-store"></i> Browse Marketplace</a>
+  <a href="/sell"><i class="fas fa-plus-circle"></i> Sell an Item</a>
+  <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+  <a href="/dashboard"><i class="fas fa-user"></i> Dashboard</a>
+  <a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a>
+  <a href="/register"><i class="fas fa-user-plus"></i> Register</a>
+</div>
+
+<!-- Hero Section -->
+<section class="hero">
+  <div style="position:relative;z-index:1">
+    <h1>🎓 Africa University's<br>Campus Marketplace</h1>
+    <p>Buy and sell textbooks, electronics, and more within the AU community. Safe, trusted, and exclusively for AU students, staff & faculty.</p>
+    
+    <div class="hero-search">
+      <input type="text" placeholder="What are you looking for?" id="main-search" onkeypress="handleMainSearch(event)">
+      <button onclick="doSearch()"><i class="fas fa-search"></i> Search</button>
+    </div>
+    
+    <div class="trust-badges">
+      <div class="trust-badge"><i class="fas fa-shield-alt"></i> AU Email Verified</div>
+      <div class="trust-badge"><i class="fas fa-users"></i> Campus Community</div>
+      <div class="trust-badge"><i class="fas fa-lock"></i> Secure Platform</div>
+      <div class="trust-badge"><i class="fas fa-leaf"></i> Eco-Friendly</div>
+    </div>
+    
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-number" id="stat-listings">0+</div>
+        <div class="hero-stat-label">Active Listings</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-number" id="stat-users">0+</div>
+        <div class="hero-stat-label">AU Members</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-number" id="stat-categories">9</div>
+        <div class="hero-stat-label">Categories</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-number">100%</div>
+        <div class="hero-stat-label">AU Verified</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Categories Section -->
+<section class="categories-section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Browse Categories</h2>
+        <p class="section-subtitle">Find exactly what you need</p>
+      </div>
+      <a href="/marketplace" class="btn btn-outline">View All <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="categories-grid" id="categories-grid">
+      <!-- Categories loaded dynamically -->
+      <div class="loading-spinner"><div class="spinner"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Recent Listings -->
+<section class="recent-listings">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Recent Listings</h2>
+        <p class="section-subtitle">Fresh items just posted by AU community</p>
+      </div>
+      <a href="/marketplace" class="btn btn-outline">See All <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="products-grid" id="recent-listings-grid">
+      <!-- Listings loaded dynamically -->
+    </div>
+    <div id="listings-empty" class="empty-state hidden">
+      <div class="empty-state-icon">🛍️</div>
+      <h3>No listings yet</h3>
+      <p>Be the first to post something on AUBazaar!</p>
+      <a href="/sell" class="btn btn-primary mt-2">Post an Item</a>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+  <div class="container">
+    <div class="text-center mb-3">
+      <h2 class="section-title">Why Choose AUBazaar?</h2>
+      <p class="section-subtitle">Built specifically for the Africa University community</p>
+    </div>
+    <div class="grid grid-4">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+        <h3>Verified Community</h3>
+        <p>Only Africa University email addresses (@africau.edu) are allowed, ensuring a trusted campus-only marketplace.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-dollar-sign"></i></div>
+        <h3>Save Money</h3>
+        <p>Buy used textbooks, electronics, and essentials at a fraction of the retail price from fellow students.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-leaf"></i></div>
+        <h3>Eco-Friendly</h3>
+        <p>Promote sustainability by giving items a second life instead of throwing them away. Reduce campus waste.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-comments"></i></div>
+        <h3>Easy Communication</h3>
+        <p>Built-in messaging system to negotiate prices and arrange safe on-campus meetups easily.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works">
+  <div class="container">
+    <div class="text-center mb-3">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Get started in 3 simple steps</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <h3 style="font-weight:700;margin-bottom:0.8rem">Create Your Account</h3>
+        <p style="color:var(--gray);font-size:0.9rem">Register with your Africa University email address to join the verified campus community.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <h3 style="font-weight:700;margin-bottom:0.8rem">Browse or Post</h3>
+        <p style="color:var(--gray);font-size:0.9rem">Search for items you need or post your own listings with photos, descriptions, and prices.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <h3 style="font-weight:700;margin-bottom:0.8rem">Connect & Trade</h3>
+        <p style="color:var(--gray);font-size:0.9rem">Message sellers, negotiate prices, and arrange safe meetups on campus to complete your transaction.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+  <h2>Ready to Start Trading?</h2>
+  <p>Join hundreds of AU students already buying and selling on AUBazaar</p>
+  <div class="cta-buttons">
+    <a href="/register" class="btn btn-secondary btn-lg"><i class="fas fa-user-plus"></i> Create Free Account</a>
+    <a href="/marketplace" class="btn btn-outline-white btn-lg"><i class="fas fa-store"></i> Browse Listings</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <h3>AU<span>Bazaar</span></h3>
+      <p>Africa University's official campus marketplace. A safe, trusted platform for the AU community to buy, sell, and trade goods and services.</p>
+    </div>
+    <div class="footer-section">
+      <h4>Marketplace</h4>
+      <ul>
+        <li><a href="/marketplace">Browse All</a></li>
+        <li><a href="/marketplace?category=textbooks">Textbooks</a></li>
+        <li><a href="/marketplace?category=electronics">Electronics</a></li>
+        <li><a href="/marketplace?category=services">Services</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h4>Account</h4>
+      <ul>
+        <li><a href="/register">Register</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/sell">Post an Item</a></li>
+        <li><a href="/messages">Messages</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="/contact">Contact</a></li>
+        <li><a href="/terms">Terms of Service</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2024 AUBazaar - Africa University Campus Marketplace. All rights reserved. | Mutare, Zimbabwe</p>
+  </div>
+</footer>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  // Load categories
+  async function loadCategories() {
+    const grid = document.getElementById('categories-grid');
+    try {
+      const response = await fetch('/api/listings/categories');
+      const data = await response.json();
+      
+      if (data.success) {
+        grid.innerHTML = data.data.map(cat => `
+          <div class="category-card" onclick="window.location.href='/marketplace?category=${cat.id}'">
+            <div class="category-icon">${AUBazaar.getCategoryIcon(cat.id)}</div>
+            <div class="category-name">${cat.name}</div>
+            <div class="category-count">${cat.count} items</div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      grid.innerHTML = '<p class="text-gray text-center">Failed to load categories</p>';
+    }
+  }
+
+  // Load recent listings from Firestore
+  async function loadRecentListings() {
+    const grid = document.getElementById('recent-listings-grid');
+    const empty = document.getElementById('listings-empty');
+    
+    try {
+      // Get all active listings and sort in JavaScript (avoids index requirement)
+      const snapshot = await AUBazaar.db.collection('listings')
+        .where('status', '==', 'active')
+        .get();
+      
+      if (snapshot.empty) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      let listings = [];
+      snapshot.forEach(doc => listings.push({ id: doc.id, ...doc.data() }));
+      
+      // Sort by createdAt descending in JavaScript
+      listings.sort((a, b) => {
+        const aTime = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+        const bTime = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+        return bTime - aTime;
+      });
+      
+      // Take only 8 most recent
+      listings = listings.slice(0, 8);
+      
+      grid.innerHTML = listings.map(listing => createProductCard(listing)).join('');
+      
+      // Update stats
+      updateStats();
+    } catch (error) {
+      console.error('Error loading listings:', error);
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+    }
+  }
+
+  function createProductCard(listing) {
+    const image = listing.images && listing.images.length > 0 
+      ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.parentElement.innerHTML='${AUBazaar.getCategoryIcon(listing.category)}'">` 
+      : AUBazaar.getCategoryIcon(listing.category);
+    
+    return `
+      <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
+        <div class="product-card-image">${image}</div>
+        <button class="product-card-favorite" onclick="event.stopPropagation(); toggleFavorite('${listing.id}', this)">
+          <i class="far fa-heart"></i>
+        </button>
+        ${listing.featured ? '<span class="product-card-badge badge-hot">🔥 Hot</span>' : ''}
+        ${!listing.featured && listing.createdAt && (listing.createdAt.toDate ? listing.createdAt.toDate() : new Date(listing.createdAt)).getTime() > Date.now() - (3 * 24 * 60 * 60 * 1000) ? '<span class="product-card-badge badge-new">🆕 New</span>' : ''}
+        <div class="product-card-body">
+          <div class="product-card-title">${listing.title}</div>
+          <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
+          <div class="product-card-meta">
+            <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+            <span>${AUBazaar.formatDate(listing.createdAt)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function updateStats() {
+    // Try server API first
+    try {
+      const response = await fetch('/api/users/stats');
+      const statsData = await response.json();
+      if (statsData.success) {
+        document.getElementById('stat-listings').textContent = statsData.data.activeListings + '+';
+        document.getElementById('stat-users').textContent = statsData.data.totalUsers + '+';
+        return;
+      }
+    } catch (e) {
+      console.log('Server stats failed, trying Firestore...');
+    }
+    
+    // Fallback to direct Firestore
+    try {
+      const listingsSnap = await AUBazaar.db.collection('listings')
+        .where('status', '==', 'active')
+        .get();
+      
+      const usersSnap = await AUBazaar.db.collection('users').get();
+      
+      document.getElementById('stat-listings').textContent = listingsSnap.size + '+';
+      document.getElementById('stat-users').textContent = usersSnap.size + '+';
+    } catch (e) {
+      console.error('Error loading stats:', e);
+    }
+  }
+
+  function toggleFavorite(listingId, btn) {
+    if (!AUBazaar.auth.currentUser) {
+      window.location.href = '/login';
+      return;
+    }
+    btn.classList.toggle('active');
+    btn.innerHTML = btn.classList.contains('active') 
+      ? '<i class="fas fa-heart"></i>' 
+      : '<i class="far fa-heart"></i>';
+  }
+
+  function handleMainSearch(e) {
+    if (e.key === 'Enter') doSearch();
+  }
+
+  function handleNavSearch(e) {
+    if (e.key === 'Enter') {
+      const q = document.getElementById('hero-search-nav').value;
+      if (q) window.location.href = `/marketplace?search=${encodeURIComponent(q)}`;
+    }
+  }
+
+  function doSearch() {
+    const q = document.getElementById('main-search').value;
+    if (q) window.location.href = `/marketplace?search=${encodeURIComponent(q)}`;
+    else window.location.href = '/marketplace';
+  }
+
+  function toggleMobileNav() {
+    document.getElementById('mobile-nav').classList.toggle('open');
+  }
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
+    loadRecentListings();
+    updateStats();
+  });
+</script>
+</body>
+</html>

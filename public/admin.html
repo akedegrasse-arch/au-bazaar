@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .admin-page {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 70px);
+    }
+    .admin-sidebar {
+      background: #1a2332;
+      color: white;
+      padding: 1.5rem 0;
+    }
+    .admin-brand {
+      padding: 0 1.5rem 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 1rem;
+    }
+    .admin-brand h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--secondary);
+    }
+    .admin-brand p {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 0.2rem;
+    }
+    .admin-nav-section {
+      margin-bottom: 0.5rem;
+    }
+    .admin-nav-label {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.4);
+    }
+    .admin-nav li a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 1.5rem;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+    .admin-nav li a:hover,
+    .admin-nav li a.active {
+      color: white;
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-nav li a.active {
+      border-left: 3px solid var(--secondary);
+    }
+    .admin-nav li a i { width: 18px; text-align: center; }
+    .admin-content {
+      padding: 2rem;
+      background: #f0f4f8;
+      overflow-y: auto;
+    }
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+    .admin-header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+    .admin-tab { display: none; }
+    .admin-tab.active { display: block; }
+    .data-table-container {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .table-toolbar {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--gray-light);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .table-toolbar input {
+      padding: 8px 14px;
+      border: 2px solid var(--gray-light);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      flex: 1;
+      min-width: 200px;
+    }
+    .table-toolbar input:focus { border-color: var(--primary-light); }
+    .table-toolbar select {
+      padding: 8px 14px;
+      border: 2px solid var(--gray-light);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: white;
+      cursor: pointer;
+    }
+    .user-row-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .listing-thumb-admin {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--gray-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .listing-thumb-admin img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .chart-placeholder {
+      background: var(--light);
+      border-radius: 10px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+    @media (max-width: 992px) {
+      .admin-page { grid-template-columns: 1fr; }
+      .admin-sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Admin Navbar -->
+<nav class="navbar" style="background:linear-gradient(135deg,#1a2332,#2c3e50)">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span> <span style="font-size:0.8rem;background:var(--secondary);padding:2px 8px;border-radius:4px;margin-left:8px">ADMIN</span>
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Marketplace</a></li>
+      <li><a href="/dashboard"><i class="fas fa-user"></i> My Account</a></li>
+      <li><a href="#" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="admin-page">
+  <!-- Admin Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <h3>⚙️ Admin Panel</h3>
+      <p id="admin-email">Loading...</p>
+    </div>
+    
+    <div class="admin-nav-section">
+      <div class="admin-nav-label">Overview</div>
+      <ul class="admin-nav">
+        <li><a href="#" class="active" onclick="showAdminTab('dashboard', this)"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+        <li><a href="#" onclick="showAdminTab('analytics', this)"><i class="fas fa-chart-bar"></i> Analytics</a></li>
+      </ul>
+    </div>
+    
+    <div class="admin-nav-section">
+      <div class="admin-nav-label">Management</div>
+      <ul class="admin-nav">
+        <li><a href="#" onclick="showAdminTab('users', this)"><i class="fas fa-users"></i> Users</a></li>
+        <li><a href="#" onclick="showAdminTab('listings', this)"><i class="fas fa-list"></i> Listings</a></li>
+        <li><a href="#" onclick="showAdminTab('reports', this)"><i class="fas fa-flag"></i> Reports <span class="notification-badge" id="reports-badge" style="display:none">0</span></a></li>
+      </ul>
+    </div>
+    
+    <div class="admin-nav-section">
+      <div class="admin-nav-label">System</div>
+      <ul class="admin-nav">
+        <li><a href="#" onclick="showAdminTab('settings', this)"><i class="fas fa-cog"></i> Settings</a></li>
+      </ul>
+    </div>
+  </aside>
+  
+  <!-- Admin Content -->
+  <main class="admin-content">
+    
+    <!-- Dashboard Tab -->
+    <div id="admin-tab-dashboard" class="admin-tab active">
+      <div class="admin-header">
+        <h1>📊 Dashboard Overview</h1>
+        <button class="btn btn-outline btn-sm" onclick="refreshStats()"><i class="fas fa-sync"></i> Refresh</button>
+      </div>
+      
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+          <div class="stat-info"><h3 id="admin-total-users">0</h3><p>Total Users</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-list"></i></div>
+          <div class="stat-info"><h3 id="admin-total-listings">0</h3><p>Total Listings</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info"><h3 id="admin-active-listings">0</h3><p>Active Listings</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-flag"></i></div>
+          <div class="stat-info"><h3 id="admin-reports">0</h3><p>Pending Reports</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-user-plus"></i></div>
+          <div class="stat-info"><h3 id="admin-new-users">0</h3><p>New Today</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-handshake"></i></div>
+          <div class="stat-info"><h3 id="admin-sold">0</h3><p>Items Sold</p></div>
+        </div>
+      </div>
+      
+      <!-- Recent Activity -->
+      <div class="grid grid-2 mt-3">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-user-plus"></i> Recent Users</div>
+          <div id="recent-users-list">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-plus-circle"></i> Recent Listings</div>
+          <div id="recent-listings-admin">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Users Tab -->
+    <div id="admin-tab-users" class="admin-tab">
+      <div class="admin-header">
+        <h1>👥 User Management</h1>
+        <span id="users-count" class="badge badge-primary">0 users</span>
+      </div>
+      
+      <div class="data-table-container">
+        <div class="table-toolbar">
+          <input type="text" placeholder="Search users..." id="user-search" oninput="filterUsers()">
+          <select id="user-role-filter" onchange="filterUsers()">
+            <option value="">All Roles</option>
+            <option value="student">Students</option>
+            <option value="staff">Staff</option>
+            <option value="faculty">Faculty</option>
+            <option value="admin">Admins</option>
+          </select>
+          <select id="user-status-filter" onchange="filterUsers()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Listings</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="7" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Listings Tab -->
+    <div id="admin-tab-listings" class="admin-tab">
+      <div class="admin-header">
+        <h1>📦 Listing Management</h1>
+        <span id="listings-count" class="badge badge-primary">0 listings</span>
+      </div>
+      
+      <div class="data-table-container">
+        <div class="table-toolbar">
+          <input type="text" placeholder="Search listings..." id="listing-search" oninput="filterAdminListings()">
+          <select id="listing-category-filter" onchange="filterAdminListings()">
+            <option value="">All Categories</option>
+            <option value="textbooks">Textbooks</option>
+            <option value="electronics">Electronics</option>
+            <option value="clothing">Clothing</option>
+            <option value="dorm-essentials">Dorm Essentials</option>
+            <option value="sports">Sports</option>
+            <option value="services">Services</option>
+            <option value="food">Food</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="listing-status-filter" onchange="filterAdminListings()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="sold">Sold</option>
+            <option value="deleted">Deleted</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Seller</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Views</th>
+                <th>Posted</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="listings-table-body">
+              <tr><td colspan="8" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Reports Tab -->
+    <div id="admin-tab-reports" class="admin-tab">
+      <div class="admin-header">
+        <h1>🚩 Reports Management</h1>
+        <span id="reports-count" class="badge badge-danger">0 pending</span>
+      </div>
+      
+      <div class="data-table-container">
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Listing</th>
+                <th>Reporter</th>
+                <th>Reason</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reports-table-body">
+              <tr><td colspan="6" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Analytics Tab -->
+    <div id="admin-tab-analytics" class="admin-tab">
+      <div class="admin-header">
+        <h1>📈 Analytics</h1>
+      </div>
+      
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">Listings by Category</div>
+          <div class="card-body">
+            <div id="category-stats"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">User Roles Distribution</div>
+          <div class="card-body">
+            <div id="role-stats"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div id="admin-tab-settings" class="admin-tab">
+      <div class="admin-header">
+        <h1>⚙️ Platform Settings</h1>
+      </div>
+      
+      <div class="card mb-3">
+        <div class="card-header">Platform Configuration</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Platform Name</label>
+            <input type="text" class="form-control" value="AUBazaar" id="platform-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Allowed Email Domains</label>
+            <input type="text" class="form-control" value="@africau.edu, @students.africau.edu" id="allowed-domains">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Images per Listing</label>
+            <input type="number" class="form-control" value="5" id="max-images">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Listing Price (USD)</label>
+            <input type="number" class="form-control" value="10000" id="max-price">
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">
+            <i class="fas fa-save"></i> Save Settings
+          </button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">Maintenance</div>
+        <div class="card-body">
+          <button class="btn btn-warning mb-2" onclick="cleanupDeletedListings()">
+            <i class="fas fa-broom"></i> Cleanup Deleted Listings
+          </button>
+          <br>
+          <button class="btn btn-danger" onclick="exportData(event)">
+            <i class="fas fa-download"></i> Export Data
+          </button>
+        </div>
+      </div>
+    </div>
+    
+  </main>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let allUsers = [];
+  let allListings = [];
+  let allReports = [];
+  let currentAdmin = null;
+
+  // Check admin access
+  AUBazaar.auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/admin';
+      return;
+    }
+    
+    currentAdmin = user;
+    
+    // Check if user is admin
+    const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+    const userData = userDoc.data();
+    
+    if (!userData || userData.role !== 'admin') {
+      AUBazaar.showToast('Access denied. Admin privileges required.', 'error');
+      setTimeout(() => window.location.href = '/dashboard', 2000);
+      return;
+    }
+    
+    document.getElementById('admin-email').textContent = user.email;
+    loadAdminData();
+  });
+
+  async function loadAdminData() {
+    await Promise.all([
+      loadStats(),
+      loadUsers(),
+      loadAllListings(),
+      loadReports()
+    ]);
+  }
+
+  async function loadStats() {
+    try {
+      const [usersSnap, listingsSnap, reportsSnap, soldSnap] = await Promise.all([
+        AUBazaar.db.collection('users').get(),
+        AUBazaar.db.collection('listings').get(),
+        AUBazaar.db.collection('reports').where('status', '==', 'pending').get(),
+        AUBazaar.db.collection('listings').where('status', '==', 'sold').get()
+      ]);
+      
+      const activeListings = listingsSnap.docs.filter(d => d.data().status === 'active').length;
+      
+      document.getElementById('admin-total-users').textContent = usersSnap.size;
+      document.getElementById('admin-total-listings').textContent = listingsSnap.size;
+      document.getElementById('admin-active-listings').textContent = activeListings;
+      document.getElementById('admin-reports').textContent = reportsSnap.size;
+      document.getElementById('admin-sold').textContent = soldSnap.size;
+      
+      if (reportsSnap.size > 0) {
+        document.getElementById('reports-badge').textContent = reportsSnap.size;
+        document.getElementById('reports-badge').style.display = 'inline-flex';
+        document.getElementById('reports-count').textContent = reportsSnap.size + ' pending';
+      }
+      
+      // New users today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const newUsers = usersSnap.docs.filter(d => {
+        const created = d.data().createdAt;
+        return created && created.toDate() >= today;
+      }).length;
+      document.getElementById('admin-new-users').textContent = newUsers;
+      
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const snapshot = await AUBazaar.db.collection('users').orderBy('createdAt', 'desc').get();
+      allUsers = [];
+      snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+      
+      document.getElementById('users-count').textContent = allUsers.length + ' users';
+      renderUsersTable(allUsers);
+      renderRecentUsers(allUsers.slice(0, 5));
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  }
+
+  function renderUsersTable(users) {
+    const tbody = document.getElementById('users-table-body');
+    
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray)">No users found</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = users.map(user => `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="user-row-avatar">${(user.fullName || 'U').charAt(0).toUpperCase()}</div>
+            <div>
+              <div style="font-weight:600;font-size:0.9rem">${user.fullName || 'Unknown'}</div>
+              <div style="font-size:0.8rem;color:var(--gray)">${user.studentId || ''}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:0.85rem">${user.email || ''}</td>
+        <td><span class="badge badge-primary">${user.role || 'student'}</span></td>
+        <td>${user.totalListings || 0}</td>
+        <td style="font-size:0.85rem">${user.createdAt ? AUBazaar.formatDate(user.createdAt) : 'N/A'}</td>
+        <td>
+          <span class="badge ${user.status === 'suspended' ? 'badge-danger' : 'badge-success'}">
+            ${user.status || 'active'}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:0.3rem">
+            <button class="btn btn-sm btn-outline" onclick="viewUserProfile('${user.id}')" title="View">
+              <i class="fas fa-eye"></i>
+            </button>
+            ${user.role !== 'admin' ? `
+              <button class="btn btn-sm ${user.status === 'suspended' ? 'btn-success' : 'btn-danger'}" 
+                onclick="toggleUserStatus('${user.id}', '${user.status}')" 
+                title="${user.status === 'suspended' ? 'Activate' : 'Suspend'}">
+                <i class="fas fa-${user.status === 'suspended' ? 'check' : 'ban'}"></i>
+              </button>
+              <button class="btn btn-sm btn-primary" onclick="makeAdmin('${user.id}')" title="Make Admin">
+                <i class="fas fa-crown"></i>
+              </button>
+            ` : '<span class="badge badge-warning">Admin</span>'}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderRecentUsers(users) {
+    const container = document.getElementById('recent-users-list');
+    container.innerHTML = users.map(user => `
+      <div style="display:flex;align-items:center;gap:10px;padding:0.8rem 1rem;border-bottom:1px solid var(--gray-light)">
+        <div class="user-row-avatar">${(user.fullName || 'U').charAt(0).toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:0.9rem">${user.fullName || 'Unknown'}</div>
+          <div style="font-size:0.8rem;color:var(--gray)">${user.role || 'student'} • ${AUBazaar.formatDate(user.createdAt)}</div>
+        </div>
+        <span class="badge badge-success">${user.status || 'active'}</span>
+      </div>
+    `).join('') || '<div style="padding:1rem;text-align:center;color:var(--gray)">No users yet</div>';
+  }
+
+  async function loadAllListings() {
+    try {
+      const snapshot = await AUBazaar.db.collection('listings').orderBy('createdAt', 'desc').get();
+      allListings = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        // Include ALL listings (active, sold, deleted) for admin to manage
+        allListings.push({ id: doc.id, ...data });
+      });
+      
+      document.getElementById('listings-count').textContent = allListings.length + ' listings';
+      renderListingsTable(allListings);
+      renderRecentListingsAdmin(allListings.slice(0, 5));
+      renderCategoryStats();
+    } catch (error) {
+      console.error('Error loading listings:', error);
+    }
+  }
+
+  function renderListingsTable(listings) {
+    const tbody = document.getElementById('listings-table-body');
+    
+    if (listings.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--gray)">No listings found</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = listings.map(listing => `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="listing-thumb-admin">
+              ${listing.images && listing.images.length > 0 
+                ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+                : AUBazaar.getCategoryIcon(listing.category)}
+            </div>
+            <div style="max-width:200px">
+              <div style="font-weight:600;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${listing.title}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:0.85rem">${listing.sellerName || 'Unknown'}</td>
+        <td><span class="badge badge-primary">${listing.category}</span></td>
+        <td style="font-weight:700;color:var(--primary)">${AUBazaar.formatCurrency(listing.price)}</td>
+        <td>${listing.views || 0}</td>
+        <td style="font-size:0.82rem">${AUBazaar.formatDate(listing.createdAt)}</td>
+        <td>
+          <span class="badge ${listing.status === 'active' ? 'badge-success' : listing.status === 'sold' ? 'badge-primary' : 'badge-danger'}">
+            ${listing.status}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:0.3rem">
+            <a href="/listing/${listing.id}" class="btn btn-sm btn-outline" target="_blank" title="View">
+              <i class="fas fa-eye"></i>
+            </a>
+            <button class="btn btn-sm btn-danger" onclick="adminDeleteListing('${listing.id}')" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderRecentListingsAdmin(listings) {
+    const container = document.getElementById('recent-listings-admin');
+    container.innerHTML = listings.map(listing => `
+      <div style="display:flex;align-items:center;gap:10px;padding:0.8rem 1rem;border-bottom:1px solid var(--gray-light)">
+        <div class="listing-thumb-admin" style="width:40px;height:40px;font-size:1rem">
+          ${listing.images && listing.images.length > 0 
+            ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+            : AUBazaar.getCategoryIcon(listing.category)}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${listing.title}</div>
+          <div style="font-size:0.8rem;color:var(--gray)">${AUBazaar.formatCurrency(listing.price)} • ${AUBazaar.formatDate(listing.createdAt)}</div>
+        </div>
+        <span class="badge ${listing.status === 'active' ? 'badge-success' : 'badge-gray'}">${listing.status}</span>
+      </div>
+    `).join('') || '<div style="padding:1rem;text-align:center;color:var(--gray)">No listings yet</div>';
+  }
+
+  async function loadReports() {
+    try {
+      const snapshot = await AUBazaar.db.collection('reports').orderBy('createdAt', 'desc').get();
+      allReports = [];
+      snapshot.forEach(doc => allReports.push({ id: doc.id, ...doc.data() }));
+      renderReportsTable(allReports);
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    }
+  }
+
+  function renderReportsTable(reports) {
+    const tbody = document.getElementById('reports-table-body');
+    
+    if (reports.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray)">No reports found</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = reports.map(report => `
+      <tr>
+        <td>
+          <a href="/listing/${report.listingId}" target="_blank" style="color:var(--primary);font-weight:600;font-size:0.9rem">
+            View Listing <i class="fas fa-external-link-alt" style="font-size:0.75rem"></i>
+          </a>
+        </td>
+        <td style="font-size:0.85rem">${report.reporterId?.substring(0, 8)}...</td>
+        <td><span class="badge badge-warning">${report.reason}</span></td>
+        <td style="font-size:0.82rem">${AUBazaar.formatDate(report.createdAt)}</td>
+        <td>
+          <span class="badge ${report.status === 'pending' ? 'badge-warning' : report.status === 'resolved' ? 'badge-success' : 'badge-gray'}">
+            ${report.status}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:0.3rem">
+            ${report.status === 'pending' ? `
+              <button class="btn btn-sm btn-success" onclick="resolveReport('${report.id}', 'resolved')" title="Resolve">
+                <i class="fas fa-check"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="resolveReport('${report.id}', 'action-taken')" title="Take Action">
+                <i class="fas fa-ban"></i>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderCategoryStats() {
+    const categoryCounts = {};
+    allListings.forEach(l => {
+      if (l.status === 'active') {
+        categoryCounts[l.category] = (categoryCounts[l.category] || 0) + 1;
+      }
+    });
+    
+    const container = document.getElementById('category-stats');
+    const total = Object.values(categoryCounts).reduce((a, b) => a + b, 0) || 1;
+    
+    container.innerHTML = Object.entries(categoryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat, count]) => `
+        <div style="margin-bottom:0.8rem">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.3rem">
+            <span>${AUBazaar.getCategoryIcon(cat)} ${cat}</span>
+            <span style="font-weight:700">${count}</span>
+          </div>
+          <div style="background:var(--gray-light);border-radius:4px;height:8px">
+            <div style="background:var(--primary);height:100%;border-radius:4px;width:${(count/total*100).toFixed(0)}%"></div>
+          </div>
+        </div>
+      `).join('') || '<p style="color:var(--gray)">No data available</p>';
+    
+    // Role stats
+    const roleCounts = {};
+    allUsers.forEach(u => {
+      roleCounts[u.role || 'student'] = (roleCounts[u.role || 'student'] || 0) + 1;
+    });
+    
+    const roleContainer = document.getElementById('role-stats');
+    const totalUsers = allUsers.length || 1;
+    
+    roleContainer.innerHTML = Object.entries(roleCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([role, count]) => `
+        <div style="margin-bottom:0.8rem">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.3rem">
+            <span>${role}</span>
+            <span style="font-weight:700">${count} (${(count/totalUsers*100).toFixed(0)}%)</span>
+          </div>
+          <div style="background:var(--gray-light);border-radius:4px;height:8px">
+            <div style="background:var(--secondary);height:100%;border-radius:4px;width:${(count/totalUsers*100).toFixed(0)}%"></div>
+          </div>
+        </div>
+      `).join('') || '<p style="color:var(--gray)">No data available</p>';
+  }
+
+  function filterUsers() {
+    const search = document.getElementById('user-search').value.toLowerCase();
+    const role = document.getElementById('user-role-filter').value;
+    const status = document.getElementById('user-status-filter').value;
+    
+    let filtered = allUsers.filter(user => {
+      const matchSearch = !search || 
+        (user.fullName || '').toLowerCase().includes(search) || 
+        (user.email || '').toLowerCase().includes(search);
+      const matchRole = !role || user.role === role;
+      const matchStatus = !status || (user.status || 'active') === status;
+      return matchSearch && matchRole && matchStatus;
+    });
+    
+    renderUsersTable(filtered);
+  }
+
+  function filterAdminListings() {
+    const search = document.getElementById('listing-search').value.toLowerCase();
+    const category = document.getElementById('listing-category-filter').value;
+    const status = document.getElementById('listing-status-filter').value;
+    
+    let filtered = allListings.filter(listing => {
+      const matchSearch = !search || listing.title.toLowerCase().includes(search);
+      const matchCategory = !category || listing.category === category;
+      const matchStatus = !status || listing.status === status;
+      return matchSearch && matchCategory && matchStatus;
+    });
+    
+    renderListingsTable(filtered);
+  }
+
+  async function toggleUserStatus(userId, currentStatus) {
+    const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    const result = await Swal.fire({
+      title: newStatus === 'suspended' ? 'Suspend User?' : 'Activate User?',
+      text: newStatus === 'suspended' ? 'This user will not be able to login.' : 'This user will be able to login again.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes',
+      cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      await AUBazaar.db.collection('users').doc(userId).update({ status: newStatus });
+      AUBazaar.showToast(`User ${newStatus} successfully`, 'success');
+      await loadUsers();
+    } catch (error) {
+      AUBazaar.showToast('Failed to update user status', 'error');
+    }
+  }
+
+  async function makeAdmin(userId) {
+    const result = await Swal.fire({
+      title: 'Grant Admin Privileges?',
+      text: 'This user will have admin access to the system.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Make Admin',
+      cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      // Use set with merge to create document if it doesn't exist
+      await AUBazaar.db.collection('users').doc(userId).set({
+        role: 'admin'
+      }, { merge: true });
+      AUBazaar.showToast('User promoted to admin', 'success');
+      await loadUsers();
+    } catch (error) {
+      console.error('Error making admin:', error);
+      AUBazaar.showToast('Failed to update user role: ' + error.message, 'error');
+    }
+  }
+
+  async function adminDeleteListing(listingId) {
+    const result = await Swal.fire({
+      title: 'Delete Listing?',
+      html: 'Choose how you want to delete this listing:<br><br>' +
+            '<button type="button" id="btn-hide" class="swal2-styled swal2-default-outline" style="padding:10px;margin:5px;width:100%">' +
+            '👁️ Hide (Can restore later)</button>' +
+            '<button type="button" id="btn-delete" class="swal2-styled swal2-danger" style="padding:10px;margin:5px;width:100%;background:#dc3545;border-color:#dc3545">' +
+            '🗑️ Delete Permanently</button>',
+      showConfirmButton: false,
+      showCancelButton: true,
+      cancelButtonText: 'Cancel'
+    });
+    
+    // Handle custom button clicks
+    const btnHide = document.getElementById('btn-hide');
+    const btnDelete = document.getElementById('btn-delete');
+    
+    if (btnHide) {
+      btnHide.onclick = async () => {
+        Swal.close();
+        await adminHideListing(listingId);
+      };
+    }
+    if (btnDelete) {
+      btnDelete.onclick = async () => {
+        Swal.close();
+        await adminPermanentlyDeleteListing(listingId);
+      };
+    }
+    
+    // If user clicked cancel or outside modal, do nothing
+    if (result.dismiss === Swal.DismissReason.cancel || result.dismiss === Swal.DismissReason.backdrop) {
+      return;
+    }
+  }
+  
+  // Admin hide listing (soft delete)
+  async function adminHideListing(listingId) {
+    try {
+      await AUBazaar.db.collection('listings').doc(listingId).update({
+        status: 'deleted',
+        deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        deletedBy: 'admin'
+      });
+      AUBazaar.showToast('Listing hidden', 'success');
+      await loadAllListings();
+    } catch (error) {
+      AUBazaar.showToast('Failed to hide listing', 'error');
+    }
+  }
+  
+  // Admin delete permanently
+  async function adminPermanentlyDeleteListing(listingId) {
+    const confirmResult = await Swal.fire({
+      title: 'Delete Permanently?',
+      text: 'This will completely remove the listing from the database. This cannot be undone!',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete permanently',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!confirmResult.isConfirmed) return;
+    
+    try {
+      // Get listing first to delete images from storage
+      const listingDoc = await AUBazaar.db.collection('listings').doc(listingId).get();
+      const listingData = listingDoc.data();
+      
+      // Delete images from Storage if they exist
+      if (listingData && listingData.images && listingData.images.length > 0) {
+        for (const imageUrl of listingData.images) {
+          try {
+            // Extract path from URL
+            const urlParts = imageUrl.split('/o/');
+            if (urlParts[1]) {
+              const path = decodeURIComponent(urlParts[1].split('?')[0]);
+              await AUBazaar.storage.ref(path).delete();
+            }
+          } catch (imgError) {
+            console.log('Could not delete image:', imgError.message);
+          }
+        }
+      }
+      
+      // Delete the listing document permanently
+      await AUBazaar.db.collection('listings').doc(listingId).delete();
+      
+      AUBazaar.showToast('Listing permanently deleted', 'success');
+      await loadAllListings();
+      await loadStats();
+    } catch (error) {
+      AUBazaar.showToast('Failed to delete listing', 'error');
+      console.error(error);
+    }
+  }
+
+  async function resolveReport(reportId, resolution) {
+    try {
+      await AUBazaar.db.collection('reports').doc(reportId).update({
+        status: resolution,
+        resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        resolvedBy: currentAdmin.uid
+      });
+      AUBazaar.showToast('Report resolved', 'success');
+      await loadReports();
+      await loadStats();
+    } catch (error) {
+      AUBazaar.showToast('Failed to resolve report', 'error');
+    }
+  }
+
+  function viewUserProfile(userId) {
+    window.open(`/profile?id=${userId}`, '_blank');
+  }
+
+  function showAdminTab(tabName, linkEl) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(`admin-tab-${tabName}`).classList.add('active');
+    document.querySelectorAll('.admin-nav a').forEach(a => a.classList.remove('active'));
+    if (linkEl) linkEl.classList.add('active');
+  }
+
+  function refreshStats() {
+    loadAdminData();
+    AUBazaar.showToast('Data refreshed', 'success');
+  }
+
+  function saveSettings() {
+    AUBazaar.showToast('Settings saved successfully', 'success');
+  }
+
+  function cleanupDeletedListings() {
+    AUBazaar.showToast('Cleanup initiated...', 'info');
+  }
+
+  async function exportData() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+    
+    try {
+      // Get all users
+      const usersSnap = await firebase.firestore().collection('users').get();
+      const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Get all listings
+      const listingsSnap = await firebase.firestore().collection('listings').get();
+      const listings = listingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Get all conversations
+      const conversationsSnap = await firebase.firestore().collection('conversations').get();
+      const conversations = conversationsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Create export object
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        stats: {
+          totalUsers: users.length,
+          totalListings: listings.length,
+          totalConversations: conversations.length
+        },
+        users: users,
+        listings: listings,
+        conversations: conversations
+      };
+      
+      // Create and download JSON file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `aubazaar_export_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Export Complete!',
+        text: `Downloaded ${users.length} users, ${listings.length} listings`,
+        confirmButtonText: 'OK'
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Export Failed',
+        text: error.message,
+        confirmButtonText: 'OK'
+      });
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-download"></i> Export Data';
+  }
+
+  async function handleLogout() {
+    await AUBazaar.auth.signOut();
+    window.location.href = '/';
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

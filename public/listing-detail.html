@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listing - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .listing-page { padding: 2rem 0; }
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--gray);
+      margin-bottom: 1.5rem;
+    }
+    .breadcrumb a { color: var(--primary); }
+    .breadcrumb span { color: var(--gray); }
+    .listing-description {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-top: 1.5rem;
+    }
+    .listing-description h3 {
+      font-weight: 700;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+    .listing-description p {
+      color: var(--gray);
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+    .related-listings {
+      margin-top: 3rem;
+    }
+    .report-btn {
+      background: none;
+      border: none;
+      color: var(--gray);
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0;
+      margin-top: 1rem;
+    }
+    .report-btn:hover { color: var(--danger); }
+    .share-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .share-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: white;
+      transition: var(--transition);
+    }
+    .share-btn:hover { transform: scale(1.1); }
+    .share-whatsapp { background: #25D366; }
+    .share-copy { background: var(--gray); }
+    .views-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+    .safety-tips {
+      background: #fef9e7;
+      border: 1px solid #f9e79f;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+    }
+    .safety-tips h4 {
+      color: #9a7d0a;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .safety-tips ul {
+      list-style: none;
+      color: #7d6608;
+    }
+    .safety-tips ul li {
+      padding: 3px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .rating-stars {
+      display: flex;
+      gap: 3px;
+      color: var(--secondary);
+    }
+    .message-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .message-modal {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    <div class="navbar-search">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Search listings..." onkeypress="if(event.key==='Enter') window.location.href='/marketplace?search='+this.value">
+    </div>
+    <ul class="navbar-nav" id="guest-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
+      <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+      <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
+    </ul>
+    <ul class="navbar-nav" id="user-nav" style="display:none">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="listing-page">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="/">Home</a>
+      <span>›</span>
+      <a href="/marketplace">Marketplace</a>
+      <span>›</span>
+      <span id="breadcrumb-category">Loading...</span>
+      <span>›</span>
+      <span id="breadcrumb-title">Loading...</span>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading-state" class="loading-spinner">
+      <div class="spinner"></div>
+    </div>
+    
+    <!-- Listing Content -->
+    <div id="listing-content" style="display:none">
+      <div class="listing-detail-layout">
+        <!-- Left: Images & Description -->
+        <div>
+          <!-- Images -->
+          <div class="listing-images">
+            <div class="main-image" id="main-image">
+              <span id="main-image-placeholder">📦</span>
+            </div>
+            <div class="image-thumbnails" id="image-thumbnails"></div>
+          </div>
+          
+          <!-- Description -->
+          <div class="listing-description">
+            <h3><i class="fas fa-align-left"></i> Description</h3>
+            <p id="listing-description-text">No description provided.</p>
+          </div>
+          
+          <!-- Details Table -->
+          <div class="listing-description" style="margin-top:1rem">
+            <h3><i class="fas fa-info-circle"></i> Item Details</h3>
+            <table style="width:100%;border-collapse:collapse">
+              <tr>
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;width:40%">Category</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem" id="detail-category">-</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Condition</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-condition">-</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Location</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-location">-</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Posted</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-posted">-</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Views</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-views">-</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Right: Info Card -->
+        <div>
+          <div class="listing-info-card">
+            <div class="listing-price" id="listing-price">$0</div>
+            <h1 class="listing-title" id="listing-title">Loading...</h1>
+            
+            <div class="listing-meta" id="listing-meta"></div>
+            
+            <!-- Seller Card -->
+            <div class="seller-card" id="seller-card">
+              <div class="seller-avatar" id="seller-avatar">
+                <img id="seller-avatar-img" style="width:100%;height:100%;object-fit:cover;display:none">
+                <span id="seller-avatar-initials">?</span>
+              </div>
+              <div class="seller-info">
+                <h4 id="seller-name">Loading...</h4>
+                <div class="rating-stars" id="seller-rating">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                </div>
+                <div style="font-size:0.8rem;color:var(--gray)" id="seller-stats">AU Member</div>
+              </div>
+              <a href="#" id="seller-profile-link" class="btn btn-sm btn-outline">View Profile</a>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div id="action-buttons">
+              <button class="btn btn-primary btn-block btn-lg mb-2" onclick="contactSeller()" id="contact-btn">
+                <i class="fas fa-envelope"></i> Message Seller
+              </button>
+              <button class="btn btn-outline btn-block" onclick="toggleFavorite()" id="favorite-btn">
+                <i class="far fa-heart"></i> Save to Favorites
+              </button>
+            </div>
+            
+            <!-- Owner Actions (shown if current user is the seller) -->
+            <div id="owner-actions" style="display:none">
+              <a href="#" id="edit-listing-btn" class="btn btn-outline btn-block mb-2">
+                <i class="fas fa-edit"></i> Edit Listing
+              </a>
+              <button class="btn btn-danger btn-block" onclick="deleteListing()">
+                <i class="fas fa-trash"></i> Delete Listing
+              </button>
+            </div>
+            
+            <!-- Share -->
+            <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-light)">
+              <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem">Share this listing:</div>
+              <div class="share-buttons">
+                <button class="share-btn share-whatsapp" onclick="shareWhatsApp()" title="Share on WhatsApp">
+                  <i class="fab fa-whatsapp"></i>
+                </button>
+                <button class="share-btn share-copy" onclick="copyLink()" title="Copy Link">
+                  <i class="fas fa-link"></i>
+                </button>
+              </div>
+            </div>
+            
+            <!-- Safety Tips -->
+            <div class="safety-tips">
+              <h4><i class="fas fa-shield-alt"></i> Safety Tips</h4>
+              <ul>
+                <li><i class="fas fa-check" style="color:var(--accent)"></i> Meet in public places on campus</li>
+                <li><i class="fas fa-check" style="color:var(--accent)"></i> Inspect items before payment</li>
+                <li><i class="fas fa-check" style="color:var(--accent)"></i> Never share personal banking details</li>
+                <li><i class="fas fa-check" style="color:var(--accent)"></i> Trust your instincts</li>
+              </ul>
+            </div>
+            
+            <button class="report-btn" onclick="reportListing()">
+              <i class="fas fa-flag"></i> Report this listing
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Related Listings -->
+      <div class="related-listings">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Similar Listings</h2>
+            <p class="section-subtitle">You might also be interested in</p>
+          </div>
+        </div>
+        <div class="products-grid" id="related-listings"></div>
+      </div>
+    </div>
+    
+    <!-- Not Found State -->
+    <div id="not-found-state" style="display:none" class="empty-state">
+      <div class="empty-state-icon">🔍</div>
+      <h3>Listing Not Found</h3>
+      <p>This listing may have been removed or doesn't exist.</p>
+      <a href="/marketplace" class="btn btn-primary mt-2">Browse Marketplace</a>
+    </div>
+  </div>
+</div>
+
+<!-- Message Modal -->
+<div id="message-modal" style="display:none" class="message-modal-overlay" onclick="if(event.target===this) closeMessageModal()">
+  <div class="message-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Message Seller</h3>
+      <button class="modal-close" onclick="closeMessageModal()">✕</button>
+    </div>
+    <div id="message-modal-content">
+      <div class="form-group">
+        <label class="form-label">Your Message</label>
+        <textarea class="form-control" id="message-text" rows="4" placeholder="Hi, I'm interested in this item. Is it still available?">Hi, I'm interested in this item. Is it still available?</textarea>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="sendMessage()">
+        <i class="fas fa-paper-plane"></i> Send Message
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div id="report-modal" style="display:none" class="message-modal-overlay" onclick="if(event.target===this) closeReportModal()">
+  <div class="message-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Report Listing</h3>
+      <button class="modal-close" onclick="closeReportModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason for Report</label>
+      <select class="form-control" id="report-reason">
+        <option value="">Select a reason...</option>
+        <option value="spam">Spam or misleading</option>
+        <option value="inappropriate">Inappropriate content</option>
+        <option value="scam">Potential scam</option>
+        <option value="prohibited">Prohibited item</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Additional Details (Optional)</label>
+      <textarea class="form-control" id="report-details" rows="3" placeholder="Provide more details..."></textarea>
+    </div>
+    <button class="btn btn-danger btn-block" onclick="submitReport()">
+      <i class="fas fa-flag"></i> Submit Report
+    </button>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let currentListing = null;
+  let currentSeller = null;
+  
+  // Get listing ID from URL
+  const listingId = window.location.pathname.split('/').pop();
+  
+  async function loadListing() {
+    try {
+      const doc = await AUBazaar.db.collection('listings').doc(listingId).get();
+      
+      if (!doc.exists || doc.data().status === 'deleted') {
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('not-found-state').style.display = 'block';
+        return;
+      }
+      
+      currentListing = { id: doc.id, ...doc.data() };
+      
+      // Increment view count only once per unique user (using localStorage for persistence)
+      const viewedKey = 'viewed_listing_' + listingId;
+      if (!localStorage.getItem(viewedKey)) {
+        localStorage.setItem(viewedKey, 'true');
+        AUBazaar.db.collection('listings').doc(listingId).update({
+          views: firebase.firestore.FieldValue.increment(1)
+        }).catch(() => {});
+      }
+      
+      renderListing(currentListing);
+      loadSeller(currentListing.sellerId);
+      loadRelatedListings(currentListing.category, listingId);
+      
+    } catch (error) {
+      console.error('Error loading listing:', error);
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('not-found-state').style.display = 'block';
+    }
+  }
+
+  function renderListing(listing) {
+    document.title = `${listing.title} - AUBazaar`;
+    
+    // Breadcrumb
+    document.getElementById('breadcrumb-category').textContent = listing.category;
+    document.getElementById('breadcrumb-title').textContent = listing.title.substring(0, 30) + (listing.title.length > 30 ? '...' : '');
+    
+    // Price & Title
+    document.getElementById('listing-price').textContent = AUBazaar.formatCurrency(listing.price);
+    document.getElementById('listing-title').textContent = listing.title;
+    
+    // Meta
+    document.getElementById('listing-meta').innerHTML = `
+      <div class="listing-meta-item">
+        <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+      </div>
+      <div class="listing-meta-item">
+        <i class="fas fa-tag"></i> ${listing.category}
+      </div>
+      <div class="listing-meta-item">
+        <i class="fas fa-map-marker-alt"></i> ${listing.location || 'AU Campus'}
+      </div>
+      <div class="listing-meta-item">
+        <i class="fas fa-clock"></i> ${AUBazaar.formatDate(listing.createdAt)}
+      </div>
+    `;
+    
+    // Description
+    document.getElementById('listing-description-text').textContent = listing.description || 'No description provided.';
+    
+    // Details
+    document.getElementById('detail-category').textContent = listing.category;
+    document.getElementById('detail-condition').innerHTML = `<span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>`;
+    document.getElementById('detail-location').textContent = listing.location || 'AU Campus';
+    document.getElementById('detail-posted').textContent = AUBazaar.formatDate(listing.createdAt);
+    document.getElementById('detail-views').textContent = (listing.views || 0) + ' views';
+    
+    // Images
+    if (listing.images && listing.images.length > 0) {
+      const mainImg = document.getElementById('main-image');
+      mainImg.innerHTML = `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">`;
+      
+      if (listing.images.length > 1) {
+        document.getElementById('image-thumbnails').innerHTML = listing.images.map((img, i) => `
+          <img src="${img}" class="image-thumbnail ${i === 0 ? 'active' : ''}" onclick="changeMainImage('${img}', this)" alt="Image ${i+1}">
+        `).join('');
+      }
+    } else {
+      document.getElementById('main-image').innerHTML = `<span style="font-size:5rem">${AUBazaar.getCategoryIcon(listing.category)}</span>`;
+    }
+    
+    // Check if current user is the seller
+    AUBazaar.auth.onAuthStateChanged((user) => {
+      if (user && user.uid === listing.sellerId) {
+        document.getElementById('action-buttons').style.display = 'none';
+        document.getElementById('owner-actions').style.display = 'block';
+        document.getElementById('edit-listing-btn').href = `/sell?edit=${listingId}`;
+      }
+    });
+    
+    // Show content
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('listing-content').style.display = 'block';
+  }
+
+  async function loadSeller(sellerId) {
+    try {
+      const doc = await AUBazaar.db.collection('users').doc(sellerId).get();
+      if (doc.exists) {
+        currentSeller = { id: doc.id, ...doc.data() };
+        
+        const initials = (currentSeller.fullName || 'U').charAt(0).toUpperCase();
+        
+        // Handle profile picture
+        if (currentSeller.profilePicture) {
+          document.getElementById('seller-avatar-img').src = currentSeller.profilePicture;
+          document.getElementById('seller-avatar-img').style.display = 'block';
+          document.getElementById('seller-avatar-initials').style.display = 'none';
+        } else {
+          document.getElementById('seller-avatar').textContent = initials;
+        }
+        
+        document.getElementById('seller-name').textContent = currentSeller.fullName || 'AU Member';
+        document.getElementById('seller-profile-link').href = `/profile?id=${sellerId}`;
+        
+        const rating = currentSeller.rating || 0;
+        const stars = document.getElementById('seller-rating');
+        stars.innerHTML = [1,2,3,4,5].map(i => 
+          `<i class="${i <= rating ? 'fas' : 'far'} fa-star"></i>`
+        ).join('');
+        
+        let memberYear = 'N/A';
+        if (currentSeller.createdAt) {
+          if (currentSeller.createdAt.seconds) {
+            memberYear = new Date(currentSeller.createdAt.seconds * 1000).getFullYear();
+          } else {
+            memberYear = new Date(currentSeller.createdAt).getFullYear();
+          }
+        }
+        document.getElementById('seller-stats').textContent = 
+          `${currentSeller.totalListings || 0} listings • Member since ${memberYear}`;
+      }
+    } catch (error) {
+      console.error('Error loading seller:', error);
+    }
+  }
+
+  async function loadRelatedListings(category, excludeId) {
+    try {
+      const snapshot = await AUBazaar.db.collection('listings')
+        .where('category', '==', category)
+        .where('status', '==', 'active')
+        .limit(5)
+        .get();
+      
+      const listings = [];
+      snapshot.forEach(doc => {
+        if (doc.id !== excludeId) listings.push({ id: doc.id, ...doc.data() });
+      });
+      
+      if (listings.length === 0) {
+        document.querySelector('.related-listings').style.display = 'none';
+        return;
+      }
+      
+      document.getElementById('related-listings').innerHTML = listings.slice(0, 4).map(listing => `
+        <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
+          <div class="product-card-image">
+            ${listing.images && listing.images.length > 0 
+              ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+              : AUBazaar.getCategoryIcon(listing.category)}
+          </div>
+          <div class="product-card-body">
+            <div class="product-card-title">${listing.title}</div>
+            <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
+            <div class="product-card-meta">
+              <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+              <span>${AUBazaar.formatDate(listing.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch (error) {
+      document.querySelector('.related-listings').style.display = 'none';
+    }
+  }
+
+  function changeMainImage(src, thumb) {
+    document.getElementById('main-image').innerHTML = `<img src="${src}" alt="Listing image">`;
+    document.querySelectorAll('.image-thumbnail').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+  }
+
+  function contactSeller() {
+    if (!AUBazaar.auth.currentUser) {
+      window.location.href = `/login?redirect=/listing/${listingId}`;
+      return;
+    }
+    document.getElementById('message-modal').style.display = 'flex';
+  }
+
+  function closeMessageModal() {
+    document.getElementById('message-modal').style.display = 'none';
+  }
+
+  async function sendMessage() {
+    const content = document.getElementById('message-text').value.trim();
+    if (!content) return;
+    
+    const user = AUBazaar.auth.currentUser;
+    if (!user) return;
+    
+    try {
+      // Create or find conversation
+      const conversationId = [user.uid, currentListing.sellerId].sort().join('_') + '_' + listingId;
+      
+      await AUBazaar.db.collection('messages').add({
+        conversationId,
+        senderId: user.uid,
+        receiverId: currentListing.sellerId,
+        listingId,
+        listingTitle: currentListing.title,
+        content,
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Update conversation
+      await AUBazaar.db.collection('conversations').doc(conversationId).set({
+        participants: [user.uid, currentListing.sellerId],
+        listingId,
+        listingTitle: currentListing.title,
+        lastMessage: content,
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      closeMessageModal();
+      AUBazaar.showToast('Message sent successfully!', 'success');
+      
+      setTimeout(() => window.location.href = '/messages', 1500);
+    } catch (error) {
+      AUBazaar.showToast('Failed to send message. Please try again.', 'error');
+    }
+  }
+
+  async function toggleFavorite() {
+    const user = AUBazaar.auth.currentUser;
+    if (!user) {
+      window.location.href = `/login?redirect=/listing/${listingId}`;
+      return;
+    }
+    
+    const btn = document.getElementById('favorite-btn');
+    const isFav = btn.classList.contains('active');
+    
+    try {
+      const userRef = AUBazaar.db.collection('users').doc(user.uid);
+      if (isFav) {
+        await userRef.update({
+          favorites: firebase.firestore.FieldValue.arrayRemove(listingId)
+        });
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="far fa-heart"></i> Save to Favorites';
+        AUBazaar.showToast('Removed from favorites', 'info');
+      } else {
+        await userRef.update({
+          favorites: firebase.firestore.FieldValue.arrayUnion(listingId)
+        });
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="fas fa-heart"></i> Saved to Favorites';
+        AUBazaar.showToast('Added to favorites!', 'success');
+      }
+    } catch (error) {
+      AUBazaar.showToast('Failed to update favorites', 'error');
+    }
+  }
+
+  async function deleteListing() {
+    const result = await Swal.fire({
+      title: 'Delete Listing?',
+      text: 'This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      await AUBazaar.db.collection('listings').doc(listingId).update({
+        status: 'deleted',
+        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      AUBazaar.showToast('Listing deleted successfully', 'success');
+      setTimeout(() => window.location.href = '/dashboard', 1500);
+    } catch (error) {
+      AUBazaar.showToast('Failed to delete listing', 'error');
+    }
+  }
+
+  function reportListing() {
+    if (!AUBazaar.auth.currentUser) {
+      window.location.href = `/login?redirect=/listing/${listingId}`;
+      return;
+    }
+    document.getElementById('report-modal').style.display = 'flex';
+  }
+
+  function closeReportModal() {
+    document.getElementById('report-modal').style.display = 'none';
+  }
+
+  async function submitReport() {
+    const reason = document.getElementById('report-reason').value;
+    const details = document.getElementById('report-details').value;
+    
+    if (!reason) {
+      AUBazaar.showToast('Please select a reason', 'warning');
+      return;
+    }
+    
+    try {
+      await AUBazaar.db.collection('reports').add({
+        listingId,
+        reporterId: AUBazaar.auth.currentUser.uid,
+        reason,
+        details,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      closeReportModal();
+      AUBazaar.showToast('Report submitted. Thank you for keeping AUBazaar safe!', 'success');
+    } catch (error) {
+      AUBazaar.showToast('Failed to submit report', 'error');
+    }
+  }
+
+  function shareWhatsApp() {
+    const url = window.location.href;
+    const text = `Check out this listing on AUBazaar: ${currentListing?.title} - ${AUBazaar.formatCurrency(currentListing?.price)}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      AUBazaar.showToast('Link copied to clipboard!', 'success');
+    });
+  }
+
+  // Check favorites on load
+  AUBazaar.auth.onAuthStateChanged(async (user) => {
+    if (user && currentListing) {
+      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        const favorites = userDoc.data().favorites || [];
+        if (favorites.includes(listingId)) {
+          const btn = document.getElementById('favorite-btn');
+          btn.classList.add('active');
+          btn.innerHTML = '<i class="fas fa-heart"></i> Saved to Favorites';
+        }
+      }
+    }
+  });
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', loadListing);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .contact-page {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+    .contact-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .contact-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .contact-header p {
+      color: var(--gray);
+      font-size: 1.1rem;
+    }
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    .contact-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .contact-card i {
+      font-size: 2.5rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+    .contact-card h3 {
+      margin-bottom: 0.5rem;
+    }
+    .contact-card p {
+      color: var(--gray);
+    }
+    .about-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+    .about-section h2 {
+      margin-bottom: 1rem;
+    }
+    .about-section p {
+      line-height: 1.8;
+      color: var(--gray-dark);
+    }
+    .faq-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    .faq-section h2 {
+      margin-bottom: 1.5rem;
+    }
+    .faq-item {
+      margin-bottom: 1.5rem;
+    }
+    .faq-item h4 {
+      margin-bottom: 0.5rem;
+      color: var(--dark);
+    }
+    .faq-item p {
+      color: var(--gray);
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">
+        <div class="logo-icon">🛒</div>
+        AU<span>Bazaar</span>
+      </a>
+      <div class="navbar-search">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search listings..." onkeypress="if(event.key==='Enter') window.location.href='/marketplace?search='+this.value">
+      </div>
+      <ul class="navbar-nav" id="guest-nav">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+        <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
+      </ul>
+      <ul class="navbar-nav" id="user-nav" style="display:none">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+        <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+        <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+        <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="contact-page">
+      <div class="contact-header">
+        <h1>📬 Contact Us</h1>
+        <p>Have questions? We'd love to hear from you!</p>
+      </div>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <i class="fas fa-envelope"></i>
+          <h3>Email</h3>
+          <p><a href="mailto:support@africau.edu">support@africau.edu</a></p>
+        </div>
+        <div class="contact-card">
+          <i class="fas fa-map-marker-alt"></i>
+          <h3>Location</h3>
+          <p>Africa University, Zimbabwe</p>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h2>📝 Send us a Message</h2>
+        <div class="contact-form" style="background:white;padding:2rem;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+          <form id="contact-form" onsubmit="sendContactMessage(event)">
+            <div style="margin-bottom:1rem">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600">Your Email</label>
+              <input type="email" id="contact-email" required style="width:100%;padding:0.75rem;border:1px solid #ddd;border-radius:4px;font-size:1rem">
+            </div>
+            <div style="margin-bottom:1rem">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600">Subject</label>
+              <input type="text" id="contact-subject" required style="width:100%;padding:0.75rem;border:1px solid #ddd;border-radius:4px;font-size:1rem">
+            </div>
+            <div style="margin-bottom:1rem">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600">Message</label>
+              <textarea id="contact-message" rows="5" required style="width:100%;padding:0.75rem;border:1px solid #ddd;border-radius:4px;font-size:1rem;resize:vertical"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Send Message</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h2>🏫 About AU Bazaar</h2>
+        <p>
+          Welcome to <strong>AU Bazaar</strong>, the official campus marketplace for Africa University! 
+          We're a student-powered platform designed to make buying and selling within the AU community 
+          easy, safe, and convenient.
+        </p>
+        <br>
+        <p>
+          Whether you're looking to sell your old textbooks, buy electronics, or find dorm essentials, 
+          AU Bazaar connects you with fellow students and staff. We verify all users have valid 
+          Africa University email addresses to ensure a trusted marketplace environment.
+        </p>
+        <br>
+        <p>
+          <strong>Our Mission:</strong> To create a sustainable circular economy within Africa University 
+          where students can save money on essentials and earn extra income from items they no longer need.
+        </p>
+      </div>
+
+      <div class="faq-section">
+        <h2>❓ Frequently Asked Questions</h2>
+        
+        <div class="faq-item">
+          <h4>Who can use AU Bazaar?</h4>
+          <p>AU Bazaar is exclusively for Africa University students, staff, and faculty. You must have a valid @africau.edu or @students.africau.edu email address to register.</p>
+        </div>
+
+        <div class="faq-item">
+          <h4>Is it free to use?</h4>
+          <p>Yes! AU Bazaar is completely free for all AU community members. There are no listing fees or commissions.</p>
+        </div>
+
+        <div class="faq-item">
+          <h4>How do I contact a seller?</h4>
+          <p>Click on any listing and use the "Message Seller" button to start a conversation. All messaging happens through our secure in-app messaging system.</p>
+        </div>
+
+        <div class="faq-item">
+          <h4>How do I list an item?</h4>
+          <p>Click "Sell" in the navigation, fill in the details about your item, add photos, and publish. It's that simple!</p>
+        </div>
+
+        <div class="faq-item">
+          <h4>What can I sell?</h4>
+          <p>You can sell textbooks, electronics, clothing, dorm essentials, sports equipment, services, food, and more. Just no furniture - students live in dorms!</p>
+        </div>
+
+        <div class="faq-item">
+          <h4>How do I report a problem?</h4>
+          <p>Contact us at support@aubazaar.edu or use the Report button on any listing if you see something inappropriate.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="logo-icon">🛒</div>
+        <span>AU<span>Bazaar</span></span>
+      </div>
+      <p>© 2024 AU Bazaar - Africa University Campus Marketplace</p>
+      <div class="footer-links">
+        <a href="/contact">Contact</a>
+        <a href="/register">Join Now</a>
+        <a href="/marketplace">Browse</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script>
+    // Check auth state and show appropriate nav
+    AUBazaar.auth.onAuthStateChanged((user) => {
+      const guestNav = document.getElementById('guest-nav');
+      const userNav = document.getElementById('user-nav');
+      
+      if (user) {
+        guestNav.style.display = 'none';
+        userNav.style.display = 'flex';
+        
+        // Check if admin
+        AUBazaar.db.collection('users').doc(user.uid).get().then(doc => {
+          if (doc.exists && doc.data().role === 'admin') {
+            document.getElementById('admin-link').style.display = 'block';
+          }
+        });
+        
+        // Update avatar
+        const initials = (user.displayName || user.email).charAt(0).toUpperCase();
+        document.getElementById('nav-user-avatar').textContent = initials;
+      } else {
+        guestNav.style.display = 'flex';
+        userNav.style.display = 'none';
+      }
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+  async function sendContactMessage(e) {
+    e.preventDefault();
+    const email = document.getElementById('contact-email').value;
+    const subject = document.getElementById('contact-subject').value;
+    const message = document.getElementById('contact-message').value;
+    const btn = e.target.querySelector('button');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    
+    try {
+      await firebase.firestore().collection('contact_messages').add({
+        email,
+        subject,
+        message,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'unread'
+      });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Message Sent!',
+        text: 'We will get back to you soon.',
+        confirmButtonText: 'OK'
+      });
+      
+      document.getElementById('contact-form').reset();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to send message. Please try again.',
+        confirmButtonText: 'OK'
+      });
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = 'Send Message';
+  }
+</script>
+</body>
+</html>

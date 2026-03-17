@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .messages-page {
+      height: calc(100vh - 70px);
+      display: flex;
+      flex-direction: column;
+    }
+    .messages-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      overflow: hidden;
+    }
+    .conversations-list {
+      border-right: 1px solid var(--gray-light);
+      overflow-y: auto;
+      background: white;
+    }
+    .conversations-header {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--gray-light);
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 10;
+    }
+    .conversation-search {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--gray-light);
+    }
+    .conversation-search input {
+      width: 100%;
+      padding: 8px 14px;
+      border: 2px solid var(--gray-light);
+      border-radius: 20px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .conversation-search input:focus {
+      border-color: var(--primary-light);
+    }
+    .conversation-item {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--gray-light);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+    }
+    .conversation-item:hover { background: var(--light); }
+    .conversation-item.active { background: #eaf4fb; border-left: 3px solid var(--primary); }
+    .conversation-item.unread .conversation-name { font-weight: 700; }
+    .conversation-item.unread .conversation-preview { color: var(--dark); font-weight: 500; }
+    .conv-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      font-size: 1rem;
+    }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-name {
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .conv-preview {
+      font-size: 0.82rem;
+      color: var(--gray);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .conv-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .conv-time { font-size: 0.75rem; color: var(--gray); }
+    .unread-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      background: #f8f9fa;
+      height: 100%;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--gray-light);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: white;
+    }
+    .chat-header-info h4 { font-weight: 700; font-size: 1rem; }
+    .chat-header-info p { font-size: 0.82rem; color: var(--gray); }
+    .chat-listing-preview {
+      background: #eaf4fb;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .chat-listing-preview:hover { background: #d6eaf8; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      min-height: 0;
+    }
+    .message-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .message-group.sent { align-items: flex-end; }
+    .message-group.received { align-items: flex-start; }
+    .message-bubble {
+      max-width: 65%;
+      padding: 10px 15px;
+      border-radius: 18px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .message-bubble.sent {
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .message-bubble.received {
+      background: white;
+      color: var(--dark);
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .message-time {
+      font-size: 0.72rem;
+      color: var(--gray);
+      padding: 0 4px;
+    }
+    .date-divider {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin: 0.5rem 0;
+      position: relative;
+    }
+    .date-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--gray-light);
+    }
+    .date-divider span {
+      background: #f8f9fa;
+      padding: 0 1rem;
+      position: relative;
+    }
+    .chat-input-area {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--gray-light);
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-end;
+      background: white;
+      flex-shrink: 0;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 2px solid var(--gray-light);
+      border-radius: 25px;
+      outline: none;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      resize: none;
+      max-height: 120px;
+      font-family: var(--font-main);
+    }
+    .chat-input:focus { border-color: var(--primary-light); }
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    .send-btn:hover { background: var(--primary-dark); transform: scale(1.05); }
+    .send-btn:disabled { background: var(--gray-light); cursor: not-allowed; transform: none; }
+    .no-conversation {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      color: var(--gray);
+      text-align: center;
+    }
+    .no-conversation-icon { font-size: 4rem; opacity: 0.3; }
+    
+    /* Chat open animation */
+    .chat-area.fade-in {
+      animation: chatFadeIn 0.35s ease;
+    }
+
+    @keyframes chatFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Message pop animation */
+    .message-group {
+      animation: messagePop 0.2s ease;
+    }
+
+    @keyframes messagePop {
+      from {
+        transform: scale(0.95);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .messages-layout { grid-template-columns: 1fr; }
+      .chat-area { display: none; }
+      .chat-area.active { display: flex; }
+      .conversations-list.hidden { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    <ul class="navbar-nav" id="user-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="/messages" class="active"><i class="fas fa-envelope"></i></a></li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="messages-page">
+  <div class="messages-layout">
+    
+    <!-- Conversations List -->
+    <div class="conversations-list" id="conversations-list">
+      <div class="conversations-header">
+        <span><i class="fas fa-envelope"></i> Messages</span>
+        <button class="btn btn-sm btn-danger" onclick="clearAllMessages()" title="Clear All Messages" style="padding:4px 8px;font-size:0.75rem">
+          <i class="fas fa-trash"></i> Clear All
+        </button>
+      </div>
+      <div class="conversation-search">
+        <input type="text" placeholder="Search conversations..." id="conv-search" oninput="filterConversations()">
+      </div>
+      <div id="conversations-container">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+    </div>
+    
+    <!-- Chat Area -->
+    <div class="chat-area" id="chat-area">
+      <div class="no-conversation" id="no-conversation">
+        <div class="no-conversation-icon"><i class="fas fa-comments"></i></div>
+        <h3 style="font-weight:700;color:var(--dark)">Select a conversation</h3>
+        <p>Choose a conversation from the left to start messaging</p>
+      </div>
+      
+      <div id="active-chat" style="display:none;flex-direction:column;height:100%">
+        <!-- Chat Header -->
+        <div class="chat-header">
+          <button class="btn btn-sm btn-outline" onclick="backToList()" style="display:none" id="back-btn">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="conv-avatar" id="chat-avatar">?</div>
+          <div class="chat-header-info">
+            <h4 id="chat-name">Loading...</h4>
+            <p id="chat-status">AU Member</p>
+          </div>
+          <div class="chat-listing-preview" id="chat-listing-preview" onclick="viewListing()" style="display:none">
+            <i class="fas fa-tag" style="color:var(--primary)"></i>
+            <div>
+              <div style="font-weight:600;font-size:0.85rem" id="chat-listing-title">Item</div>
+              <div style="color:var(--primary);font-weight:700" id="chat-listing-price">$0</div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="deleteCurrentConversation()" title="Delete conversation" style="margin-left:auto">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        
+        <!-- Messages -->
+        <div class="chat-messages" id="chat-messages"></div>
+        <div id="typing-indicator" style="display:none;padding:8px 14px;color:#777;font-size:0.85rem;font-style:italic;">
+          Someone is typing...
+        </div>
+        
+        <!-- Input -->
+        <div class="chat-input-area" id="chat-input-area" style="display:flex">
+          <input type="file" id="image-input" accept="image/*" style="display:none" onchange="sendImage(event)">
+          <button class="send-btn" onclick="document.getElementById('image-input').click()" title="Send Image" style="padding:8px 12px">
+            <i class="fas fa-image"></i>
+          </button>
+          <textarea class="chat-input" id="message-input" placeholder="Type a message..." rows="1" 
+            onkeypress="handleKeyPress(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" onclick="sendMessage()" id="send-btn">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let currentUser = null;
+  let conversations = [];
+  let activeConversation = null;
+  let messagesUnsubscribe = null;
+  let conversationsUnsubscribe = null;
+
+  AUBazaar.auth.onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/messages';
+      return;
+    }
+    currentUser = user;
+    document.getElementById('nav-user-avatar').textContent = (user.displayName || user.email).charAt(0).toUpperCase();
+    loadConversations();
+  });
+
+  function loadConversations() {
+    if (conversationsUnsubscribe) conversationsUnsubscribe();
+    
+    // Query without orderBy first (index not required), then sort in memory
+    conversationsUnsubscribe = AUBazaar.db.collection('conversations')
+      .where('participants', 'array-contains', currentUser.uid)
+      .onSnapshot(async (snapshot) => {
+        conversations = [];
+        
+        if (snapshot.empty) {
+          renderConversations();
+          return;
+        }
+        
+        for (const doc of snapshot.docs) {
+          const conv = { id: doc.id, ...doc.data() };
+          
+          // Skip if current user has hidden this conversation
+          if (conv.hiddenBy && conv.hiddenBy.includes(currentUser.uid)) {
+            continue;
+          }
+          
+          // Get other participant info
+          const otherId = conv.participants.find(p => p !== currentUser.uid);
+          if (otherId) {
+            try {
+              const userDoc = await AUBazaar.db.collection('users').doc(otherId).get();
+              conv.otherUser = userDoc.exists ? { id: otherId, ...userDoc.data() } : { id: otherId, fullName: 'AU Member' };
+            } catch (e) {
+              conv.otherUser = { id: otherId, fullName: 'AU Member' };
+            }
+          }
+          
+          // Count unread messages - get all messages and count in JS to avoid index
+          const allMessagesSnap = await AUBazaar.db.collection('messages')
+            .where('conversationId', '==', conv.id)
+            .get();
+          const allMessages = allMessagesSnap.docs.map(d => d.data());
+          conv.unreadCount = allMessages.filter(m => m.receiverId === currentUser.uid && m.read === false).length;
+          
+          conversations.push(conv);
+        }
+        
+        // Sort by updatedAt descending in JavaScript
+        conversations.sort((a, b) => {
+          const aTime = a.updatedAt ? (a.updatedAt.seconds || 0) : 0;
+          const bTime = b.updatedAt ? (b.updatedAt.seconds || 0) : 0;
+          return bTime - aTime;
+        });
+        
+        renderConversations();
+        updateUnreadCount();
+      });
+  }
+
+  function renderConversations() {
+    const container = document.getElementById('conversations-container');
+    
+    if (conversations.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:2rem">
+          <div class="empty-state-icon">💬</div>
+          <h3>No messages yet</h3>
+          <p>Start a conversation by messaging a seller!</p>
+          <a href="/marketplace" class="btn btn-primary mt-2" style="font-size:0.85rem">Browse Listings</a>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = conversations.map(conv => {
+      const other = conv.otherUser || {};
+      const initials = (other.fullName || 'U').charAt(0).toUpperCase();
+      const isActive = activeConversation?.id === conv.id;
+      
+      return `
+        <div class="conversation-item ${isActive ? 'active' : ''} ${conv.unreadCount > 0 ? 'unread' : ''}" 
+             onclick="openConversation('${conv.id}')">
+          <div class="conv-avatar">${initials}</div>
+          <div class="conv-info">
+            <div class="conv-name">${other.fullName || 'AU Member'}</div>
+            <div class="conv-preview">${conv.listingTitle ? '📦 ' + conv.listingTitle : conv.lastMessage || 'No messages yet'}</div>
+          </div>
+          <div class="conv-meta">
+            <div class="conv-time">${conv.updatedAt ? AUBazaar.formatDate(conv.updatedAt) : ''}</div>
+            ${conv.unreadCount > 0 ? `<div class="unread-dot"></div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateUnreadCount() {
+    const total = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+    const badge = document.getElementById('unread-count');
+    if (total > 0) {
+      badge.textContent = total;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  async function openConversation(convId) {
+    console.log('openConversation called with:', convId);
+    try {
+      activeConversation = conversations.find(c => c.id === convId);
+      if (!activeConversation) {
+        console.error('Conversation not found:', convId);
+        return;
+      }
+      
+      // Update UI
+      renderConversations();
+      
+      const other = activeConversation.otherUser || {};
+      const initials = (other.fullName || 'U').charAt(0).toUpperCase();
+      
+      const avatarEl = document.getElementById('chat-avatar');
+      if (avatarEl) {
+        // Handle profile picture
+        if (other.profilePicture) {
+          avatarEl.innerHTML = `<img src="${other.profilePicture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        } else {
+          avatarEl.textContent = initials;
+        }
+      }
+      
+      const nameEl = document.getElementById('chat-name');
+      if (nameEl) nameEl.textContent = other.fullName || 'AU Member';
+      
+      const statusEl = document.getElementById('chat-status');
+      if (statusEl) statusEl.textContent = other.role || 'AU Member';
+      
+      // Show listing preview if available
+      const listingPreview = document.getElementById('chat-listing-preview');
+      if (listingPreview) {
+        if (activeConversation.listingId) {
+          try {
+            const listingDoc = await AUBazaar.db.collection('listings').doc(activeConversation.listingId).get();
+            if (listingDoc.exists) {
+              const listing = listingDoc.data();
+              document.getElementById('chat-listing-title').textContent = listing.title;
+              document.getElementById('chat-listing-price').textContent = AUBazaar.formatCurrency(listing.price);
+              listingPreview.style.display = 'flex';
+            }
+          } catch (e) {
+            console.error('Error loading listing:', e);
+          }
+        } else {
+          listingPreview.style.display = 'none';
+        }
+      }
+      
+      // Show chat - with null checks
+      const noConvEl = document.getElementById('no-conversation');
+      const activeChatEl = document.getElementById('active-chat');
+      
+      if (noConvEl) {
+        noConvEl.style.display = 'none';
+        console.log('Hidden no-conversation');
+      }
+      if (activeChatEl) {
+        activeChatEl.style.display = 'flex';
+        
+        // Trigger fade-in animation
+        const chatArea = document.getElementById('chat-area');
+        if (chatArea) {
+          chatArea.classList.remove('fade-in');
+          setTimeout(() => {
+            chatArea.classList.add('fade-in');
+          }, 10);
+        }
+        
+        console.log('Shown active-chat');
+        console.log('active-chat style:', activeChatEl.style.display);
+      }
+      
+      // Mobile
+      if (window.innerWidth <= 768) {
+        const convList = document.getElementById('conversations-list');
+        const chatArea = document.getElementById('chat-area');
+        const backBtn = document.getElementById('back-btn');
+        
+        if (convList) convList.classList.add('hidden');
+        if (chatArea) chatArea.classList.add('active');
+        if (backBtn) backBtn.style.display = 'flex';
+      }
+      
+      // Load messages
+      loadMessages(convId);
+      
+      // Setup typing listener
+      setupTypingListener(convId);
+      
+      // Mark messages as read
+      markMessagesAsRead(convId);
+    } catch (error) {
+      console.error('Error opening conversation:', error);
+      AUBazaar.showToast('Error opening conversation', 'error');
+    }
+  }
+
+  function loadMessages(convId) {
+    if (messagesUnsubscribe) messagesUnsubscribe();
+    
+    const messagesContainer = document.getElementById('chat-messages');
+    messagesContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    
+    // Query without orderBy first, sort in JavaScript
+    messagesUnsubscribe = AUBazaar.db.collection('messages')
+      .where('conversationId', '==', convId)
+      .onSnapshot((snapshot) => {
+        const messages = [];
+        snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+        // Sort by createdAt ascending in JavaScript
+        messages.sort((a, b) => {
+          const aTime = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+          const bTime = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+          return aTime - bTime;
+        });
+        renderMessages(messages);
+      });
+  }
+
+  function renderMessages(messages) {
+    const container = document.getElementById('chat-messages');
+    
+    if (messages.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;color:var(--gray);padding:2rem">
+          <p>No messages yet. Say hello! 👋</p>
+        </div>
+      `;
+      return;
+    }
+    
+    let html = '';
+    let lastDate = null;
+    
+    messages.forEach(msg => {
+      const msgDate = msg.createdAt ? new Date(msg.createdAt.seconds * 1000).toDateString() : null;
+      
+      if (msgDate && msgDate !== lastDate) {
+        html += `<div class="date-divider"><span>${msgDate === new Date().toDateString() ? 'Today' : msgDate}</span></div>`;
+        lastDate = msgDate;
+      }
+      
+      // Skip messages deleted by current user
+      if (msg.deletedBy && msg.deletedBy.includes(currentUser.uid)) {
+        return;
+      }
+      
+      const isSent = msg.senderId === currentUser.uid;
+      const time = msg.createdAt ? AUBazaar.formatDate(msg.createdAt) : '';
+      
+      html += `
+        <div class="message-group ${isSent ? 'sent' : 'received'}" style="position:relative">
+          <div class="message-bubble ${isSent ? 'sent' : 'received'}" data-message-id="${msg.id}" oncontextmenu="${isSent ? `showMessageMenu(event, '${msg.id}')` : ''}" title="${isSent ? 'Right-click to delete' : ''}">
+            ${msg.imageUrl ? `<img src="${msg.imageUrl}" style="max-width:220px;border-radius:12px;cursor:pointer" onclick="window.open('${msg.imageUrl}', '_blank')">` : escapeHtml(msg.content)}
+          </div>
+          <div class="message-time">${time} ${isSent && msg.read ? '✓✓' : ''}</div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    
+    if (!content || !activeConversation) return;
+    
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    
+    const container = document.getElementById('chat-messages');
+    
+    // Show message instantly with current time (optimistic UI)
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const tempMessage = `
+      <div class="message-group sent" data-message-id="temp-${Date.now()}">
+        <div class="message-bubble sent">${escapeHtml(content)}</div>
+        <div class="message-time">${timeStr}</div>
+      </div>
+    `;
+    
+    // Remove "no messages" text if present
+    if (container.querySelector('p')?.textContent.includes('No messages')) {
+      container.innerHTML = '';
+    }
+    
+    container.insertAdjacentHTML('beforeend', tempMessage);
+    container.scrollTop = container.scrollHeight;
+    
+    input.value = '';
+    input.style.height = 'auto';
+    
+    try {
+      const otherId = activeConversation.participants.find(p => p !== currentUser.uid);
+      
+      await AUBazaar.db.collection('messages').add({
+        conversationId: activeConversation.id,
+        senderId: currentUser.uid,
+        receiverId: otherId,
+        listingId: activeConversation.listingId || null,
+        content,
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      await AUBazaar.db.collection('conversations').doc(activeConversation.id).update({
+        lastMessage: content,
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+    } catch (error) {
+      // Remove the temp message if failed
+      container.lastElementChild?.remove();
+      AUBazaar.showToast('Failed to send message', 'error');
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+  
+  // Helper function to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Send image in chat
+  async function sendImage(event) {
+    const file = event.target.files[0];
+    if (!file || !activeConversation) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      AUBazaar.showToast('Image must be less than 5MB', 'error');
+      return;
+    }
+    
+    const otherId = activeConversation.participants.find(p => p !== currentUser.uid);
+    
+    // Show loading
+    AUBazaar.showToast('Uploading image...', 'info');
+    
+    try {
+      const storageRef = AUBazaar.storage.ref().child(`chat-images/${activeConversation.id}/${Date.now()}-${file.name}`);
+      await storageRef.put(file);
+      const imageUrl = await storageRef.getDownloadURL();
+      
+      // Show image instantly
+      const container = document.getElementById('chat-messages');
+      const tempMessage = `
+        <div class="message-group sent">
+          <div class="message-bubble sent">
+            <img src="${imageUrl}" style="max-width:220px;border-radius:12px">
+          </div>
+          <div class="message-time">sending...</div>
+        </div>
+      `;
+      
+      // Remove "no messages" text if present
+      if (container.querySelector('p')?.textContent.includes('No messages')) {
+        container.innerHTML = '';
+      }
+      
+      container.insertAdjacentHTML('beforeend', tempMessage);
+      container.scrollTop = container.scrollHeight;
+      
+      // Save to Firestore
+      await AUBazaar.db.collection('messages').add({
+        conversationId: activeConversation.id,
+        senderId: currentUser.uid,
+        receiverId: otherId,
+        content: '',
+        imageUrl: imageUrl,
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Update conversation
+      await AUBazaar.db.collection('conversations').doc(activeConversation.id).update({
+        lastMessage: '📷 Image',
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      AUBazaar.showToast('Image sent!', 'success');
+      
+    } catch (error) {
+      console.error('Error sending image:', error);
+      AUBazaar.showToast('Failed to send image', 'error');
+    }
+    
+    // Reset input
+    event.target.value = '';
+  }
+
+  async function markMessagesAsRead(convId) {
+    try {
+      // Get all messages and filter in JS to avoid index requirement
+      const allSnap = await AUBazaar.db.collection('messages')
+        .where('conversationId', '==', convId)
+        .get();
+      
+      const batch = AUBazaar.db.batch();
+      let updated = false;
+      allSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.receiverId === currentUser.uid && data.read === false) {
+          batch.update(doc.ref, { read: true });
+          updated = true;
+        }
+      });
+      if (updated) {
+        await batch.commit();
+      }
+    } catch (e) {
+      console.error('Error marking messages as read:', e);
+    }
+  }
+
+  function handleKeyPress(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    
+    // Send typing status
+    sendTypingStatus(true);
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      sendTypingStatus(false);
+    }, 1500);
+  }
+  
+  // Typing timeout variable
+  let typingTimeout;
+  
+  // Send typing status to Firestore
+  function sendTypingStatus(isTyping) {
+    if (!activeConversation || !currentUser) return;
+    
+    const typingField = {};
+    typingField[`typing.${currentUser.uid}`] = isTyping;
+    
+    AUBazaar.db.collection('conversations')
+      .doc(activeConversation.id)
+      .update(typingField)
+      .catch(() => {}); // Ignore errors
+  }
+  
+  // Listen for typing status from other user
+  let typingUnsubscribe = null;
+  
+  function setupTypingListener(convId) {
+    if (typingUnsubscribe) typingUnsubscribe();
+    
+    typingUnsubscribe = AUBazaar.db.collection('conversations')
+      .doc(convId)
+      .onSnapshot(doc => {
+        if (!doc.exists || !activeConversation) return;
+        
+        const data = doc.data();
+        if (!data.typing) return;
+        
+        const otherId = activeConversation.participants.find(p => p !== currentUser.uid);
+        const isTyping = data.typing[otherId] === true;
+        
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+          if (isTyping && activeConversation.otherUser) {
+            indicator.style.display = 'block';
+            indicator.textContent = `${activeConversation.otherUser.fullName || 'User'} is typing...`;
+          } else {
+            indicator.style.display = 'none';
+          }
+        }
+      });
+  }
+
+  function filterConversations() {
+    const query = document.getElementById('conv-search').value.toLowerCase();
+    const items = document.querySelectorAll('.conversation-item');
+    items.forEach(item => {
+      const name = item.querySelector('.conv-name').textContent.toLowerCase();
+      const preview = item.querySelector('.conv-preview').textContent.toLowerCase();
+      item.style.display = name.includes(query) || preview.includes(query) ? 'flex' : 'none';
+    });
+  }
+
+  function backToList() {
+    // Clean up typing listener
+    if (typingUnsubscribe) {
+      typingUnsubscribe();
+      typingUnsubscribe = null;
+    }
+    
+    // Clear typing status for current user
+    sendTypingStatus(false);
+    
+    document.getElementById('conversations-list').classList.remove('hidden');
+    document.getElementById('chat-area').classList.remove('active');
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('active-chat').style.display = 'none';
+    document.getElementById('typing-indicator').style.display = 'none';
+  }
+
+  function viewListing() {
+    if (activeConversation?.listingId) {
+      window.location.href = `/listing/${activeConversation.listingId}`;
+    }
+  }
+
+  async function deleteCurrentConversation() {
+    if (!activeConversation) return;
+    
+    const result = await Swal.fire({
+      title: 'Hide Conversation?',
+      text: 'This will hide the conversation from your list. It will still be visible to the other person.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Hide for Me',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      // Hide conversation for current user only
+      await AUBazaar.db.collection('conversations').doc(activeConversation.id).update({
+        hiddenBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+      });
+      AUBazaar.showToast('Conversation hidden', 'success');
+      backToList();
+    } catch (error) {
+      console.error('Error hiding conversation:', error);
+      AUBazaar.showToast('Failed to hide conversation', 'error');
+    }
+  }
+
+  // Context menu for messages
+  let messageContextMenu = null;
+  let currentContextMenuMessageId = null;
+  
+  function showMessageMenu(event, messageId) {
+    event.preventDefault();
+    
+    // Remove existing menu
+    hideMessageMenu();
+    
+    currentContextMenuMessageId = messageId;
+    
+    // Create menu
+    messageContextMenu = document.createElement('div');
+    messageContextMenu.id = 'message-context-menu';
+    messageContextMenu.style.cssText = `
+      position: fixed;
+      z-index: 10000;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 6px 0;
+      min-width: 160px;
+      font-size: 14px;
+    `;
+    
+    messageContextMenu.innerHTML = `
+      <div onclick="copyMessage('${messageId}')" style="padding: 10px 16px;cursor:pointer:hover{background:#f5f5f5}">
+        📋 Copy
+      </div>
+      <div onclick="deleteMessageForMe('${messageId}')" style="padding: 10px 16px;cursor:pointer;color:#dc3545">
+        🗑️ Delete for Me
+      </div>
+      <div onclick="deleteMessageForEveryone('${messageId}')" style="padding: 10px 16px;cursor:pointer;color:#dc3545;font-weight:600">
+        🗑️ Delete for Everyone
+      </div>
+    `;
+    
+    // Position menu
+    messageContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 180)}px`;
+    messageContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 120)}px`;
+    
+    document.body.appendChild(messageContextMenu);
+    
+    // Add hover effects
+    messageContextMenu.querySelectorAll('div').forEach(item => {
+      item.addEventListener('mouseenter', () => item.style.background = '#f5f5f5');
+      item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+    });
+    
+    // Close on click outside
+    setTimeout(() => {
+      document.addEventListener('click', hideMessageMenu);
+    }, 10);
+  }
+  
+  function hideMessageMenu() {
+    if (messageContextMenu) {
+      messageContextMenu.remove();
+      messageContextMenu = null;
+    }
+    currentContextMenuMessageId = null;
+    document.removeEventListener('click', hideMessageMenu);
+  }
+  
+  function copyMessage(messageId) {
+    const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (msgEl) {
+      const text = msgEl.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        AUBazaar.showToast('Copied to clipboard', 'success');
+      });
+    } else {
+      // Try to get from messages array
+      const msg = messages.find(m => m.id === messageId);
+      if (msg && msg.content) {
+        navigator.clipboard.writeText(msg.content).then(() => {
+          AUBazaar.showToast('Copied to clipboard', 'success');
+        });
+      }
+    }
+    hideMessageMenu();
+  }
+  
+  async function deleteMessageForMe(messageId) {
+    try {
+      await AUBazaar.db.collection('messages').doc(messageId).update({
+        deletedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+      });
+      AUBazaar.showToast('Message hidden for you', 'success');
+    } catch (error) {
+      AUBazaar.showToast('Failed to hide message', 'error');
+    }
+    hideMessageMenu();
+  }
+  
+  async function deleteMessageForEveryone(messageId) {
+    const result = await Swal.fire({
+      title: 'Delete for Everyone?',
+      text: 'This message will be deleted for everyone. This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result.isConfirmed) {
+      hideMessageMenu();
+      return;
+    }
+    
+    try {
+      await AUBazaar.db.collection('messages').doc(messageId).delete();
+      AUBazaar.showToast('Message deleted for everyone', 'success');
+    } catch (error) {
+      AUBazaar.showToast('Failed to delete message', 'error');
+    }
+    hideMessageMenu();
+  }
+
+  async function deleteMessage(messageId) {
+    const result = await Swal.fire({
+      title: 'Delete Message?',
+      html: 'Choose delete option:',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete for Everyone',
+      cancelButtonText: 'Delete for Me Only',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result.isConfirmed && result.dismiss === Swal.DismissReason.cancel) {
+      // Delete for me only - just hide it locally
+      try {
+        await AUBazaar.db.collection('messages').doc(messageId).update({
+          deletedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+        });
+        AUBazaar.showToast('Message hidden for you', 'success');
+      } catch (error) {
+        AUBazaar.showToast('Failed to hide message', 'error');
+      }
+      return;
+    }
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      await AUBazaar.db.collection('messages').doc(messageId).delete();
+      AUBazaar.showToast('Message deleted for everyone', 'success');
+    } catch (error) {
+      AUBazaar.showToast('Failed to delete message', 'error');
+    }
+  }
+
+  // Clear all messages - delete all conversations and messages for current user
+  async function clearAllMessages() {
+    const result = await Swal.fire({
+      title: 'Clear All Messages?',
+      html: 'This will permanently delete ALL your conversations and messages. This cannot be undone!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Delete All',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      // Show loading
+      AUBazaar.showToast('Deleting all messages...', 'info');
+      
+      // Get all conversations for current user
+      const convsSnapshot = await AUBazaar.db.collection('conversations')
+        .where('participants', 'array-contains', currentUser.uid)
+        .get();
+      
+      // Delete all messages in each conversation
+      for (const convDoc of convsSnapshot.docs) {
+        const convId = convDoc.id;
+        
+        // Get all messages in this conversation
+        const msgsSnapshot = await AUBazaar.db.collection('messages')
+          .where('conversationId', '==', convId)
+          .get();
+        
+        // Delete all messages
+        const deletePromises = msgsSnapshot.docs.map(msgDoc => 
+          msgDoc.ref.delete()
+        );
+        await Promise.all(deletePromises);
+        
+        // Delete the conversation itself
+        await convDoc.ref.delete();
+      }
+      
+      // Clear local cache
+      conversations = [];
+      activeConversation = null;
+      
+      // Refresh the UI
+      renderConversations();
+      showNoConversation();
+      
+      AUBazaar.showToast('All messages deleted', 'success');
+    } catch (error) {
+      console.error('Error clearing messages:', error);
+      AUBazaar.showToast('Failed to delete some messages', 'error');
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

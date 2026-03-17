@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .profile-page { padding: 2rem 0; }
+    .profile-header-card {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .profile-cover {
+      height: 150px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, #1abc9c 100%);
+    }
+    .profile-info {
+      padding: 0 2rem 2rem;
+      position: relative;
+    }
+    .profile-avatar-large {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: white;
+      border: 4px solid white;
+      margin-top: -50px;
+      margin-bottom: 1rem;
+    }
+    .profile-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--dark);
+    }
+    .profile-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+    .profile-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+    .seller-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-top-seller {
+      background: linear-gradient(135deg, #ffd700, #ffb700);
+      color: #000;
+    }
+    .badge-trusted {
+      background: linear-gradient(135deg, #4CAF50, #2E7D32);
+      color: white;
+    }
+    .badge-fast-responder {
+      background: linear-gradient(135deg, #2196F3, #1565C0);
+      color: white;
+    }
+    .badge-new-seller {
+      background: linear-gradient(135deg, #9C27B0, #6A1B9A);
+      color: white;
+    }
+    .profile-stats {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--gray-light);
+    }
+    .profile-stat {
+      text-align: center;
+    }
+    .profile-stat-number {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--dark);
+    }
+    .profile-stat-label {
+      font-size: 0.8rem;
+      color: var(--gray);
+    }
+    .rating-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 0.5rem;
+    }
+    .stars {
+      display: flex;
+      gap: 3px;
+      color: var(--secondary);
+      font-size: 1rem;
+    }
+    .rating-number {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .rating-count {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+    .profile-actions {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .review-card {
+      background: var(--light);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .review-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 0.5rem;
+    }
+    .review-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .review-stars { color: var(--secondary); font-size: 0.85rem; }
+    .review-text { font-size: 0.9rem; color: var(--gray); line-height: 1.6; }
+    .rate-modal-stars {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 2rem;
+      cursor: pointer;
+      margin: 1rem 0;
+    }
+    .rate-modal-stars span {
+      color: var(--gray-light);
+      transition: var(--transition);
+    }
+    .rate-modal-stars span.active,
+    .rate-modal-stars span:hover {
+      color: var(--secondary);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    <div class="navbar-search">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Search listings..." onkeypress="if(event.key==='Enter') window.location.href='/marketplace?search='+this.value">
+    </div>
+    <ul class="navbar-nav" id="guest-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    </ul>
+    <ul class="navbar-nav" id="user-nav" style="display:none">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="profile-page">
+    
+    <!-- Loading -->
+    <div id="loading-state" class="loading-spinner"><div class="spinner"></div></div>
+    
+    <!-- Profile Content -->
+    <div id="profile-content" style="display:none">
+      
+      <!-- Profile Header -->
+      <div class="profile-header-card">
+        <div class="profile-cover"></div>
+        <div class="profile-info">
+          <div class="profile-avatar-large" id="profile-avatar">
+            <img id="profile-avatar-img" style="width:100%;height:100%;object-fit:cover;display:none">
+            <span id="profile-avatar-initials">U</span>
+          </div>
+          
+          <div class="profile-actions" id="profile-actions">
+            <!-- Actions loaded dynamically -->
+          </div>
+          
+          <div class="profile-name" id="profile-name">Loading...</div>
+          
+          <div class="rating-display">
+            <div class="stars" id="profile-stars">
+              <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
+            </div>
+            <span class="rating-number" id="profile-rating">0.0</span>
+            <span class="rating-count" id="profile-rating-count">(0 reviews)</span>
+          </div>
+          
+          <div class="profile-meta">
+            <div class="profile-meta-item" id="profile-role-meta">
+              <i class="fas fa-user-tag"></i> <span>Student</span>
+            </div>
+            <div class="profile-meta-item" id="profile-dept-meta" style="display:none">
+              <i class="fas fa-building"></i> <span id="profile-dept"></span>
+            </div>
+            <div class="profile-meta-item">
+              <i class="fas fa-calendar"></i> Member since <span id="profile-joined">N/A</span>
+            </div>
+            <div class="profile-meta-item" id="profile-verified-meta" style="display:none">
+              <i class="fas fa-check-circle" style="color:var(--accent)"></i> Verified AU Member
+            </div>
+            <div id="seller-badges" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem"></div>
+          </div>
+          
+          <div id="profile-bio-section" style="display:none;margin-top:1rem">
+            <p style="color:var(--gray);font-size:0.9rem;line-height:1.7" id="profile-bio-text"></p>
+          </div>
+          
+          <div class="profile-stats">
+            <div class="profile-stat">
+              <div class="profile-stat-number" id="stat-listings">0</div>
+              <div class="profile-stat-label">Listings</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-number" id="stat-sold">0</div>
+              <div class="profile-stat-label">Sold</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-number" id="stat-rating">0</div>
+              <div class="profile-stat-label">Rating</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Listings & Reviews Grid -->
+      <div class="grid grid-2" style="align-items:start">
+        
+        <!-- Active Listings -->
+        <div>
+          <h3 style="font-weight:700;margin-bottom:1rem"><i class="fas fa-list"></i> Active Listings</h3>
+          <div id="user-listings-grid" class="products-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+          </div>
+          <div id="listings-empty" class="empty-state hidden">
+            <div class="empty-state-icon">📦</div>
+            <h3>No active listings</h3>
+          </div>
+        </div>
+        
+        <!-- Reviews -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <h3 style="font-weight:700"><i class="fas fa-star"></i> Reviews</h3>
+            <button class="btn btn-sm btn-outline" id="rate-btn" onclick="openRateModal()" style="display:none">
+              <i class="fas fa-star"></i> Rate User
+            </button>
+          </div>
+          <div id="reviews-container">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- Not Found -->
+    <div id="not-found" style="display:none" class="empty-state">
+      <div class="empty-state-icon">👤</div>
+      <h3>User Not Found</h3>
+      <p>This profile doesn't exist or has been removed.</p>
+      <a href="/marketplace" class="btn btn-primary mt-2">Browse Marketplace</a>
+    </div>
+    
+  </div>
+</div>
+
+<!-- Rate Modal -->
+<div id="rate-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this) closeRateModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Rate this User</h3>
+      <button class="modal-close" onclick="closeRateModal()">✕</button>
+    </div>
+    <div style="text-align:center">
+      <p style="color:var(--gray);margin-bottom:0.5rem">How was your experience?</p>
+      <div class="rate-modal-stars" id="rate-stars">
+        <span onclick="setRating(1)" data-rating="1">★</span>
+        <span onclick="setRating(2)" data-rating="2">★</span>
+        <span onclick="setRating(3)" data-rating="3">★</span>
+        <span onclick="setRating(4)" data-rating="4">★</span>
+        <span onclick="setRating(5)" data-rating="5">★</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comment (Optional)</label>
+      <textarea class="form-control" id="review-comment" rows="3" placeholder="Share your experience with this seller..."></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="submitRating()">
+      <i class="fas fa-paper-plane"></i> Submit Review
+    </button>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let profileUser = null;
+  let selectedRating = 0;
+  
+  const userId = new URLSearchParams(window.location.search).get('id');
+  
+  async function loadProfile() {
+    if (!userId) {
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('not-found').style.display = 'block';
+      return;
+    }
+    
+    try {
+      const doc = await AUBazaar.db.collection('users').doc(userId).get();
+      
+      if (!doc.exists) {
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('not-found').style.display = 'block';
+        return;
+      }
+      
+      profileUser = { id: doc.id, ...doc.data() };
+      renderProfile(profileUser);
+      loadUserListings(userId);
+      loadReviews(userId);
+      
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('not-found').style.display = 'block';
+    }
+  }
+
+  function renderProfile(user) {
+    document.title = `${user.fullName || 'User'} - AUBazaar`;
+    
+    const initials = (user.fullName || 'U').charAt(0).toUpperCase();
+    
+    // Handle profile picture
+    if (user.profilePicture) {
+      document.getElementById('profile-avatar-img').src = user.profilePicture;
+      document.getElementById('profile-avatar-img').style.display = 'block';
+      document.getElementById('profile-avatar-initials').style.display = 'none';
+    } else {
+      document.getElementById('profile-avatar').textContent = initials;
+    }
+    
+    document.getElementById('profile-name').textContent = user.fullName || 'AU Member';
+    
+    // Rating
+    const rating = user.rating || 0;
+    document.getElementById('profile-rating').textContent = rating.toFixed(1);
+    document.getElementById('profile-rating-count').textContent = `(${user.ratingCount || 0} reviews)`;
+    
+    // Calculate and display seller badges
+    displaySellerBadges(user);
+    document.getElementById('stat-rating').textContent = rating.toFixed(1);
+    
+    const stars = document.getElementById('profile-stars');
+    stars.innerHTML = [1,2,3,4,5].map(i => 
+      `<i class="${i <= Math.round(rating) ? 'fas' : 'far'} fa-star"></i>`
+    ).join('');
+    
+    // Meta
+    document.getElementById('profile-role-meta').querySelector('span').textContent = user.role || 'Student';
+    
+    if (user.department) {
+      document.getElementById('profile-dept-meta').style.display = 'flex';
+      document.getElementById('profile-dept').textContent = user.department;
+    }
+    
+    if (user.createdAt) {
+      let year;
+      if (user.createdAt.seconds) {
+        // Firestore Timestamp format
+        year = new Date(user.createdAt.seconds * 1000).getFullYear();
+      } else {
+        // Plain timestamp (number from Date.now())
+        year = new Date(user.createdAt).getFullYear();
+      }
+      document.getElementById('profile-joined').textContent = year;
+    }
+    
+    if (user.bio) {
+      document.getElementById('profile-bio-section').style.display = 'block';
+      document.getElementById('profile-bio-text').textContent = user.bio;
+    }
+    
+    // Stats
+    document.getElementById('stat-listings').textContent = user.totalListings || 0;
+    document.getElementById('stat-sold').textContent = user.totalSales || 0;
+    
+    // Actions based on current user
+    AUBazaar.auth.onAuthStateChanged((currentUser) => {
+      const actionsEl = document.getElementById('profile-actions');
+      
+      if (currentUser && currentUser.uid !== userId) {
+        actionsEl.innerHTML = `
+          <button class="btn btn-primary" onclick="messageUser()">
+            <i class="fas fa-envelope"></i> Message
+          </button>
+        `;
+        document.getElementById('rate-btn').style.display = 'inline-flex';
+      } else if (currentUser && currentUser.uid === userId) {
+        actionsEl.innerHTML = `
+          <a href="/dashboard" class="btn btn-outline">
+            <i class="fas fa-edit"></i> Edit Profile
+          </a>
+        `;
+      }
+    });
+    
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('profile-content').style.display = 'block';
+  }
+
+  async function loadUserListings(uid) {
+    const grid = document.getElementById('user-listings-grid');
+    const empty = document.getElementById('listings-empty');
+    
+    try {
+      const snapshot = await AUBazaar.db.collection('listings')
+        .where('sellerId', '==', uid)
+        .where('status', '==', 'active')
+        .orderBy('createdAt', 'desc')
+        .limit(6)
+        .get();
+      
+      if (snapshot.empty) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      const listings = [];
+      snapshot.forEach(doc => listings.push({ id: doc.id, ...doc.data() }));
+      
+      grid.innerHTML = listings.map(listing => `
+        <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
+          <div class="product-card-image">
+            ${listing.images && listing.images.length > 0 
+              ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+              : AUBazaar.getCategoryIcon(listing.category)}
+          </div>
+          <div class="product-card-body">
+            <div class="product-card-title">${listing.title}</div>
+            <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
+          </div>
+        </div>
+      `).join('');
+      
+    } catch (error) {
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+    }
+  }
+
+  async function loadReviews(uid) {
+    const container = document.getElementById('reviews-container');
+    
+    try {
+      const snapshot = await AUBazaar.db.collection('reviews')
+        .where('revieweeId', '==', uid)
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .get();
+      
+      if (snapshot.empty) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding:2rem">
+            <div class="empty-state-icon">⭐</div>
+            <h3>No reviews yet</h3>
+            <p>Be the first to review this user!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const reviews = [];
+      snapshot.forEach(doc => reviews.push({ id: doc.id, ...doc.data() }));
+      
+      container.innerHTML = reviews.map(review => `
+        <div class="review-card">
+          <div class="review-header">
+            <div class="review-avatar">${(review.reviewerName || 'U').charAt(0).toUpperCase()}</div>
+            <div>
+              <div style="font-weight:600;font-size:0.9rem">${review.reviewerName || 'AU Member'}</div>
+              <div class="review-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
+            </div>
+            <div style="margin-left:auto;font-size:0.8rem;color:var(--gray)">${AUBazaar.formatDate(review.createdAt)}</div>
+          </div>
+          ${review.comment ? `<p class="review-text">${review.comment}</p>` : ''}
+        </div>
+      `).join('');
+      
+    } catch (error) {
+      container.innerHTML = '<p style="color:var(--gray);padding:1rem">Failed to load reviews</p>';
+    }
+  }
+
+  function messageUser() {
+    const currentUser = AUBazaar.auth.currentUser;
+    if (!currentUser) {
+      window.location.href = '/login';
+      return;
+    }
+    window.location.href = '/messages';
+  }
+
+  function openRateModal() {
+    const currentUser = AUBazaar.auth.currentUser;
+    if (!currentUser) {
+      window.location.href = '/login';
+      return;
+    }
+    document.getElementById('rate-modal').style.display = 'flex';
+  }
+
+  function closeRateModal() {
+    document.getElementById('rate-modal').style.display = 'none';
+    selectedRating = 0;
+    document.querySelectorAll('.rate-modal-stars span').forEach(s => s.classList.remove('active'));
+  }
+
+  function setRating(rating) {
+    selectedRating = rating;
+    document.querySelectorAll('.rate-modal-stars span').forEach((s, i) => {
+      s.classList.toggle('active', i < rating);
+    });
+  }
+
+  async function submitRating() {
+    if (selectedRating === 0) {
+      AUBazaar.showToast('Please select a rating', 'warning');
+      return;
+    }
+    
+    const currentUser = AUBazaar.auth.currentUser;
+    if (!currentUser) return;
+    
+    const comment = document.getElementById('review-comment').value.trim();
+    
+    try {
+      // Get reviewer name
+      const reviewerDoc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
+      const reviewerName = reviewerDoc.data()?.fullName || currentUser.displayName || 'AU Member';
+      
+      // Add review
+      await AUBazaar.db.collection('reviews').add({
+        revieweeId: userId,
+        reviewerId: currentUser.uid,
+        reviewerName,
+        rating: selectedRating,
+        comment,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Update user's average rating
+      const reviewsSnap = await AUBazaar.db.collection('reviews').where('revieweeId', '==', userId).get();
+      const ratings = [];
+      reviewsSnap.forEach(doc => ratings.push(doc.data().rating));
+      const avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+      
+      await AUBazaar.db.collection('users').doc(userId).update({
+        rating: avgRating,
+        ratingCount: ratings.length
+      });
+      
+      closeRateModal();
+      AUBazaar.showToast('Review submitted successfully!', 'success');
+      loadReviews(userId);
+      
+    } catch (error) {
+      AUBazaar.showToast('Failed to submit review', 'error');
+    }
+  }
+
+  // Calculate and display seller badges
+  function displaySellerBadges(user) {
+    const badgesContainer = document.getElementById('seller-badges');
+    if (!badgesContainer) return;
+    
+    const rating = user.rating || 0;
+    const ratingCount = user.ratingCount || 0;
+    const totalSales = user.totalSales || 0;
+    const totalListings = user.totalListings || 0;
+    
+    let badges = [];
+    
+    // Top Seller: rating >= 4.5 and at least 5 reviews
+    if (rating >= 4.5 && ratingCount >= 5) {
+      badges.push({ class: 'badge-top-seller', icon: '🏆', text: 'Top Seller' });
+    }
+    
+    // Trusted Seller: rating >= 4.0 and at least 3 reviews
+    if (rating >= 4.0 && ratingCount >= 3) {
+      badges.push({ class: 'badge-trusted', icon: '🛡️', text: 'Trusted' });
+    }
+    
+    // Rising Seller: 1+ reviews
+    if (ratingCount >= 1) {
+      badges.push({ class: 'badge-fast-responder', icon: '⭐', text: 'Rising Seller' });
+    }
+    
+    // Active Seller: many listings
+    if (totalListings >= 3) {
+      badges.push({ class: 'badge-fast-responder', icon: '⚡', text: 'Active Seller' });
+    }
+    
+    // New Seller: has listings but no reviews yet
+    if (totalListings > 0 && ratingCount === 0) {
+      badges.push({ class: 'badge-new-seller', icon: '🌟', text: 'New Seller' });
+    }
+    
+    // If no badges, don't show the container
+    if (badges.length === 0) {
+      badgesContainer.style.display = 'none';
+      return;
+    }
+    
+    badgesContainer.style.display = 'flex';
+    badgesContainer.innerHTML = badges.map(badge => 
+      `<span class="seller-badge ${badge.class}">${badge.icon} ${badge.text}</span>`
+    ).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+</body>
+</html>

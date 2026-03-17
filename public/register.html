@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .auth-card { max-width: 520px; }
+    .role-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.8rem;
+    }
+    .role-option {
+      border: 2px solid var(--gray-light);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .role-option:hover {
+      border-color: var(--primary-light);
+    }
+    .role-option.selected {
+      border-color: var(--primary);
+      background: #eaf4fb;
+    }
+    .role-option input { display: none; }
+    .role-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+    .role-label { font-size: 0.85rem; font-weight: 600; color: var(--dark); }
+    .password-strength {
+      height: 4px;
+      border-radius: 2px;
+      margin-top: 0.5rem;
+      transition: var(--transition);
+    }
+    .strength-weak { background: var(--danger); width: 33%; }
+    .strength-medium { background: var(--warning); width: 66%; }
+    .strength-strong { background: var(--accent); width: 100%; }
+    .terms-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.88rem;
+      color: var(--gray);
+    }
+    .terms-check input { margin-top: 3px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-circle">🛒</div>
+      <h1>AU<span>Bazaar</span></h1>
+      <p>Africa University Campus Marketplace</p>
+    </div>
+    
+    <h2 class="auth-title">Create Your Account</h2>
+    <p class="auth-subtitle">Join the AU campus marketplace community</p>
+    
+    <div id="alert-container"></div>
+    
+    <form id="register-form" onsubmit="handleRegister(event)">
+      <!-- Role Selection -->
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label>
+        <div class="role-selector">
+          <label class="role-option selected" onclick="selectRole('student', this)">
+            <input type="radio" name="role" value="student" checked>
+            <div class="role-icon">🎓</div>
+            <div class="role-label">Student</div>
+          </label>
+          <label class="role-option" onclick="selectRole('staff', this)">
+            <input type="radio" name="role" value="staff">
+            <div class="role-icon">👔</div>
+            <div class="role-label">Staff</div>
+          </label>
+          <label class="role-option" onclick="selectRole('faculty', this)">
+            <input type="radio" name="role" value="faculty">
+            <div class="role-icon">📖</div>
+            <div class="role-label">Faculty</div>
+          </label>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-user"></i> Full Name</label>
+        <input type="text" class="form-control" id="fullName" placeholder="Enter your full name" required minlength="2">
+        <div class="form-error hidden" id="fullName-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-envelope"></i> University Email</label>
+        <input type="email" class="form-control" id="email" placeholder="yourname@africau.edu" required oninput="validateEmailField()">
+        <div class="form-hint">Must be an @africau.edu or @students.africau.edu address</div>
+        <div class="form-error hidden" id="email-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-id-card"></i> Student/Staff ID <span style="color:var(--gray);font-weight:400">(Optional)</span></label>
+        <input type="text" class="form-control" id="studentId" placeholder="e.g., AU2024001">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-phone"></i> Phone Number <span style="color:var(--gray);font-weight:400">(Optional)</span></label>
+        <input type="tel" class="form-control" id="phone" placeholder="+263 77 123 4567">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+        <div class="password-toggle">
+          <input type="password" class="form-control" id="password" placeholder="Create a strong password" required minlength="6" oninput="checkPasswordStrength()">
+          <button type="button" class="toggle-btn" onclick="togglePassword('password')">
+            <i class="fas fa-eye" id="password-eye"></i>
+          </button>
+        </div>
+        <div class="password-strength" id="password-strength"></div>
+        <div class="form-hint" id="strength-text">At least 6 characters</div>
+        <div class="form-error hidden" id="password-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-lock"></i> Confirm Password</label>
+        <div class="password-toggle">
+          <input 
+            type="password" 
+            class="form-control" 
+            id="confirmPassword" 
+            placeholder="Repeat your password"
+            required
+          >
+          <button type="button" class="toggle-btn" onclick="togglePassword('confirmPassword')">
+            <i class="fas fa-eye" id="confirmPassword-eye"></i>
+          </button>
+        </div>
+        <div class="form-error hidden" id="confirmPassword-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="terms-check">
+          <input type="checkbox" id="terms" required>
+          <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. I confirm I am a member of Africa University.</span>
+        </label>
+        <div class="form-error hidden" id="terms-error"></div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="register-btn">
+        <i class="fas fa-user-plus"></i> Create Account
+      </button>
+    </form>
+    
+    <div class="auth-divider"><span>or</span></div>
+    
+    <button class="btn btn-outline btn-block" onclick="handleGoogleRegister()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+      Sign up with Google
+    </button>
+    
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let selectedRole = 'student';
+
+  // Redirect if already logged in
+  AUBazaar.auth.onAuthStateChanged((user) => {
+    if (user) window.location.href = '/marketplace';
+  });
+
+  function selectRole(role, el) {
+    selectedRole = role;
+    document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function validateEmailField() {
+    const email = document.getElementById('email').value;
+    const errorEl = document.getElementById('email-error');
+    if (email && !AUBazaar.isValidAUEmail(email)) {
+      errorEl.textContent = 'Must be an @africau.edu or @students.africau.edu email';
+      errorEl.classList.remove('hidden');
+      document.getElementById('email').classList.add('error');
+    } else {
+      errorEl.classList.add('hidden');
+      document.getElementById('email').classList.remove('error');
+    }
+  }
+
+  function checkPasswordStrength() {
+    const password = document.getElementById('password').value;
+    const strengthBar = document.getElementById('password-strength');
+    const strengthText = document.getElementById('strength-text');
+    
+    if (password.length === 0) {
+      strengthBar.className = 'password-strength';
+      strengthText.textContent = 'At least 6 characters';
+      return;
+    }
+    
+    let strength = 0;
+    if (password.length >= 6) strength++;
+    if (password.length >= 10) strength++;
+    if (/[A-Z]/.test(password) && /[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    
+    if (strength <= 1) {
+      strengthBar.className = 'password-strength strength-weak';
+      strengthText.textContent = '⚠️ Weak password';
+      strengthText.style.color = 'var(--danger)';
+    } else if (strength <= 2) {
+      strengthBar.className = 'password-strength strength-medium';
+      strengthText.textContent = '⚡ Medium password';
+      strengthText.style.color = 'var(--warning)';
+    } else {
+      strengthBar.className = 'password-strength strength-strong';
+      strengthText.textContent = '✅ Strong password';
+      strengthText.style.color = 'var(--accent)';
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    clearErrors();
+    
+    const fullName = document.getElementById('fullName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const studentId = document.getElementById('studentId').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const terms = document.getElementById('terms').checked;
+    
+    // Validations
+    let hasError = false;
+    
+    if (fullName.length < 2) {
+      showFieldError('fullName-error', 'Please enter your full name');
+      hasError = true;
+    }
+    
+    if (!AUBazaar.isValidAUEmail(email)) {
+      showFieldError('email-error', 'Please use your Africa University email address');
+      hasError = true;
+    }
+    
+    if (password.length < 6) {
+      showFieldError('password-error', 'Password must be at least 6 characters');
+      hasError = true;
+    }
+    
+    if (password !== confirmPassword) {
+      showFieldError('confirmPassword-error', 'Passwords do not match');
+      hasError = true;
+    }
+    
+    if (!terms) {
+      showFieldError('terms-error', 'You must agree to the terms and conditions');
+      hasError = true;
+    }
+    
+    if (hasError) return;
+    
+    const btn = document.getElementById('register-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+    btn.disabled = true;
+    
+    try {
+      // Create Firebase Auth user
+      const userCredential = await AUBazaar.auth.createUserWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+      
+      // Update display name
+      await user.updateProfile({ displayName: fullName });
+      
+      // Send email verification
+      await user.sendEmailVerification();
+      
+      // Try backend approach first
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            email: email,
+            fullName: fullName,
+            studentId: studentId,
+            phone: phone,
+            role: selectedRole
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.message);
+        }
+      } catch (backendError) {
+        // Fallback: try direct Firestore save
+        const userRef = AUBazaar.db.collection('users').doc(user.uid);
+        await userRef.set({
+          fullName,
+          email,
+          studentId: studentId || null,
+          phone: phone || null,
+          role: selectedRole,
+          status: 'active',
+          rating: 0,
+          ratingCount: 0,
+          totalListings: 0,
+          totalSales: 0,
+          favorites: [],
+          createdAt: Date.now(),
+          lastLogin: Date.now()
+        });
+      }
+      
+      showAlert('🎉 Account created successfully! Please check your email to verify your account.', 'success');
+      
+      setTimeout(() => {
+        window.location.href = '/marketplace';
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+      btn.disabled = false;
+      
+      let message = 'Registration failed. Check console for details.';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = 'An account with this email already exists. Please login instead.';
+          break;
+        case 'auth/invalid-email':
+          message = 'Invalid email address format.';
+          break;
+        case 'auth/weak-password':
+          message = 'Password is too weak. Please use at least 6 characters.';
+          break;
+        case 'auth/operation-not-allowed':
+          message = 'Email/password registration is not enabled. Go to Firebase Console > Authentication > Sign-in method and enable Email/Password.';
+          break;
+        case 'permission-denied':
+        case 'PERMISSION_DENIED':
+          message = 'Database permission denied. Go to Firebase Console > Firestore Database > Rules and allow read/write.';
+          break;
+        default:
+          message = 'Registration failed: ' + error.message + ' (code: ' + error.code + ')';
+      }
+      showAlert(message, 'danger');
+    }
+  }
+
+  async function handleGoogleRegister() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ hd: 'africau.edu' });
+    
+    try {
+      const result = await AUBazaar.auth.signInWithPopup(provider);
+      const user = result.user;
+      
+      if (!AUBazaar.isValidAUEmail(user.email)) {
+        await AUBazaar.auth.signOut();
+        showAlert('Only Africa University email addresses are allowed.', 'danger');
+        return;
+      }
+      
+      // Check if user already exists
+      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        await AUBazaar.db.collection('users').doc(user.uid).set({
+          fullName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          role: 'student',
+          status: 'active',
+          rating: 0,
+          ratingCount: 0,
+          totalListings: 0,
+          totalSales: 0,
+          favorites: [],
+          createdAt: Date.now(),
+          lastLogin: Date.now()
+        });
+      }
+      
+      showAlert('Account created successfully!', 'success');
+      setTimeout(() => window.location.href = '/marketplace', 1000);
+      
+    } catch (error) {
+      if (error.code !== 'auth/popup-closed-by-user') {
+        showAlert('Google sign-up failed. Please try again.', 'danger');
+      }
+    }
+  }
+
+  function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const eye = document.getElementById(fieldId + '-eye');
+    if (field.type === 'password') {
+      field.type = 'text';
+      eye.className = 'fas fa-eye-slash';
+    } else {
+      field.type = 'password';
+      eye.className = 'fas fa-eye';
+    }
+  }
+
+  function showAlert(message, type) {
+    const container = document.getElementById('alert-container');
+    container.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}</div>`;
+  }
+
+  function showFieldError(id, message) {
+    const el = document.getElementById(id);
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
+
+  function clearErrors() {
+    document.getElementById('alert-container').innerHTML = '';
+    document.querySelectorAll('.form-error').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.form-control').forEach(el => el.classList.remove('error'));
+  }
+</script>
+</body>
+</html>

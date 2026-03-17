@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Sellers - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .leaderboard-page { padding: 2rem 0; }
+    .leaderboard-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .leaderboard-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1a5276;
+    }
+    .leaderboard-header p {
+      color: #7f8c8d;
+      margin-top: 0.5rem;
+    }
+    .leaderboard-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #eee;
+      transition: background 0.2s;
+      cursor: pointer;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .leaderboard-item:last-child { border-bottom: none; }
+    .leaderboard-item:hover { background: #f8f9fa; }
+    .rank {
+      width: 35px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-align: center;
+    }
+    .rank-1 { color: #ffd700; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+    .avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      margin-right: 1rem;
+    }
+    .info { flex: 1; min-width: 150px; }
+    .info h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin: 0;
+    }
+    .badges {
+      display: flex;
+      gap: 5px;
+      margin-top: 4px;
+    }
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .badge-gold { background: #fff3cd; color: #856404; }
+    .badge-green { background: #d4edda; color: #155724; }
+    .badge-blue { background: #cce5ff; color: #004085; }
+    .rating {
+      text-align: right;
+      min-width: 100px;
+    }
+    .rating .stars { color: #ffc107; font-size: 0.9rem; }
+    .rating .count { font-size: 0.8rem; color: var(--gray); }
+    .sales {
+      text-align: right;
+      min-width: 80px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+    }
+    .empty-state-icon { font-size: 3rem; }
+    .empty-state h3 { margin: 1rem 0 0.5rem; }
+    .empty-state p { color: var(--gray); }
+    @media (max-width: 600px) {
+      .leaderboard-item { flex-wrap: wrap; }
+      .rating, .sales { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav style="background: linear-gradient(135deg, #1a5276 0%, #154360 100%); padding: 0.75rem 2rem;">
+    <div class="container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;max-width:1200px;margin:0 auto">
+      <a href="/" style="font-size:1.5rem;font-weight:800;color:#f39c12;text-decoration:none">AUBazaar</a>
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.9rem">
+        <a href="/marketplace" style="color:white;text-decoration:none">Marketplace</a>
+        <a href="/top-sellers" style="color:#f39c12;font-weight:600;text-decoration:none">Top Sellers</a>
+        <a href="/sell" style="color:white;text-decoration:none">Sell</a>
+        <a href="/messages" id="nav-messages" style="color:white;text-decoration:none;display:none">Messages</a>
+        <a href="/dashboard" id="nav-dashboard" style="color:white;text-decoration:none;display:none">Dashboard</a>
+        <a href="/profile" id="nav-profile" style="color:white;text-decoration:none;display:none">Profile</a>
+        <a href="/login" id="nav-login" style="color:white;text-decoration:none">Login</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="leaderboard-page">
+      <div class="leaderboard-header">
+        <h1>🏆 Top Sellers</h1>
+        <p>Best rated sellers at AU Bazaar</p>
+      </div>
+      
+      <div class="leaderboard-card" id="leaderboard">
+        <div style="text-align:center;padding:3rem">
+          <div class="spinner" style="margin:0 auto"></div>
+          <p style="margin-top:1rem;color:var(--gray)">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script>
+    let currentUser = null;
+    
+    function init() {
+      if (typeof AUBazaar === 'undefined') {
+        setTimeout(init, 500);
+        return;
+      }
+      AUBazaar.auth.onAuthStateChanged((user) => {
+        currentUser = user;
+        updateNav();
+        loadTopSellers();
+      });
+    }
+    init();
+
+    function updateNav() {
+      const loggedIn = !!currentUser;
+      document.getElementById('nav-messages').style.display = loggedIn ? '' : 'none';
+      document.getElementById('nav-dashboard').style.display = loggedIn ? '' : 'none';
+      document.getElementById('nav-profile').style.display = loggedIn ? '' : 'none';
+      document.getElementById('nav-login').style.display = loggedIn ? 'none' : '';
+      if (loggedIn) {
+        document.getElementById('nav-profile').href = '/profile?id=' + currentUser.uid;
+      }
+    }
+
+    async function loadTopSellers() {
+      const container = document.getElementById('leaderboard');
+      
+      try {
+        const usersSnap = await AUBazaar.db.collection('users').get();
+        
+        const sellers = [];
+        usersSnap.forEach(doc => {
+          const user = doc.data();
+          // Only include users with at least a rating or review
+          if ((user.rating && user.rating > 0) || (user.ratingCount && user.ratingCount > 0) || (user.totalSales && user.totalSales > 0)) {
+            const score = ((user.rating || 0) * 20) + 
+                          ((user.totalSales || 0) * 5) + 
+                          ((user.totalListings || 0) * 2) +
+                          ((user.ratingCount || 0) * 3);
+            sellers.push({ id: doc.id, ...user, score });
+          }
+        });
+        
+        sellers.sort((a, b) => b.score - a.score);
+        
+        if (sellers.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">🏆</div>
+              <h3>No Sellers Yet</h3>
+              <p>Be the first to start selling!</p>
+              <a href="/sell" class="btn btn-primary" style="margin-top:1rem">Start Selling</a>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = sellers.slice(0, 20).map((seller, index) => {
+          const rank = index + 1;
+          const initial = (seller.fullName || seller.email || '?').charAt(0).toUpperCase();
+          const badges = getBadges(seller);
+          
+          return `
+            <div class="leaderboard-item" onclick="window.location.href='/profile?id=${seller.id}'">
+              <div class="rank rank-${rank <= 3 ? rank : ''}">${rank}</div>
+              <div class="avatar">${initial}</div>
+              <div class="info">
+                <h3>${seller.fullName || 'AU Member'}</h3>
+                <div class="badges">${badges}</div>
+              </div>
+              <div class="rating">
+                <div class="stars">${getStars(seller.rating || 0)}</div>
+                <div class="count">${(seller.rating || 0).toFixed(1)} (${seller.ratingCount || 0})</div>
+              </div>
+              <div class="sales">${seller.totalSales || 0} sales</div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">😕</div>
+            <h3>Failed to Load</h3>
+            <p>Please try again later</p>
+          </div>
+        `;
+      }
+    }
+    
+    function getBadges(user) {
+      const rating = user.rating || 0;
+      const ratingCount = user.ratingCount || 0;
+      const totalListings = user.totalListings || 0;
+      let badges = [];
+      
+      if (rating >= 4.5 && ratingCount >= 5) badges.push('<span class="badge badge-gold">🏆 Top</span>');
+      if (rating >= 4.0 && ratingCount >= 3) badges.push('<span class="badge badge-green">🛡️ Trusted</span>');
+      if (ratingCount >= 1) badges.push('<span class="badge badge-blue">⭐ Rising</span>');
+      if (totalListings >= 3) badges.push('<span class="badge badge-blue">⚡ Active</span>');
+      
+      return badges.join('');
+    }
+    
+    function getStars(rating) {
+      const fullStars = Math.floor(rating);
+      let stars = '';
+      for (let i = 0; i < 5; i++) stars += i < fullStars ? '★' : '☆';
+      return stars;
+    }
+  </script>
+</body>
+</html>

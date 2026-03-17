@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Firebase - AUBazaar</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    h1 { color: #1a5276; }
+    .test { padding: 15px; margin: 10px 0; border-radius: 8px; }
+    .success { background: #d5f5e3; color: #1e8449; border: 1px solid #1e8449; }
+    .error { background: #fadbd8; color: #922b21; border: 1px solid #922b21; }
+    .pending { background: #fef9e7; color: #9a7d0a; border: 1px solid #9a7d0a; }
+    .info { background: #d6eaf8; color: #1a5276; border: 1px solid #1a5276; }
+    pre { background: #f0f0f0; padding: 15px; border-radius: 8px; overflow-x: auto; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #1a5276; color: white; border: none; border-radius: 5px; }
+    button:hover { background: #154360; }
+  </style>
+</head>
+<body>
+  <h1>🧪 AUBazaar Firebase Test</h1>
+  <p>This page tests your Firebase connection.</p>
+  
+  <button onclick="runTests()">Run Tests</button>
+  
+  <div id="results"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3Vu-kHTGeReLgBPyUQZfC629gau_4qys",
+      authDomain: "aubazaar-12d35.firebaseapp.com",
+      projectId: "aubazaar-12d35",
+      storageBucket: "aubazaar-12d35.firebasestorage.app",
+      messagingSenderId: "711155540514",
+      appId: "1:711155540514:web:26c64d452b9f62d68de07b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    function addResult(title, status, details = '') {
+      const results = document.getElementById('results');
+      results.innerHTML += `<div class="test ${status}"><strong>${title}</strong><br>${details}</div>`;
+    }
+
+    async function runTests() {
+      document.getElementById('results').innerHTML = '';
+      
+      // Test 1: Firebase Config
+      addResult('Test 1: Firebase Configuration', 'info', 'Config loaded: ' + firebaseConfig.projectId);
+      
+      // Test 2: Firestore Connection
+      try {
+        const testDoc = db.collection('test').doc('connection-test');
+        await testDoc.set({ 
+          timestamp: Date.now(),
+          message: 'AUBazaar connection test'
+        });
+        addResult('Test 2: Firestore Write', 'success', '✓ Successfully wrote to Firestore!');
+        
+        // Clean up test document
+        await testDoc.delete();
+        addResult('Test 3: Firestore Delete', 'success', '✓ Successfully deleted test document!');
+      } catch (error) {
+        console.error('Firestore error:', error);
+        addResult('Test 2-3: Firestore', 'error', '❌ Error: ' + error.message + '<br><br><strong>FIX:</strong> Go to Firebase Console > Firestore Database > Rules and set:<br><pre>rules_version = "2";\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}</pre>');
+      }
+
+      // Test 4: Authentication
+      addResult('Test 4: Authentication', 'pending', 'Checking Auth status...');
+      
+      auth.onAuthStateChanged((user) => {
+        const statusEl = document.querySelector('.pending:last-child');
+        if (user) {
+          statusEl.className = 'test success';
+          statusEl.innerHTML = `<strong>Test 4: Authentication</strong><br>✓ User is logged in: ${user.email}<br>UID: ${user.uid}`;
+        } else {
+          statusEl.className = 'test info';
+          statusEl.innerHTML = `<strong>Test 4: Authentication</strong><br>ℹ No user logged in (this is OK for testing)`;
+        }
+      });
+
+      // Test 5: Storage
+      addResult('Test 5: Storage', 'info', 'Storage bucket: ' + firebaseConfig.storageBucket);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .listing-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border-bottom: 1px solid var(--gray-light);
+      transition: var(--transition);
+    }
+    .listing-row:hover { background: var(--light); }
+    .listing-row:last-child { border-bottom: none; }
+    .listing-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--gray-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .listing-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .listing-info { flex: 1; min-width: 0; }
+    .listing-info h4 {
+      font-weight: 600;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .listing-info p {
+      font-size: 0.82rem;
+      color: var(--gray);
+      margin-top: 0.2rem;
+    }
+    .listing-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .status-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-active { background: #d5f5e3; color: #1e8449; }
+    .status-sold { background: #d6eaf8; color: var(--primary); }
+    .status-pending { background: #fef9e7; color: #9a7d0a; }
+    .status-deleted { background: #fadbd8; color: var(--danger); }
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--gray-light);
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--gray);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .profile-edit-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .profile-edit-form .full-width { grid-column: 1 / -1; }
+    @media (max-width: 600px) {
+      .profile-edit-form { grid-template-columns: 1fr; }
+    }
+    .notification-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border-bottom: 1px solid var(--gray-light);
+      align-items: flex-start;
+    }
+    .notification-item.unread { background: #eaf4fb; }
+    .notification-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .notif-message { background: #d6eaf8; color: var(--primary); }
+    .notif-sale { background: #d5f5e3; color: var(--accent); }
+    .notif-system { background: #fef9e7; color: #9a7d0a; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    <div class="navbar-search">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Search listings..." onkeypress="if(event.key==='Enter') window.location.href='/marketplace?search='+this.value">
+    </div>
+    <ul class="navbar-nav" id="user-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li><a href="/dashboard" class="active"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+      <div class="sidebar-user-name" id="sidebar-name">Loading...</div>
+      <div class="sidebar-user-role" id="sidebar-role">Student</div>
+    </div>
+    
+    <ul class="sidebar-nav">
+      <li><a href="#" class="active" onclick="showTab('overview', this)"><i class="fas fa-tachometer-alt"></i> Overview</a></li>
+      <li><a href="#" onclick="showTab('listings', this)"><i class="fas fa-list"></i> My Listings</a></li>
+      <li><a href="#" onclick="showTab('favorites', this)"><i class="fas fa-heart"></i> Favorites</a></li>
+      <li><a href="/messages"><i class="fas fa-envelope"></i> Messages <span class="notification-badge" id="msg-count" style="display:none">0</span></a></li>
+      <li><a href="#" onclick="showTab('notifications', this)"><i class="fas fa-bell"></i> Notifications</a></li>
+      <li><a href="#" onclick="showTab('profile', this)"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+      <li><a href="#" onclick="showTab('settings', this)"><i class="fas fa-cog"></i> Settings</a></li>
+      <li style="margin-top:1rem;border-top:1px solid var(--gray-light);padding-top:1rem">
+        <a href="#" onclick="handleLogout()" style="color:var(--danger)!important"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      </li>
+    </ul>
+  </aside>
+  
+  <!-- Main Content -->
+  <main class="dashboard-content">
+    
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-content active">
+      <h2 style="font-weight:800;margin-bottom:1.5rem">Welcome back, <span id="welcome-name">User</span>! 👋</h2>
+      
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-list"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-active-listings">0</h3>
+            <p>Active Listings</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-sold">0</h3>
+            <p>Items Sold</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-heart"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-favorites">0</h3>
+            <p>Saved Items</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-eye"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-views">0</h3>
+            <p>Total Views</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recent Listings -->
+      <div class="card mt-3">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span><i class="fas fa-list"></i> Recent Listings</span>
+          <a href="#" onclick="showTab('listings', null)" class="btn btn-sm btn-outline">View All</a>
+        </div>
+        <div id="recent-listings-dash"></div>
+      </div>
+      
+      <!-- Quick Actions -->
+      <div class="card mt-3">
+        <div class="card-header"><i class="fas fa-bolt"></i> Quick Actions</div>
+        <div class="card-body">
+          <div style="display:flex;gap:1rem;flex-wrap:wrap">
+            <a href="/sell" class="btn btn-primary"><i class="fas fa-plus"></i> Post New Item</a>
+            <a href="/marketplace" class="btn btn-outline"><i class="fas fa-store"></i> Browse Marketplace</a>
+            <a href="/messages" class="btn btn-outline"><i class="fas fa-envelope"></i> Check Messages</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Listings Tab -->
+    <div id="tab-listings" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+        <h2 style="font-weight:800">My Listings</h2>
+        <a href="/sell" class="btn btn-primary"><i class="fas fa-plus"></i> New Listing</a>
+      </div>
+      
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="filterListings('all', this)">All</button>
+        <button class="tab-btn" onclick="filterListings('active', this)">Active</button>
+        <button class="tab-btn" onclick="filterListings('sold', this)">Sold</button>
+      </div>
+      
+      <div class="card">
+        <div id="my-listings-container">
+          <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Favorites Tab -->
+    <div id="tab-favorites" class="tab-content">
+      <h2 style="font-weight:800;margin-bottom:1.5rem">Saved Items</h2>
+      <div class="products-grid" id="favorites-grid">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+      <div id="favorites-empty" class="empty-state hidden">
+        <div class="empty-state-icon">❤️</div>
+        <h3>No saved items yet</h3>
+        <p>Browse the marketplace and save items you're interested in.</p>
+        <a href="/marketplace" class="btn btn-primary mt-2">Browse Marketplace</a>
+      </div>
+    </div>
+    
+    <!-- Notifications Tab -->
+    <div id="tab-notifications" class="tab-content">
+      <h2 style="font-weight:800;margin-bottom:1.5rem">Notifications</h2>
+      <div class="card">
+        <div id="notifications-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔔</div>
+            <h3>No notifications yet</h3>
+            <p>You'll see updates about your listings and messages here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Profile Tab -->
+    <div id="tab-profile" class="tab-content">
+      <h2 style="font-weight:800;margin-bottom:1.5rem">Edit Profile</h2>
+      
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem">
+            <div style="position:relative">
+              <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:white;overflow:hidden" id="profile-avatar-large">
+                <img id="profile-avatar-img" style="width:100%;height:100%;object-fit:cover;display:none">
+                <span id="profile-avatar-initials">U</span>
+              </div>
+              <label for="profile-picture-input" style="position:absolute;bottom:0;right:0;background:var(--primary);color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.8rem">
+                <i class="fas fa-camera"></i>
+              </label>
+              <input type="file" id="profile-picture-input" accept="image/*" style="display:none" onchange="uploadProfilePicture(event)">
+            </div>
+            <div>
+              <h3 id="profile-name-display">Loading...</h3>
+              <p style="color:var(--gray);font-size:0.9rem" id="profile-email-display"></p>
+              <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+                <span class="badge badge-primary" id="profile-role-badge">Student</span>
+                <span class="badge badge-success" id="profile-verified-badge" style="display:none"><i class="fas fa-check"></i> Verified</span>
+              </div>
+            </div>
+          </div>
+          
+          <form id="profile-form" onsubmit="updateProfile(event)">
+            <div class="profile-edit-form">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="profile-fullname" placeholder="Your full name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="profile-phone" placeholder="+263 77 123 4567">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Student/Staff ID</label>
+                <input type="text" class="form-control" id="profile-studentid" placeholder="e.g., AU2024001">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Department/Faculty</label>
+                <input type="text" class="form-control" id="profile-department" placeholder="e.g., Computer Science">
+              </div>
+              <div class="form-group full-width">
+                <label class="form-label">Bio</label>
+                <textarea class="form-control" id="profile-bio" rows="3" placeholder="Tell others about yourself..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Preferred Location</label>
+                <select class="form-control" id="profile-location">
+                  <option value="">Select location...</option>
+                  <option value="Dining Hall">Dining Hall</option>
+                  <option value="SU">SU</option>
+                  <option value="Open Happiness">Open Happiness</option>
+                  <option value="Hostel">Hostel</option>
+                  <option value="Library">Library</option>
+                </select>
+              </div>
+            </div>
+            
+            <div style="margin-top:1rem">
+              <button type="submit" class="btn btn-primary" id="save-profile-btn">
+                <i class="fas fa-save"></i> Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content">
+      <h2 style="font-weight:800;margin-bottom:1.5rem">Settings</h2>
+      
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-bell"></i> Notification Preferences</div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:1rem">
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+              <span>New messages</span>
+              <input type="checkbox" checked id="notif-messages">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+              <span>Listing views</span>
+              <input type="checkbox" id="notif-views">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+              <span>Price drops on saved items</span>
+              <input type="checkbox" checked id="notif-price">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+              <span>New listings in my categories</span>
+              <input type="checkbox" id="notif-new-listings">
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-lock"></i> Security</div>
+        <div class="card-body">
+          <button class="btn btn-outline mb-2" onclick="changePassword()">
+            <i class="fas fa-key"></i> Change Password
+          </button>
+          <br>
+          <button class="btn btn-danger" onclick="deleteAccount()">
+            <i class="fas fa-trash"></i> Delete Account
+          </button>
+        </div>
+      </div>
+    </div>
+    
+  </main>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let currentUser = null;
+  let userData = null;
+  let myListings = [];
+  let currentListingFilter = 'all';
+
+  // Require auth
+  AUBazaar.auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/dashboard';
+      return;
+    }
+    
+    currentUser = user;
+    await loadUserData();
+    loadDashboardData();
+  });
+
+  async function loadUserData() {
+    try {
+      const doc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
+      if (doc.exists) {
+        userData = doc.data();
+      } else {
+        userData = {
+          fullName: currentUser.displayName || 'AU Member',
+          email: currentUser.email,
+          role: 'student'
+        };
+      }
+      
+      // Update UI
+      const name = userData.fullName || currentUser.displayName || 'User';
+      const initials = name.charAt(0).toUpperCase();
+      
+      // Update sidebar avatar with profile picture if available
+      if (userData.profilePicture) {
+        const sidebarAvatar = document.getElementById('sidebar-avatar');
+        sidebarAvatar.innerHTML = `<img src="${userData.profilePicture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        const navAvatar = document.getElementById('nav-user-avatar');
+        navAvatar.innerHTML = `<img src="${userData.profilePicture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      } else {
+        document.getElementById('sidebar-avatar').textContent = initials;
+        document.getElementById('nav-user-avatar').textContent = initials;
+      }
+      document.getElementById('welcome-name').textContent = name.split(' ')[0];
+      
+      // Profile tab
+      document.getElementById('profile-avatar-large').textContent = initials;
+      document.getElementById('profile-name-display').textContent = name;
+      document.getElementById('profile-email-display').textContent = currentUser.email;
+      document.getElementById('profile-role-badge').textContent = userData.role || 'Student';
+      
+      if (currentUser.emailVerified) {
+        document.getElementById('profile-verified-badge').style.display = 'inline-flex';
+      }
+      
+      // Load profile picture if exists
+      if (userData.profilePicture) {
+        const avatarImg = document.getElementById('profile-avatar-img');
+        const avatarInitials = document.getElementById('profile-avatar-initials');
+        if (avatarImg) {
+          avatarImg.src = userData.profilePicture;
+          avatarImg.style.display = 'block';
+        }
+        if (avatarInitials) {
+          avatarInitials.style.display = 'none';
+        }
+      }
+      
+      // Fill profile form
+      document.getElementById('profile-fullname').value = userData.fullName || '';
+      document.getElementById('profile-phone').value = userData.phone || '';
+      document.getElementById('profile-studentid').value = userData.studentId || '';
+      document.getElementById('profile-department').value = userData.department || '';
+      document.getElementById('profile-bio').value = userData.bio || '';
+      if (userData.preferredLocation) {
+        document.getElementById('profile-location').value = userData.preferredLocation;
+      }
+      
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  }
+
+  async function loadDashboardData() {
+    await loadMyListings();
+    await loadFavorites();
+    updateStats();
+  }
+
+  async function loadMyListings() {
+    try {
+      const snapshot = await AUBazaar.db.collection('listings')
+        .where('sellerId', '==', currentUser.uid)
+        .orderBy('createdAt', 'desc')
+        .get();
+      
+      myListings = [];
+      snapshot.forEach(doc => myListings.push({ id: doc.id, ...doc.data() }));
+      
+      renderMyListings();
+      renderRecentListings();
+    } catch (error) {
+      console.error('Error loading listings:', error);
+    }
+  }
+
+  function renderMyListings() {
+    const container = document.getElementById('my-listings-container');
+    
+    let filtered = myListings;
+    if (currentListingFilter === 'active') filtered = myListings.filter(l => l.status === 'active');
+    if (currentListingFilter === 'sold') filtered = myListings.filter(l => l.status === 'sold');
+    
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📦</div>
+          <h3>No listings yet</h3>
+          <p>Start selling by posting your first item!</p>
+          <a href="/sell" class="btn btn-primary mt-2">Post an Item</a>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = filtered.map(listing => `
+      <div class="listing-row">
+        <div class="listing-thumb">
+          ${listing.images && listing.images.length > 0 
+            ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+            : AUBazaar.getCategoryIcon(listing.category)}
+        </div>
+        <div class="listing-info">
+          <h4>${listing.title}</h4>
+          <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.category} • ${listing.views || 0} views • ${AUBazaar.formatDate(listing.createdAt)}</p>
+        </div>
+        <span class="status-badge status-${listing.status}">${listing.status}</span>
+        <div class="listing-actions">
+          <a href="/listing/${listing.id}" class="btn btn-sm btn-outline" title="View"><i class="fas fa-eye"></i></a>
+          <a href="/sell?edit=${listing.id}" class="btn btn-sm btn-outline" title="Edit"><i class="fas fa-edit"></i></a>
+          <button class="btn btn-sm btn-danger" onclick="markAsSold('${listing.id}')" title="Mark Sold" ${listing.status === 'sold' ? 'disabled' : ''}>
+            <i class="fas fa-check"></i>
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="deleteListing('${listing.id}')" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderRecentListings() {
+    const container = document.getElementById('recent-listings-dash');
+    const recent = myListings.slice(0, 3);
+    
+    if (recent.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:2rem">
+          <div class="empty-state-icon">📦</div>
+          <h3>No listings yet</h3>
+          <a href="/sell" class="btn btn-primary mt-2">Post Your First Item</a>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = recent.map(listing => `
+      <div class="listing-row">
+        <div class="listing-thumb">
+          ${listing.images && listing.images.length > 0 
+            ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+            : AUBazaar.getCategoryIcon(listing.category)}
+        </div>
+        <div class="listing-info">
+          <h4>${listing.title}</h4>
+          <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.views || 0} views</p>
+        </div>
+        <span class="status-badge status-${listing.status}">${listing.status}</span>
+        <a href="/listing/${listing.id}" class="btn btn-sm btn-outline">View</a>
+      </div>
+    `).join('');
+  }
+
+  async function loadFavorites() {
+    const grid = document.getElementById('favorites-grid');
+    const empty = document.getElementById('favorites-empty');
+    
+    try {
+      const userDoc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
+      const favorites = userDoc.data()?.favorites || [];
+      
+      document.getElementById('stat-favorites').textContent = favorites.length;
+      
+      if (favorites.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      // Load favorite listings
+      const listings = [];
+      for (const id of favorites.slice(0, 12)) {
+        const doc = await AUBazaar.db.collection('listings').doc(id).get();
+        if (doc.exists && doc.data().status === 'active') {
+          listings.push({ id: doc.id, ...doc.data() });
+        }
+      }
+      
+      if (listings.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      grid.innerHTML = listings.map(listing => `
+        <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
+          <div class="product-card-image">
+            ${listing.images && listing.images.length > 0 
+              ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+              : AUBazaar.getCategoryIcon(listing.category)}
+          </div>
+          <div class="product-card-body">
+            <div class="product-card-title">${listing.title}</div>
+            <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
+            <div class="product-card-meta">
+              <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  }
+
+  function updateStats() {
+    const active = myListings.filter(l => l.status === 'active').length;
+    const sold = myListings.filter(l => l.status === 'sold').length;
+    const totalViews = myListings.reduce((sum, l) => sum + (l.views || 0), 0);
+    
+    document.getElementById('stat-active-listings').textContent = active;
+    document.getElementById('stat-sold').textContent = sold;
+    document.getElementById('stat-views').textContent = totalViews;
+  }
+
+  function filterListings(filter, btn) {
+    currentListingFilter = filter;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderMyListings();
+  }
+
+  async function markAsSold(listingId) {
+    const result = await Swal.fire({
+      title: 'Mark as Sold?',
+      text: 'This will mark the item as sold.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Mark as Sold',
+      cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      await AUBazaar.db.collection('listings').doc(listingId).update({
+        status: 'sold',
+        soldAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Update user stats
+      await AUBazaar.db.collection('users').doc(currentUser.uid).update({
+        totalSales: firebase.firestore.FieldValue.increment(1)
+      }).catch(() => {});
+      
+      AUBazaar.showToast('Item marked as sold!', 'success');
+      await loadMyListings();
+      updateStats();
+    } catch (error) {
+      AUBazaar.showToast('Failed to update listing', 'error');
+    }
+  }
+
+  async function deleteListing(listingId) {
+    const { value } = await Swal.fire({
+      title: 'Delete Listing?',
+      html: 'Choose how you want to delete this listing:',
+      showCancelButton: true,
+      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Hide (Can restore later)',
+      denyButtonText: 'Delete Permanently',
+      showDenyButton: true,
+      cancelButtonColor: '#6c757d',
+      confirmButtonColor: '#0d6efd',
+      denyButtonColor: '#dc3545'
+    });
+    
+    if (value === true) {
+      // Hide (soft delete)
+      await hideListing(listingId);
+    } else if (value === false) {
+      // Delete permanently (no extra confirmation)
+      await permanentlyDeleteListing(listingId);
+    }
+  }
+  
+  // Hide listing (soft delete)
+  async function hideListing(listingId) {
+    try {
+      // Check if listing exists
+      const listingDoc = await AUBazaar.db.collection('listings').doc(listingId).get();
+      
+      if (!listingDoc.exists) {
+        AUBazaar.showToast('Listing not found', 'warning');
+        await loadMyListings();
+        return;
+      }
+      
+      const listingData = listingDoc.data();
+      const currentUser = firebase.auth().currentUser;
+      
+      // Verify ownership
+      if (listingData.sellerId !== currentUser.uid && listingData.role !== 'admin') {
+        AUBazaar.showToast('You can only hide your own listings', 'error');
+        return;
+      }
+      
+      await AUBazaar.db.collection('listings').doc(listingId).update({
+        status: 'deleted',
+        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      AUBazaar.showToast('Listing hidden', 'success');
+      await loadMyListings();
+      updateStats();
+    } catch (error) {
+      AUBazaar.showToast('Failed to hide listing: ' + error.message, 'error');
+      console.error(error);
+    }
+  }
+  
+  // Delete permanently
+  async function permanentlyDeleteListing(listingId) {
+    const confirmResult = await Swal.fire({
+      title: 'Delete Permanently?',
+      text: 'This action cannot be undone!',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete permanently',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!confirmResult.isConfirmed) return;
+    
+    try {
+      // Get listing first to verify ownership and delete images from storage
+      const listingDoc = await AUBazaar.db.collection('listings').doc(listingId).get();
+      
+      if (!listingDoc.exists) {
+        AUBazaar.showToast('Listing not found', 'warning');
+        await loadMyListings();
+        return;
+      }
+      
+      const listingData = listingDoc.data();
+      const currentUser = firebase.auth().currentUser;
+      
+      // Verify ownership (allow owner or admin to delete)
+      if (listingData.sellerId !== currentUser.uid && listingData.role !== 'admin') {
+        AUBazaar.showToast('You can only delete your own listings', 'error');
+        return;
+      }
+      
+      // Delete images from Storage if they exist
+      if (listingData && listingData.images && listingData.images.length > 0) {
+        for (const imageUrl of listingData.images) {
+          try {
+            // Extract path from URL
+            const urlParts = imageUrl.split('/o/');
+            if (urlParts[1]) {
+              const path = decodeURIComponent(urlParts[1].split('?')[0]);
+              await AUBazaar.storage.ref(path).delete();
+            }
+          } catch (imgError) {
+            console.log('Could not delete image:', imgError.message);
+          }
+        }
+      }
+      
+      // Delete the listing document permanently
+      await AUBazaar.db.collection('listings').doc(listingId).delete();
+      
+      AUBazaar.showToast('Listing permanently deleted', 'success');
+      await loadMyListings();
+      updateStats();
+    } catch (error) {
+      console.error('Permanent delete error:', error);
+      AUBazaar.showToast('Failed to delete: ' + error.message, 'error');
+    }
+  }
+
+  async function uploadProfilePicture(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire({
+        icon: 'error',
+        title: 'File Too Large',
+        text: 'Please select an image under 2MB',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    
+    const user = firebase.auth().currentUser;
+    if (!user) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Not Logged In',
+        text: 'Please log in to upload a profile picture',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    
+    // Find the label element safely
+    const inputEl = document.getElementById('profile-picture-input');
+    let labelEl = null;
+    if (inputEl && inputEl.parentElement) {
+      labelEl = inputEl.parentElement.querySelector('label');
+    }
+    if (labelEl) {
+      labelEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+    
+    try {
+      console.log('Uploading profile picture for user:', user.uid);
+      
+      // Upload to Firebase Storage
+      const storageRef = firebase.storage().ref(`profiles/${user.uid}/profile.jpg`);
+      const uploadTask = await storageRef.put(file);
+      console.log('Upload complete:', uploadTask.metadata);
+      
+      const downloadURL = await storageRef.getDownloadURL();
+      console.log('Got download URL:', downloadURL);
+      
+      // Update user document
+      await firebase.firestore().collection('users').doc(user.uid).set({
+        profilePicture: downloadURL
+      }, { merge: true });
+      console.log('Firestore updated');
+      
+      // Update display with null checks
+      const avatarImg = document.getElementById('profile-avatar-img');
+      const avatarInitials = document.getElementById('profile-avatar-initials');
+      
+      console.log('avatarImg element:', avatarImg);
+      console.log('avatarInitials element:', avatarInitials);
+      
+      if (avatarImg) {
+        avatarImg.src = downloadURL;
+        avatarImg.style.display = 'block';
+      }
+      if (avatarInitials) {
+        avatarInitials.style.display = 'none';
+      }
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Profile Picture Updated!',
+        confirmButtonText: 'OK'
+      });
+    } catch (error) {
+      console.error('Profile upload error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Failed',
+        text: error.message,
+        confirmButtonText: 'OK'
+      });
+    }
+    
+    if (labelEl) {
+      labelEl.innerHTML = '<i class="fas fa-camera"></i>';
+    }
+  }
+  
+  async function updateProfile(event) {
+    event.preventDefault();
+    const btn = document.getElementById('save-profile-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
+    
+    try {
+      const updates = {
+        fullName: document.getElementById('profile-fullname').value.trim(),
+        phone: document.getElementById('profile-phone').value.trim(),
+        studentId: document.getElementById('profile-studentid').value.trim(),
+        department: document.getElementById('profile-department').value.trim(),
+        bio: document.getElementById('profile-bio').value.trim(),
+        preferredLocation: document.getElementById('profile-location').value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // Use set with merge: true to create document if it doesn't exist
+      // This prevents "Failed to update profile" error when user document is missing
+      await AUBazaar.db.collection('users').doc(currentUser.uid).set(updates, { merge: true });
+      
+      if (updates.fullName) {
+        await currentUser.updateProfile({ displayName: updates.fullName });
+      }
+      
+      AUBazaar.showToast('Profile updated successfully!', 'success');
+      await loadUserData();
+    } catch (error) {
+      AUBazaar.showToast('Failed to update profile', 'error');
+    } finally {
+      btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+      btn.disabled = false;
+    }
+  }
+
+  function showTab(tabName, linkEl) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    
+    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+    if (linkEl) linkEl.classList.add('active');
+  }
+
+  async function handleLogout() {
+    const result = await Swal.fire({
+      title: 'Logout?',
+      text: 'Are you sure you want to logout?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Logout',
+      cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    await AUBazaar.auth.signOut();
+    window.location.href = '/';
+  }
+
+  function changePassword() {
+    if (!currentUser || !currentUser.email) {
+      AUBazaar.showToast('Unable to get your email. Please log out and log in again.', 'error');
+      return;
+    }
+    
+    const email = currentUser.email;
+    
+    AUBazaar.auth.sendPasswordResetEmail(email)
+      .then(() => {
+        AUBazaar.showToast(`Password reset email sent to ${email}. Check your inbox!`, 'success');
+      })
+      .catch((error) => {
+        AUBazaar.showToast('Failed to send reset email: ' + error.message, 'error');
+      });
+  }
+
+  async function deleteAccount() {
+    const result = await Swal.fire({
+      title: 'Delete Account?',
+      text: 'All your listings will be permanently removed. This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete My Account',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    const result2 = await Swal.fire({
+      title: 'Final Warning',
+      text: 'Are you absolutely sure? This will permanently delete all your data.',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Delete Everything',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    
+    if (!result2.isConfirmed) return;
+    
+    try {
+      const user = currentUser;
+      const userId = user.uid;
+      
+      AUBazaar.showToast('Deleting your account...', 'info');
+      
+      // Delete all user's listings - get all and filter (to avoid index)
+      const allListingsSnap = await AUBazaar.db.collection('listings').get();
+      const userListings = allListingsSnap.docs.filter(doc => doc.data().sellerId === userId);
+      
+      if (userListings.length > 0) {
+        const batch = AUBazaar.db.batch();
+        userListings.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
+      
+      // Delete user document
+      await AUBazaar.db.collection('users').doc(userId).delete();
+      
+      // Delete auth user
+      await user.delete();
+      
+      AUBazaar.showToast('Account deleted successfully', 'success');
+      setTimeout(() => window.location.href = '/', 1500);
+    } catch (error) {
+      if (error.code === 'auth/requires-recent-login') {
+        AUBazaar.showToast('Please log out and log in again to delete your account.', 'error');
+      } else {
+        AUBazaar.showToast('Failed to delete account: ' + error.message, 'error');
+      }
+    }
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

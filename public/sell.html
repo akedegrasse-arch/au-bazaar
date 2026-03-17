@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post an Item - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .sell-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .sell-header {
+      margin-bottom: 2rem;
+    }
+    .sell-header h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--dark);
+    }
+    .sell-header p {
+      color: var(--gray);
+      margin-top: 0.3rem;
+    }
+    .form-section {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+    .form-section-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--dark);
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 2px solid var(--gray-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.8rem;
+    }
+    .category-option {
+      border: 2px solid var(--gray-light);
+      border-radius: 10px;
+      padding: 0.8rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .category-option:hover {
+      border-color: var(--primary-light);
+    }
+    .category-option.selected {
+      border-color: var(--primary);
+      background: #eaf4fb;
+    }
+    .category-option input { display: none; }
+    .category-option .cat-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    .category-option .cat-name { font-size: 0.8rem; font-weight: 600; color: var(--dark); }
+    .condition-options {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.8rem;
+    }
+    .condition-option {
+      border: 2px solid var(--gray-light);
+      border-radius: 8px;
+      padding: 0.8rem 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .condition-option:hover { border-color: var(--primary-light); }
+    .condition-option.selected { border-color: var(--primary); background: #eaf4fb; color: var(--primary); }
+    .condition-option input { display: none; }
+    .image-upload-zone {
+      border: 2px dashed var(--gray-light);
+      border-radius: var(--border-radius);
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--light);
+    }
+    .image-upload-zone:hover, .image-upload-zone.dragover {
+      border-color: var(--primary);
+      background: #eaf4fb;
+    }
+    .image-upload-zone .upload-icon {
+      font-size: 3rem;
+      color: var(--gray);
+      margin-bottom: 1rem;
+    }
+    .image-upload-zone h4 {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    .image-upload-zone p {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .preview-item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: var(--gray-light);
+    }
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .preview-remove {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+    .preview-main-badge {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .price-input-wrapper {
+      position: relative;
+    }
+    .price-input-wrapper .currency-symbol {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 700;
+      color: var(--gray);
+    }
+    .price-input-wrapper input {
+      padding-left: 30px;
+    }
+    .char-count {
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-top: 0.3rem;
+    }
+    .preview-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+      border: 2px solid var(--primary-light);
+    }
+    .preview-card-title {
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    @media (max-width: 600px) {
+      .condition-options { grid-template-columns: repeat(3, 1fr); }
+      .category-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    <ul class="navbar-nav" id="guest-nav">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
+      <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    </ul>
+    <ul class="navbar-nav" id="user-nav" style="display:none">
+      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/sell" class="active btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="sell-container">
+  <div class="sell-header">
+    <h1><i class="fas fa-plus-circle" style="color:var(--primary)"></i> Post an Item</h1>
+    <p>List your item on AUBazaar and reach the entire Africa University community</p>
+  </div>
+  
+  <div id="auth-required" style="display:none" class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle"></i>
+    You need to <a href="/login?redirect=/sell" style="font-weight:700">login</a> to post items.
+  </div>
+  
+  <form id="sell-form" onsubmit="handleSubmit(event)">
+    
+    <!-- Images Section -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-images"></i> Photos (Up to 5)</div>
+      
+      <div class="image-upload-zone" id="upload-zone" onclick="document.getElementById('image-input').click()" 
+           ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+        <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <h4>Click to upload or drag & drop</h4>
+        <p>JPG, PNG, GIF up to 5MB each • First photo will be the cover</p>
+      </div>
+      
+      <input type="file" id="image-input" accept="image/*" multiple style="display:none" onchange="handleImageSelect(event)">
+      
+      <div class="preview-grid" id="preview-grid"></div>
+    </div>
+    
+    <!-- Basic Info -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-info-circle"></i> Item Information</div>
+      
+      <div class="form-group">
+        <label class="form-label">Title <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="form-control" id="title" placeholder="e.g., Introduction to Computer Science Textbook" maxlength="100" oninput="updateCharCount('title', 100)" required>
+        <div class="char-count"><span id="title-count">0</span>/100</div>
+        <div class="form-error hidden" id="title-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Description <span style="color:var(--danger)">*</span></label>
+        <textarea class="form-control" id="description" rows="5" placeholder="Describe your item in detail - include brand, model, any defects, reason for selling, etc." maxlength="1000" oninput="updateCharCount('description', 1000)" required></textarea>
+        <div class="char-count"><span id="description-count">0</span>/1000</div>
+        <div class="form-error hidden" id="description-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Price (USD) <span style="color:var(--danger)">*</span></label>
+        <div class="price-input-wrapper">
+          <span class="currency-symbol">$</span>
+          <input type="number" class="form-control" id="price" placeholder="0.00" min="0" step="0.01" required>
+        </div>
+        <div class="form-hint">Set to $0 for free items</div>
+        <div class="form-error hidden" id="price-error"></div>
+      </div>
+    </div>
+    
+    <!-- Category -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-th-large"></i> Category <span style="color:var(--danger)">*</span></div>
+      <div class="category-grid" id="category-grid">
+        <label class="category-option" onclick="selectCategory('textbooks', this)">
+          <input type="radio" name="category" value="textbooks">
+          <div class="cat-icon">📚</div>
+          <div class="cat-name">Textbooks</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('electronics', this)">
+          <input type="radio" name="category" value="electronics">
+          <div class="cat-icon">💻</div>
+          <div class="cat-name">Electronics</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('clothing', this)">
+          <input type="radio" name="category" value="clothing">
+          <div class="cat-icon">👕</div>
+          <div class="cat-name">Clothing</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('dorm-essentials', this)">
+          <input type="radio" name="category" value="dorm-essentials">
+          <div class="cat-icon">🛏️</div>
+          <div class="cat-name">Dorm Essentials</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('sports', this)">
+          <input type="radio" name="category" value="sports">
+          <div class="cat-icon">⚽</div>
+          <div class="cat-name">Sports</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('services', this)">
+          <input type="radio" name="category" value="services">
+          <div class="cat-icon">🤝</div>
+          <div class="cat-name">Services</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('food', this)">
+          <input type="radio" name="category" value="food">
+          <div class="cat-icon">🍽️</div>
+          <div class="cat-name">Food</div>
+        </label>
+        <label class="category-option" onclick="selectCategory('other', this)">
+          <input type="radio" name="category" value="other">
+          <div class="cat-icon">📦</div>
+          <div class="cat-name">Other</div>
+        </label>
+      </div>
+      <div class="form-error hidden" id="category-error"></div>
+    </div>
+    
+    <!-- Condition -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-star"></i> Condition <span style="color:var(--danger)">*</span></div>
+      <div class="condition-options">
+        <label class="condition-option" onclick="selectCondition('new', this)">
+          <input type="radio" name="condition" value="new">
+          ✨ New
+        </label>
+        <label class="condition-option" onclick="selectCondition('like-new', this)">
+          <input type="radio" name="condition" value="like-new">
+          👍 Like New
+        </label>
+        <label class="condition-option" onclick="selectCondition('good', this)">
+          <input type="radio" name="condition" value="good">
+          ✅ Good
+        </label>
+        <label class="condition-option" onclick="selectCondition('fair', this)">
+          <input type="radio" name="condition" value="fair">
+          ⚠️ Fair
+        </label>
+        <label class="condition-option" onclick="selectCondition('poor', this)">
+          <input type="radio" name="condition" value="poor">
+          🔧 Poor
+        </label>
+      </div>
+      <div class="form-error hidden" id="condition-error"></div>
+    </div>
+    
+    <!-- Location -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-map-marker-alt"></i> Location & Contact</div>
+      
+      <div class="form-group">
+        <label class="form-label">Pickup Location</label>
+        <input type="text" class="form-control" id="location" placeholder="e.g., Near Main Library, Hostel Block A, Student Center..." required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Contact Preference</label>
+        <select class="form-control" id="contact-preference">
+          <option value="message">Platform Messages Only</option>
+          <option value="phone">Phone/WhatsApp</option>
+          <option value="both">Both</option>
+        </select>
+      </div>
+      
+      <div class="form-group" id="phone-group" style="display:none">
+        <label class="form-label">Phone/WhatsApp Number</label>
+        <input type="tel" class="form-control" id="contact-phone" placeholder="+263 77 123 4567">
+      </div>
+    </div>
+    
+    <!-- Submit -->
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" style="flex:1">
+        <i class="fas fa-paper-plane"></i> Post Listing
+      </button>
+      <button type="button" class="btn btn-outline btn-lg" onclick="saveDraft()">
+        <i class="fas fa-save"></i> Save Draft
+      </button>
+      <a href="/marketplace" class="btn btn-outline btn-lg">
+        <i class="fas fa-times"></i> Cancel
+      </a>
+    </div>
+    
+  </form>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let selectedImages = [];
+  let selectedCategory = '';
+  let selectedCondition = '';
+  let isEditMode = false;
+  let editListingId = null;
+
+  // Check auth
+  AUBazaar.auth.onAuthStateChanged((user) => {
+    if (!user) {
+      document.getElementById('auth-required').style.display = 'block';
+      document.getElementById('sell-form').style.display = 'none';
+    } else {
+      document.getElementById('auth-required').style.display = 'none';
+      document.getElementById('sell-form').style.display = 'block';
+      
+      // Check if edit mode
+      const params = new URLSearchParams(window.location.search);
+      editListingId = params.get('edit');
+      if (editListingId) {
+        isEditMode = true;
+        loadListingForEdit(editListingId);
+      }
+    }
+  });
+
+  async function loadListingForEdit(id) {
+    try {
+      const doc = await AUBazaar.db.collection('listings').doc(id).get();
+      if (!doc.exists) return;
+      
+      const listing = doc.data();
+      document.querySelector('.sell-header h1').innerHTML = '<i class="fas fa-edit" style="color:var(--primary)"></i> Edit Listing';
+      document.getElementById('title').value = listing.title;
+      document.getElementById('description').value = listing.description;
+      document.getElementById('price').value = listing.price;
+      document.getElementById('location').value = listing.location;
+      
+      updateCharCount('title', 100);
+      updateCharCount('description', 1000);
+      
+      if (listing.category) {
+        const catEl = document.querySelector(`input[value="${listing.category}"]`);
+        if (catEl) selectCategory(listing.category, catEl.closest('.category-option'));
+      }
+      
+      if (listing.condition) {
+        const condEl = document.querySelector(`input[name="condition"][value="${listing.condition}"]`);
+        if (condEl) selectCondition(listing.condition, condEl.closest('.condition-option'));
+      }
+      
+      document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Update Listing';
+    } catch (error) {
+      console.error('Error loading listing for edit:', error);
+    }
+  }
+
+  function handleImageSelect(event) {
+    const files = Array.from(event.target.files);
+    addImages(files);
+  }
+
+  function handleDragOver(event) {
+    event.preventDefault();
+    document.getElementById('upload-zone').classList.add('dragover');
+  }
+
+  function handleDragLeave(event) {
+    document.getElementById('upload-zone').classList.remove('dragover');
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    document.getElementById('upload-zone').classList.remove('dragover');
+    const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    addImages(files);
+  }
+
+  function addImages(files) {
+    const remaining = 5 - selectedImages.length;
+    const toAdd = files.slice(0, remaining);
+    
+    toAdd.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        AUBazaar.showToast(`${file.name} is too large (max 5MB)`, 'warning');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        selectedImages.push({ file, dataUrl: e.target.result });
+        renderPreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    if (files.length > remaining) {
+      AUBazaar.showToast(`Maximum 5 images allowed. Only ${remaining} more can be added.`, 'warning');
+    }
+  }
+
+  function renderPreviews() {
+    const grid = document.getElementById('preview-grid');
+    grid.innerHTML = selectedImages.map((img, i) => `
+      <div class="preview-item">
+        <img src="${img.dataUrl}" alt="Preview ${i+1}">
+        ${i === 0 ? '<div class="preview-main-badge">Cover</div>' : ''}
+        <button type="button" class="preview-remove" onclick="removeImage(${i})">✕</button>
+      </div>
+    `).join('');
+    
+    if (selectedImages.length > 0) {
+      document.getElementById('upload-zone').style.display = 'none';
+    }
+    
+    // Add "add more" button if less than 5
+    if (selectedImages.length > 0 && selectedImages.length < 5) {
+      grid.innerHTML += `
+        <div class="preview-item" style="cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--gray-light);border:2px dashed var(--gray)" onclick="document.getElementById('image-input').click()">
+          <div style="text-align:center;color:var(--gray)">
+            <i class="fas fa-plus" style="font-size:1.5rem"></i>
+            <div style="font-size:0.8rem;margin-top:0.3rem">Add More</div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function removeImage(index) {
+    selectedImages.splice(index, 1);
+    if (selectedImages.length === 0) {
+      document.getElementById('upload-zone').style.display = 'block';
+    }
+    renderPreviews();
+  }
+
+  function selectCategory(category, el) {
+    selectedCategory = category;
+    document.querySelectorAll('.category-option').forEach(opt => opt.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('category-error').classList.add('hidden');
+  }
+
+  function selectCondition(condition, el) {
+    selectedCondition = condition;
+    document.querySelectorAll('.condition-option').forEach(opt => opt.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('condition-error').classList.add('hidden');
+  }
+
+  function updateCharCount(fieldId, max) {
+    const field = document.getElementById(fieldId);
+    const count = document.getElementById(fieldId + '-count');
+    if (count) count.textContent = field.value.length;
+  }
+
+  document.getElementById('contact-preference').addEventListener('change', function() {
+    document.getElementById('phone-group').style.display = 
+      this.value !== 'message' ? 'block' : 'none';
+  });
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    
+    const user = AUBazaar.auth.currentUser;
+    if (!user) {
+      window.location.href = '/login?redirect=/sell';
+      return;
+    }
+    
+    // Validate
+    let hasError = false;
+    
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const price = parseFloat(document.getElementById('price').value);
+    
+    if (!title) {
+      document.getElementById('title-error').textContent = 'Title is required';
+      document.getElementById('title-error').classList.remove('hidden');
+      hasError = true;
+    }
+    
+    if (!description) {
+      document.getElementById('description-error').textContent = 'Description is required';
+      document.getElementById('description-error').classList.remove('hidden');
+      hasError = true;
+    }
+    
+    if (isNaN(price) || price < 0) {
+      document.getElementById('price-error').textContent = 'Please enter a valid price';
+      document.getElementById('price-error').classList.remove('hidden');
+      hasError = true;
+    }
+    
+    if (!selectedCategory) {
+      document.getElementById('category-error').textContent = 'Please select a category';
+      document.getElementById('category-error').classList.remove('hidden');
+      hasError = true;
+    }
+    
+    if (!selectedCondition) {
+      document.getElementById('condition-error').textContent = 'Please select a condition';
+      document.getElementById('condition-error').classList.remove('hidden');
+      hasError = true;
+    }
+    
+    if (hasError) return;
+    
+    const btn = document.getElementById('submit-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+    btn.disabled = true;
+    
+    try {
+      // Upload images to Firebase Storage (if any)
+      const imageUrls = [];
+      if (selectedImages && selectedImages.length > 0) {
+        for (const img of selectedImages) {
+          try {
+            const storageRef = AUBazaar.storage.ref(`listings/${user.uid}/${Date.now()}_${img.file.name}`);
+            const snapshot = await storageRef.put(img.file);
+            const url = await snapshot.ref.getDownloadURL();
+            imageUrls.push(url);
+          } catch (imgError) {
+            console.error('Error uploading image:', imgError);
+            // Continue with other images even if one fails
+          }
+        }
+      }
+      
+      // Get user data
+      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      const userData = userDoc.data() || {};
+      
+      const listingData = {
+        title,
+        description,
+        price,
+        category: selectedCategory,
+        condition: selectedCondition,
+        location: document.getElementById('location').value,
+        contactPreference: document.getElementById('contact-preference').value,
+        contactPhone: document.getElementById('contact-phone').value || null,
+        images: imageUrls,
+        sellerId: user.uid,
+        sellerName: userData.fullName || user.displayName || 'AU Member',
+        sellerEmail: user.email,
+        status: 'active',
+        views: 0,
+        featured: false,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if (isEditMode && editListingId) {
+        await AUBazaar.db.collection('listings').doc(editListingId).update(listingData);
+        AUBazaar.showToast('Listing updated successfully!', 'success');
+        setTimeout(() => window.location.href = `/listing/${editListingId}`, 1500);
+      } else {
+        listingData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        
+        const docRef = await AUBazaar.db.collection('listings').add(listingData);
+        
+        // Update user's listing count - use set with merge to avoid errors if doc doesn't exist
+        const userRef = AUBazaar.db.collection('users').doc(user.uid);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+          await userRef.update({
+            totalListings: firebase.firestore.FieldValue.increment(1)
+          });
+        } else {
+          // Create user doc if it doesn't exist
+          await userRef.set({
+            totalListings: 1,
+            email: user.email,
+            fullName: user.displayName || '',
+            role: 'student',
+            rating: 0,
+            ratingCount: 0,
+            totalSales: 0,
+            createdAt: Date.now()
+          }, { merge: true });
+        }
+        
+        AUBazaar.showToast('Listing posted successfully!', 'success');
+        setTimeout(() => window.location.href = `/listing/${docRef.id}`, 1500);
+      }
+      
+    } catch (error) {
+      console.error('Error posting listing:', error);
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Listing';
+      btn.disabled = false;
+      AUBazaar.showToast('Failed to post listing. Please try again.', 'error');
+    }
+  }
+
+  function saveDraft() {
+    const draft = {
+      title: document.getElementById('title').value,
+      description: document.getElementById('description').value,
+      price: document.getElementById('price').value,
+      category: selectedCategory,
+      condition: selectedCondition,
+      location: document.getElementById('location').value
+    };
+    localStorage.setItem('aubazaar_draft', JSON.stringify(draft));
+    AUBazaar.showToast('Draft saved!', 'success');
+  }
+
+  // Load draft if exists
+  document.addEventListener('DOMContentLoaded', () => {
+    const draft = localStorage.getItem('aubazaar_draft');
+    if (draft && !new URLSearchParams(window.location.search).get('edit')) {
+      try {
+        const d = JSON.parse(draft);
+        if (d.title) document.getElementById('title').value = d.title;
+        if (d.description) document.getElementById('description').value = d.description;
+        if (d.price) document.getElementById('price').value = d.price;
+        if (d.category) {
+          const catEl = document.querySelector(`input[value="${d.category}"]`);
+          if (catEl) selectCategory(d.category, catEl.closest('.category-option'));
+        }
+        if (d.condition) {
+          const condEl = document.querySelector(`input[name="condition"][value="${d.condition}"]`);
+          if (condEl) selectCondition(d.condition, condEl.closest('.condition-option'));
+        }
+        updateCharCount('title', 100);
+        updateCharCount('description', 1000);
+      } catch (e) {}
+    }
+  });
+</script>
+</body>
+</html>

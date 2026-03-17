@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace - AUBazaar</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .marketplace-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+      padding: 2rem 0;
+      min-height: calc(100vh - 70px);
+    }
+    .filters-sidebar {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      height: fit-content;
+      position: sticky;
+      top: 90px;
+    }
+    .filter-section {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--gray-light);
+    }
+    .filter-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .filter-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--gray);
+      transition: var(--transition);
+    }
+    .filter-option:hover { color: var(--primary); }
+    .filter-option input { cursor: pointer; }
+    .filter-option.active { color: var(--primary); font-weight: 600; }
+    .price-range {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+    .price-range input {
+      padding: 8px 12px;
+      border: 2px solid var(--gray-light);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+    .price-range input:focus {
+      outline: none;
+      border-color: var(--primary-light);
+    }
+    .marketplace-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .results-count {
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+    .sort-select {
+      padding: 8px 14px;
+      border: 2px solid var(--gray-light);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: white;
+    }
+    .view-toggle {
+      display: flex;
+      gap: 0.3rem;
+    }
+    .view-btn {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--gray-light);
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .view-btn.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #eaf4fb;
+    }
+    .search-bar-marketplace {
+      display: flex;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+    }
+    .search-bar-marketplace input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 2px solid var(--gray-light);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: var(--transition);
+    }
+    .search-bar-marketplace input:focus {
+      border-color: var(--primary-light);
+    }
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .filter-tag {
+      background: #eaf4fb;
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-tag button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--primary);
+      font-size: 0.8rem;
+      padding: 0;
+    }
+    .list-view.products-container .products-grid {
+      grid-template-columns: 1fr;
+    }
+    .list-view.products-container .product-card {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+    }
+    .list-view.products-container .product-card-image {
+      height: 150px;
+    }
+    .mobile-filter-btn {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+    }
+    @media (max-width: 992px) {
+      .marketplace-layout {
+        grid-template-columns: 1fr;
+      }
+      .filters-sidebar {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+        border-radius: 0;
+        overflow-y: auto;
+        padding-top: 4rem;
+      }
+      .filters-sidebar.open {
+        display: block;
+      }
+      .mobile-filter-btn {
+        display: flex;
+      }
+      .filter-close-btn {
+        display: block !important;
+      }
+    }
+    .filter-close-btn {
+      display: none;
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon">🛒</div>
+      AU<span>Bazaar</span>
+    </a>
+    <div class="navbar-search">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Search listings..." id="nav-search" onkeypress="if(event.key==='Enter') applySearch()">
+    </div>
+    <ul class="navbar-nav" id="guest-nav">
+      <li><a href="/marketplace" class="active"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
+      <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+      <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
+    </ul>
+    <ul class="navbar-nav" id="user-nav" style="display:none">
+      <li><a href="/marketplace" class="active"><i class="fas fa-store"></i> Browse</a></li>
+      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="marketplace-layout">
+    
+    <!-- Filters Sidebar -->
+    <aside class="filters-sidebar" id="filters-sidebar">
+      <button class="filter-close-btn" onclick="closeFilters()">✕</button>
+      
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+        <h3 style="font-weight:700;font-size:1.1rem"><i class="fas fa-filter"></i> Filters</h3>
+        <button onclick="clearAllFilters()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:0.85rem;font-weight:600">Clear All</button>
+      </div>
+      
+      <!-- Category Filter -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="fas fa-th-large"></i> Category</div>
+        <div id="category-filters">
+          <label class="filter-option active" onclick="setCategory('', this)">
+            <input type="radio" name="category" value="" checked> All Categories
+          </label>
+          <label class="filter-option" onclick="setCategory('textbooks', this)">
+            <input type="radio" name="category" value="textbooks"> 📚 Textbooks
+          </label>
+          <label class="filter-option" onclick="setCategory('electronics', this)">
+            <input type="radio" name="category" value="electronics"> 💻 Electronics
+          </label>
+        
+          <label class="filter-option" onclick="setCategory('clothing', this)">
+            <input type="radio" name="category" value="clothing"> 👕 Clothing
+          </label>
+          <label class="filter-option" onclick="setCategory('dorm-essentials', this)">
+            <input type="radio" name="category" value="dorm-essentials"> 🛏️ Dorm Essentials
+          </label>
+          <label class="filter-option" onclick="setCategory('sports', this)">
+            <input type="radio" name="category" value="sports"> ⚽ Sports
+          </label>
+          <label class="filter-option" onclick="setCategory('services', this)">
+            <input type="radio" name="category" value="services"> 🤝 Services
+          </label>
+          <label class="filter-option" onclick="setCategory('food', this)">
+            <input type="radio" name="category" value="food"> 🍽️ Food
+          </label>
+          <label class="filter-option" onclick="setCategory('other', this)">
+            <input type="radio" name="category" value="other"> 📦 Other
+          </label>
+        </div>
+      </div>
+      
+      <!-- Price Range -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="fas fa-dollar-sign"></i> Price Range</div>
+        <div class="price-range">
+          <input type="number" id="min-price" placeholder="Min $" min="0" onchange="applyFilters()">
+          <input type="number" id="max-price" placeholder="Max $" min="0" onchange="applyFilters()">
+        </div>
+      </div>
+      
+      <!-- Condition Filter -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="fas fa-star"></i> Condition</div>
+        <label class="filter-option">
+          <input type="checkbox" value="new" onchange="applyFilters()"> New
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" value="like-new" onchange="applyFilters()"> Like New
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" value="good" onchange="applyFilters()"> Good
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" value="fair" onchange="applyFilters()"> Fair
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" value="poor" onchange="applyFilters()"> Poor
+        </label>
+      </div>
+      
+      <button class="btn btn-primary btn-block" onclick="applyFilters(); closeFilters()">
+        <i class="fas fa-search"></i> Apply Filters
+      </button>
+    </aside>
+    
+    <!-- Main Content -->
+    <main>
+      <!-- Search Bar -->
+      <div class="search-bar-marketplace">
+        <input type="text" id="search-input" placeholder="Search for items..." value="" onkeypress="if(event.key==='Enter') applySearch()">
+        <button class="btn btn-primary" onclick="applySearch()"><i class="fas fa-search"></i> Search</button>
+      </div>
+      
+      <!-- Active Filters -->
+      <div class="active-filters" id="active-filters"></div>
+      
+      <!-- Header -->
+      <div class="marketplace-header">
+        <div>
+          <h2 style="font-weight:700;font-size:1.3rem" id="page-title">All Listings</h2>
+          <div class="results-count" id="results-count">Loading...</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem">
+          <select class="sort-select" id="sort-select" onchange="applyFilters()">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+          </select>
+          <div class="view-toggle">
+            <button class="view-btn active" id="grid-view-btn" onclick="setView('grid')" title="Grid View">
+              <i class="fas fa-th"></i>
+            </button>
+            <button class="view-btn" id="list-view-btn" onclick="setView('list')" title="List View">
+              <i class="fas fa-list"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Listings Grid -->
+      <div id="listings-container">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Mobile Filter Button -->
+<button class="btn btn-primary mobile-filter-btn" onclick="openFilters()">
+  <i class="fas fa-filter"></i> Filters
+</button>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+  let currentFilters = {
+    category: '',
+    search: '',
+    minPrice: null,
+    maxPrice: null,
+    conditions: [],
+    sort: 'newest'
+  };
+  let currentView = 'grid';
+  let allListings = [];
+  let filteredListings = [];
+  let currentPage = 1;
+  const itemsPerPage = 12;
+
+  // Parse URL params on load
+  function parseUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('category')) {
+      currentFilters.category = params.get('category');
+      const option = document.querySelector(`input[value="${currentFilters.category}"]`);
+      if (option) {
+        option.checked = true;
+        option.closest('.filter-option').classList.add('active');
+        document.querySelector('input[value=""]').closest('.filter-option').classList.remove('active');
+      }
+    }
+    if (params.get('search')) {
+      currentFilters.search = params.get('search');
+      document.getElementById('search-input').value = currentFilters.search;
+    }
+  }
+
+  async function loadListings() {
+    const container = document.getElementById('listings-container');
+    container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    
+    try {
+      let query = AUBazaar.db.collection('listings').where('status', '==', 'active');
+      
+      const snapshot = await query.get();
+      allListings = [];
+      snapshot.forEach(doc => allListings.push({ id: doc.id, ...doc.data() }));
+      
+      applyClientFilters();
+    } catch (error) {
+      console.error('Error loading listings:', error);
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">😕</div>
+          <h3>Failed to load listings</h3>
+          <p>Please check your connection and try again.</p>
+          <button class="btn btn-primary mt-2" onclick="loadListings()">Retry</button>
+        </div>
+      `;
+    }
+  }
+
+  function applyClientFilters() {
+    filteredListings = [...allListings];
+    
+    // Category filter
+    if (currentFilters.category) {
+      filteredListings = filteredListings.filter(l => l.category === currentFilters.category);
+    }
+    
+    // Search filter
+    if (currentFilters.search) {
+      const q = currentFilters.search.toLowerCase();
+      filteredListings = filteredListings.filter(l => 
+        l.title.toLowerCase().includes(q) || 
+        (l.description && l.description.toLowerCase().includes(q))
+      );
+    }
+    
+    // Price filter
+    if (currentFilters.minPrice !== null) {
+      filteredListings = filteredListings.filter(l => l.price >= currentFilters.minPrice);
+    }
+    if (currentFilters.maxPrice !== null) {
+      filteredListings = filteredListings.filter(l => l.price <= currentFilters.maxPrice);
+    }
+    
+    // Condition filter
+    if (currentFilters.conditions.length > 0) {
+      filteredListings = filteredListings.filter(l => currentFilters.conditions.includes(l.condition));
+    }
+    
+    // Sort
+    switch (currentFilters.sort) {
+      case 'newest':
+        filteredListings.sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return bTime - aTime;
+        });
+        break;
+      case 'oldest':
+        filteredListings.sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return aTime - bTime;
+        });
+        break;
+      case 'price-low':
+        filteredListings.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        filteredListings.sort((a, b) => b.price - a.price);
+        break;
+    }
+    
+    currentPage = 1;
+    renderListings();
+    updateActiveFilters();
+  }
+
+  function renderListings() {
+    const container = document.getElementById('listings-container');
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageListings = filteredListings.slice(start, end);
+    
+    document.getElementById('results-count').textContent = `${filteredListings.length} listing${filteredListings.length !== 1 ? 's' : ''} found`;
+    
+    // Update page title
+    const catName = currentFilters.category ? 
+      document.querySelector(`input[value="${currentFilters.category}"]`)?.closest('.filter-option')?.textContent?.trim() || 'Listings' 
+      : 'All Listings';
+    document.getElementById('page-title').textContent = currentFilters.search ? `Results for "${currentFilters.search}"` : catName;
+    
+    if (pageListings.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔍</div>
+          <h3>No listings found</h3>
+          <p>Try adjusting your filters or search terms.</p>
+          <button class="btn btn-outline mt-2" onclick="clearAllFilters()">Clear Filters</button>
+          <a href="/sell" class="btn btn-primary mt-2 ml-2">Post an Item</a>
+        </div>
+      `;
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    
+    const gridClass = currentView === 'list' ? 'list-view' : '';
+    container.className = 'products-container ' + gridClass;
+    container.innerHTML = `<div class="products-grid">${pageListings.map(createProductCard).join('')}</div>`;
+    
+    renderPagination();
+  }
+
+  function createProductCard(listing) {
+    const image = listing.images && listing.images.length > 0 
+      ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
+      : AUBazaar.getCategoryIcon(listing.category);
+    
+    // Determine badge based on listing properties
+    let badge = '';
+    const now = Date.now();
+    const threeDaysAgo = now - (3 * 24 * 60 * 60 * 1000);
+    const listingDate = listing.createdAt ? (listing.createdAt.toDate ? listing.createdAt.toDate() : new Date(listing.createdAt)).getTime() : 0;
+    
+    if (listing.featured) {
+      badge = '<span class="product-card-badge badge-hot">🔥 Hot</span>';
+    } else if (listingDate > threeDaysAgo) {
+      badge = '<span class="product-card-badge badge-new">🆕 New</span>';
+    } else if (listing.sellerRating && listing.sellerRating >= 4.5) {
+      badge = '<span class="product-card-badge badge-best-seller">⭐ Top Rated</span>';
+    }
+    
+    return `
+      <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
+        <div class="product-card-image">${image}${badge}</div>
+        <button class="product-card-favorite" onclick="event.stopPropagation(); toggleFavorite('${listing.id}', this)">
+          <i class="far fa-heart"></i>
+        </button>
+        <div class="product-card-body">
+          <div class="product-card-title">${listing.title}</div>
+          <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
+          <div class="product-card-meta">
+            <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+            <span><i class="fas fa-map-marker-alt"></i> Campus</span>
+          </div>
+          <div style="font-size:0.8rem;color:var(--gray);margin-top:0.4rem">
+            <i class="fas fa-clock"></i> ${AUBazaar.formatDate(listing.createdAt)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPagination() {
+    const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
+    const pagination = document.getElementById('pagination');
+    
+    if (totalPages <= 1) {
+      pagination.innerHTML = '';
+      return;
+    }
+    
+    let html = '';
+    html += `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+    
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+        html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      } else if (i === currentPage - 3 || i === currentPage + 3) {
+        html += `<button disabled>...</button>`;
+      }
+    }
+    
+    html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+    pagination.innerHTML = html;
+  }
+
+  function goToPage(page) {
+    const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderListings();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setCategory(category, el) {
+    currentFilters.category = category;
+    document.querySelectorAll('#category-filters .filter-option').forEach(opt => opt.classList.remove('active'));
+    el.classList.add('active');
+    applyClientFilters();
+  }
+
+  function applySearch() {
+    currentFilters.search = document.getElementById('search-input').value.trim();
+    applyClientFilters();
+  }
+
+  function applyFilters() {
+    currentFilters.minPrice = document.getElementById('min-price').value ? parseFloat(document.getElementById('min-price').value) : null;
+    currentFilters.maxPrice = document.getElementById('max-price').value ? parseFloat(document.getElementById('max-price').value) : null;
+    currentFilters.sort = document.getElementById('sort-select').value;
+    
+    const conditionCheckboxes = document.querySelectorAll('input[type="checkbox"][value]');
+    currentFilters.conditions = Array.from(conditionCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+    
+    applyClientFilters();
+  }
+
+  function clearAllFilters() {
+    currentFilters = { category: '', search: '', minPrice: null, maxPrice: null, conditions: [], sort: 'newest' };
+    document.getElementById('search-input').value = '';
+    document.getElementById('min-price').value = '';
+    document.getElementById('max-price').value = '';
+    document.getElementById('sort-select').value = 'newest';
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#category-filters .filter-option').forEach(opt => opt.classList.remove('active'));
+    document.querySelector('input[value=""]').closest('.filter-option').classList.add('active');
+    applyClientFilters();
+  }
+
+  function updateActiveFilters() {
+    const container = document.getElementById('active-filters');
+    const tags = [];
+    
+    if (currentFilters.category) {
+      const label = document.querySelector(`input[value="${currentFilters.category}"]`)?.closest('.filter-option')?.textContent?.trim();
+      tags.push(`<div class="filter-tag">${label} <button onclick="setCategory('', document.querySelector('input[value=\\'\\']').closest('.filter-option'))">✕</button></div>`);
+    }
+    if (currentFilters.search) {
+      tags.push(`<div class="filter-tag">Search: "${currentFilters.search}" <button onclick="clearSearch()">✕</button></div>`);
+    }
+    if (currentFilters.minPrice !== null) {
+      tags.push(`<div class="filter-tag">Min: $${currentFilters.minPrice} <button onclick="clearMinPrice()">✕</button></div>`);
+    }
+    if (currentFilters.maxPrice !== null) {
+      tags.push(`<div class="filter-tag">Max: $${currentFilters.maxPrice} <button onclick="clearMaxPrice()">✕</button></div>`);
+    }
+    
+    container.innerHTML = tags.join('');
+  }
+
+  function clearSearch() {
+    currentFilters.search = '';
+    document.getElementById('search-input').value = '';
+    applyClientFilters();
+  }
+
+  function clearMinPrice() {
+    currentFilters.minPrice = null;
+    document.getElementById('min-price').value = '';
+    applyClientFilters();
+  }
+
+  function clearMaxPrice() {
+    currentFilters.maxPrice = null;
+    document.getElementById('max-price').value = '';
+    applyClientFilters();
+  }
+
+  function setView(view) {
+    currentView = view;
+    document.getElementById('grid-view-btn').classList.toggle('active', view === 'grid');
+    document.getElementById('list-view-btn').classList.toggle('active', view === 'list');
+    renderListings();
+  }
+
+  function toggleFavorite(listingId, btn) {
+    if (!AUBazaar.auth.currentUser) {
+      window.location.href = '/login?redirect=/marketplace';
+      return;
+    }
+    btn.classList.toggle('active');
+    btn.innerHTML = btn.classList.contains('active') 
+      ? '<i class="fas fa-heart"></i>' 
+      : '<i class="far fa-heart"></i>';
+  }
+
+  function openFilters() {
+    document.getElementById('filters-sidebar').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeFilters() {
+    document.getElementById('filters-sidebar').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    parseUrlParams();
+    loadListings();
+    
+    // Scroll Reveal Animation
+    window.addEventListener('scroll', () => {
+      document.querySelectorAll('.reveal').forEach(el => {
+        const position = el.getBoundingClientRect().top;
+        const screenHeight = window.innerHeight;
+        if (position < screenHeight - 100) {
+          el.classList.add('active');
+        }
+      });
+    });
+  });
+</script>
+</body>
+</html>
