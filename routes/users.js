@@ -5,6 +5,28 @@ const router = express.Router();
 const { getDb } = require('../config/firebase'); // adjust path if needed
 const db = getDb();
 
+// GET /api/users/stats - Get public platform stats (no auth required)
+router.get('/stats', async (req, res) => {
+  try {
+    const usersSnap = await db.collection('users').get();
+    const listingsSnap = await db.collection('listings').where('status', '==', 'active').get();
+    
+    res.json({
+      success: true,
+      data: {
+        totalUsers: usersSnap.size,
+        activeListings: listingsSnap.size
+      }
+    });
+  } catch (error) {
+    console.error('STATS ERROR:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 
 // GET /api/users/:id - Get user profile
 router.get('/:id', async (req, res) => {

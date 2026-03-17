@@ -1,34 +1,71 @@
 const express = require('express');
 const router = express.Router();
 
+const { getDb } = require('../config/firebase');
+const db = getDb();
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, fullName, studentId, role } = req.body;
+    const { uid, email, fullName, studentId, role } = req.body;
+
+    if (!uid || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'UID and email are required'
+      });
+    }
 
     // Validate Africa University email
     if (!email.endsWith('@africau.edu') && !email.endsWith('@students.africau.edu')) {
       return res.status(400).json({
         success: false,
-        message: 'Only Africa University email addresses are allowed (@africau.edu or @students.africau.edu)'
+        message: 'Only Africa University email addresses are allowed'
       });
     }
 
-    // Return success - actual Firebase auth happens on frontend
-    res.json({
-      success: true,
-      message: 'Registration data validated. Please complete registration with Firebase.',
-      data: { email, fullName, studentId, role }
+    const userRef = db.collection('users').doc(uid);
+    const existingUser = await userRef.get();
+
+    if (existingUser.exists) {
+      return res.json({
+        success: true,
+        message: 'User already exists in Firestore'
+      });
+    }
+
+    await userRef.set({
+      email,
+      fullName: fullName || '',
+      studentId: studentId || '',
+      role: role || 'student',
+      status: 'active',
+      rating: 0,
+      ratingCount: 0,
+      totalListings: 0,
+      totalSales: 0,
+      favorites: [],
+      createdAt: new Date()
     });
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered and saved to Firestore'
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('REGISTER ERROR:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 });
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email } = req.body;
 
     if (!email.endsWith('@africau.edu') && !email.endsWith('@students.africau.edu')) {
       return res.status(400).json({

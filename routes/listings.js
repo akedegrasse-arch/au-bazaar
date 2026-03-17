@@ -4,6 +4,7 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
+const { getDb } = require('../config/firebase');
 
 // Configure multer for image uploads
 const storage = multer.diskStorage({
@@ -65,20 +66,48 @@ router.get('/featured', async (req, res) => {
   }
 });
 
-// GET /api/listings/categories - Get all categories
+// GET /api/listings/categories - Get all categories with counts
 router.get('/categories', async (req, res) => {
   try {
+    const db = getDb();
+    
     const categories = [
-      { id: 'textbooks', name: 'Textbooks & Study Materials', icon: 'book', count: 0 },
-      { id: 'electronics', name: 'Electronics & Gadgets', icon: 'laptop', count: 0 },
-      { id: 'clothing', name: 'Clothing & Accessories', icon: 'tshirt', count: 0 },
-      { id: 'dorm-essentials', name: 'Dorm Essentials', icon: 'bed', count: 0 },
-      { id: 'sports', name: 'Sports & Recreation', icon: 'football', count: 0 },
-      { id: 'services', name: 'Services & Tutoring', icon: 'handshake', count: 0 },
-      { id: 'food', name: 'Food & Beverages', icon: 'utensils', count: 0 },
-      { id: 'other', name: 'Other Items', icon: 'box', count: 0 }
+      { id: 'textbooks', name: 'Textbooks & Study Materials', icon: 'book' },
+      { id: 'electronics', name: 'Electronics & Gadgets', icon: 'laptop' },
+      { id: 'clothing', name: 'Clothing & Accessories', icon: 'tshirt' },
+      { id: 'dorm-essentials', name: 'Dorm Essentials', icon: 'bed' },
+      { id: 'sports', name: 'Sports & Recreation', icon: 'football' },
+      { id: 'services', name: 'Services & Tutoring', icon: 'handshake' },
+      { id: 'food', name: 'Food & Beverages', icon: 'utensils' },
+      { id: 'other', name: 'Other Items', icon: 'box' }
     ];
-    res.json({ success: true, data: categories });
+    
+    // Get all active listings and count in JavaScript (avoids index requirement)
+    const snapshot = await db.collection('listings')
+      .where('status', '==', 'active')
+      .get();
+    
+    // Count by category
+    const counts = {};
+    categories.forEach(cat => counts[cat.id] = 0);
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const cat = data.category || 'other';
+      if (counts[cat] !== undefined) {
+        counts[cat]++;
+      } else {
+        counts['other']++;
+      }
+    });
+    
+    // Add counts to categories
+    const categoriesWithCounts = categories.map(cat => ({
+      ...cat,
+      count: counts[cat.id] || 0
+    }));
+    
+    res.json({ success: true, data: categoriesWithCounts });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
