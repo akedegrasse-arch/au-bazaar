@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload images to listings folder
+    match /listings/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to upload profile pictures
+    match /profiles/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to upload chat images
+    match /chat-images/{conversationId}/{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+  }
+}
