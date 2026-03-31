@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -176,8 +180,8 @@
 <nav class="navbar">
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
-      <div class="logo-icon">🛒</div>
-      AU<span>Bazaar</span>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
+      <span>AU<span>Bazaar</span></span>
     </a>
     <div class="navbar-search">
       <i class="fas fa-search search-icon"></i>
@@ -192,10 +196,28 @@
       <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
       <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
       <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+      <li>
+        <div class="profile-menu">
+          <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
+          <div class="dropdown-menu" id="profile-dropdown">
+            <div class="dropdown-menu-header">
+              <div class="user-name" id="dropdown-name">Loading...</div>
+              <div class="user-email" id="dropdown-email">-</div>
+            </div>
+            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
+            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </li>
     </ul>
   </div>
 </nav>
+
+<!-- Floating Sell Button -->
+<a href="/sell" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
 
 <div class="container">
   <div class="profile-page">
@@ -348,16 +370,59 @@
   const userId = new URLSearchParams(window.location.search).get('id');
   
   async function loadProfile() {
-    if (!userId) {
-      document.getElementById('loading-state').style.display = 'none';
-      document.getElementById('not-found').style.display = 'block';
-      return;
+    // Wait for auth to initialize properly
+    const currentUser = await new Promise((resolve) => {
+      const unsubscribe = AUBazaar.auth.onAuthStateChanged((user) => {
+        unsubscribe();
+        resolve(user);
+      });
+      // Fallback if auth state doesn't change in 3 seconds
+      setTimeout(() => resolve(AUBazaar.auth.currentUser), 3000);
+    });
+    
+    // If no userId in URL, try to load current user's profile
+    let targetUserId = userId;
+    
+    if (!targetUserId) {
+      if (currentUser) {
+        targetUserId = currentUser.uid;
+      } else {
+        // Not logged in - redirect to login
+        window.location.href = '/login';
+        return;
+      }
     }
     
     try {
-      const doc = await AUBazaar.db.collection('users').doc(userId).get();
+      const doc = await AUBazaar.db.collection('users').doc(targetUserId).get();
       
       if (!doc.exists) {
+        // If doc doesn't exist for current user, create it automatically
+        if (!userId && targetUserId && currentUser && currentUser.uid === targetUserId) {
+          // Create the user document automatically
+          await AUBazaar.db.collection('users').doc(targetUserId).set({
+            fullName: currentUser.displayName || 'AU User',
+            email: currentUser.email,
+            role: 'student',
+            status: 'active',
+            rating: 0,
+            ratingCount: 0,
+            totalListings: 0,
+            totalSales: 0,
+            createdAt: Date.now()
+          });
+          
+          // Reload the document
+          const newDoc = await AUBazaar.db.collection('users').doc(targetUserId).get();
+          if (newDoc.exists) {
+            profileUser = { id: newDoc.id, ...newDoc.data() };
+            renderProfile(profileUser);
+            loadUserListings(targetUserId);
+            loadReviews(targetUserId);
+            return;
+          }
+        }
+        
         document.getElementById('loading-state').style.display = 'none';
         document.getElementById('not-found').style.display = 'block';
         return;
@@ -365,8 +430,8 @@
       
       profileUser = { id: doc.id, ...doc.data() };
       renderProfile(profileUser);
-      loadUserListings(userId);
-      loadReviews(userId);
+      loadUserListings(targetUserId);
+      loadReviews(targetUserId);
       
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -605,10 +670,7 @@
       reviewsSnap.forEach(doc => ratings.push(doc.data().rating));
       const avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
       
-      await AUBazaar.db.collection('users').doc(userId).update({
-        rating: avgRating,
-        ratingCount: ratings.length
-      });
+      await AUBazaar.db.collection('users').doc(userId).set({ rating: avgRating, ratingCount: ratings.length }, { merge: true });
       
       closeRateModal();
       AUBazaar.showToast('Review submitted successfully!', 'success');

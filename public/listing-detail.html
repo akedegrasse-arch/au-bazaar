@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Listing - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -135,8 +139,8 @@
 <nav class="navbar">
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
-      <div class="logo-icon">🛒</div>
-      AU<span>Bazaar</span>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
+      <span>AU<span>Bazaar</span></span>
     </a>
     <div class="navbar-search">
       <i class="fas fa-search search-icon"></i>
@@ -153,10 +157,28 @@
       <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
       <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
       <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+      <li>
+        <div class="profile-menu">
+          <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
+          <div class="dropdown-menu" id="profile-dropdown">
+            <div class="dropdown-menu-header">
+              <div class="user-name" id="dropdown-name">Loading...</div>
+              <div class="user-email" id="dropdown-email">-</div>
+            </div>
+            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
+            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </li>
     </ul>
   </div>
 </nav>
+
+<!-- Floating Sell Button -->
+<a href="/sell" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
 
 <div class="container">
   <div class="listing-page">
@@ -635,16 +657,16 @@
     try {
       const userRef = AUBazaar.db.collection('users').doc(user.uid);
       if (isFav) {
-        await userRef.update({
+        await userRef.set({
           favorites: firebase.firestore.FieldValue.arrayRemove(listingId)
-        });
+        }, { merge: true });
         btn.classList.remove('active');
         btn.innerHTML = '<i class="far fa-heart"></i> Save to Favorites';
         AUBazaar.showToast('Removed from favorites', 'info');
       } else {
-        await userRef.update({
+        await userRef.set({
           favorites: firebase.firestore.FieldValue.arrayUnion(listingId)
-        });
+        }, { merge: true });
         btn.classList.add('active');
         btn.innerHTML = '<i class="fas fa-heart"></i> Saved to Favorites';
         AUBazaar.showToast('Added to favorites!', 'success');

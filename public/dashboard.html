@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -89,8 +93,8 @@
       color: var(--primary);
       border-bottom-color: var(--primary);
     }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    .tab-content { display: none !important; }
+    .tab-content.active { display: block !important; }
     .profile-edit-form {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -129,8 +133,8 @@
 <nav class="navbar">
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
-      <div class="logo-icon">🛒</div>
-      AU<span>Bazaar</span>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
+      <span>AU<span>Bazaar</span></span>
     </a>
     <div class="navbar-search">
       <i class="fas fa-search search-icon"></i>
@@ -138,13 +142,31 @@
     </div>
     <ul class="navbar-nav" id="user-nav">
       <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+      <li><a href="#" onclick="checkAndGoToSell(event)" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
       <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
       <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li><a href="/dashboard" class="active"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+      <li>
+        <div class="profile-menu">
+          <div class="profile-avatar" id="nav-user-avatar" onclick="toggleProfileMenu()">U</div>
+          <div class="dropdown-menu" id="profile-dropdown">
+            <div class="dropdown-menu-header">
+              <div class="user-name" id="dropdown-name">Loading...</div>
+              <div class="user-email" id="dropdown-email">-</div>
+            </div>
+            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
+            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </li>
     </ul>
   </div>
 </nav>
+
+<!-- Floating Sell Button -->
+<a href="#" onclick="checkAndGoToSell(event)" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
 
 <div class="dashboard-layout">
   <!-- Sidebar -->
@@ -156,13 +178,13 @@
     </div>
     
     <ul class="sidebar-nav">
-      <li><a href="#" class="active" onclick="showTab('overview', this)"><i class="fas fa-tachometer-alt"></i> Overview</a></li>
-      <li><a href="#" onclick="showTab('listings', this)"><i class="fas fa-list"></i> My Listings</a></li>
-      <li><a href="#" onclick="showTab('favorites', this)"><i class="fas fa-heart"></i> Favorites</a></li>
+      <li><a href="#" onclick="showTab('overview', this); return false;" class="active"><i class="fas fa-tachometer-alt"></i> Overview</a></li>
+      <li><a href="#" onclick="showTab('listings', this); return false;"><i class="fas fa-list"></i> My Listings</a></li>
+      <li><a href="#" onclick="showTab('favorites', this); return false;"><i class="fas fa-heart"></i> Favorites</a></li>
       <li><a href="/messages"><i class="fas fa-envelope"></i> Messages <span class="notification-badge" id="msg-count" style="display:none">0</span></a></li>
-      <li><a href="#" onclick="showTab('notifications', this)"><i class="fas fa-bell"></i> Notifications</a></li>
-      <li><a href="#" onclick="showTab('profile', this)"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
-      <li><a href="#" onclick="showTab('settings', this)"><i class="fas fa-cog"></i> Settings</a></li>
+      <li><a href="#" onclick="showTab('notifications', this); return false;"><i class="fas fa-bell"></i> Notifications</a></li>
+      <li><a href="#" onclick="showTab('profile', this); return false;"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+      <li><a href="#" onclick="showTab('settings', this); return false;"><i class="fas fa-cog"></i> Settings</a></li>
       <li style="margin-top:1rem;border-top:1px solid var(--gray-light);padding-top:1rem">
         <a href="#" onclick="handleLogout()" style="color:var(--danger)!important"><i class="fas fa-sign-out-alt"></i> Logout</a>
       </li>
@@ -318,6 +340,7 @@
               <div class="form-group">
                 <label class="form-label">Student/Staff ID</label>
                 <input type="text" class="form-control" id="profile-studentid" placeholder="e.g., AU2024001">
+                <div class="form-hint">Your university ID (set at registration)</div>
               </div>
               <div class="form-group">
                 <label class="form-label">Department/Faculty</label>
@@ -353,6 +376,13 @@
     <!-- Settings Tab -->
     <div id="tab-settings" class="tab-content">
       <h2 style="font-weight:800;margin-bottom:1.5rem">Settings</h2>
+      
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-store"></i> Seller Status</div>
+        <div class="card-body" id="seller-status-section">
+          <!-- Seller status will be loaded here -->
+        </div>
+      </div>
       
       <div class="card mb-3">
         <div class="card-header"><i class="fas fa-bell"></i> Notification Preferences</div>
@@ -420,13 +450,23 @@
   });
 
   async function loadUserData() {
+    // First, set the name immediately from Firebase Auth user object
+    const authName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+    
+    // Update all name displays immediately
+    document.getElementById('dropdown-name').textContent = authName;
+    document.getElementById('dropdown-email').textContent = currentUser.email;
+    document.getElementById('sidebar-name').textContent = authName;
+    document.getElementById('profile-name-display').textContent = authName;
+    document.getElementById('profile-email-display').textContent = currentUser.email;
+    
     try {
       const doc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
       if (doc.exists) {
         userData = doc.data();
       } else {
         userData = {
-          fullName: currentUser.displayName || 'AU Member',
+          fullName: authName,
           email: currentUser.email,
           role: 'student'
         };
@@ -446,6 +486,11 @@
         document.getElementById('sidebar-avatar').textContent = initials;
         document.getElementById('nav-user-avatar').textContent = initials;
       }
+      
+      // Update dropdown menu
+      document.getElementById('dropdown-name').textContent = name;
+      document.getElementById('dropdown-email').textContent = currentUser.email;
+      
       document.getElementById('welcome-name').textContent = name.split(' ')[0];
       
       // Profile tab
@@ -471,8 +516,9 @@
         }
       }
       
-      // Fill profile form
-      document.getElementById('profile-fullname').value = userData.fullName || '';
+      // Fill profile form - use Firestore data first, fallback to Firebase Auth displayName
+      const displayName = currentUser.displayName || '';
+      document.getElementById('profile-fullname').value = userData.fullName || displayName;
       document.getElementById('profile-phone').value = userData.phone || '';
       document.getElementById('profile-studentid').value = userData.studentId || '';
       document.getElementById('profile-department').value = userData.department || '';
@@ -490,6 +536,75 @@
     await loadMyListings();
     await loadFavorites();
     updateStats();
+    updateSellerStatusUI();
+  }
+
+  function updateSellerStatusUI() {
+    // First sync from Firestore
+    if (currentUser) {
+      AUBazaar.db.collection('users').doc(currentUser.uid).get().then(doc => {
+        if (doc.exists) {
+          const userData = doc.data();
+          localStorage.setItem('role', userData.role || 'buyer');
+          localStorage.setItem('sellerStatus', userData.sellerStatus || 'none');
+          localStorage.setItem('paymentRef', userData.paymentRef || '');
+        }
+      });
+    }
+    
+    const status = localStorage.getItem('sellerStatus');
+    const role = localStorage.getItem('role');
+    const container = document.getElementById('seller-status-section');
+    
+    if (!container) return;
+    
+    let html = '';
+    
+    // Check if approved OR has seller role
+    console.log('Dashboard seller check:', { status, role });
+    
+    if (status === 'approved' || role === 'seller') {
+      const sellerSince = localStorage.getItem('sellerSince');
+      const date = sellerSince ? new Date(parseInt(sellerSince)).toLocaleDateString() : 'N/A';
+      
+      html = `
+        <div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;padding:1rem;text-align:center">
+          <i class="fas fa-check-circle" style="color:#28a745;font-size:2rem;margin-bottom:0.5rem"></i>
+          <h3 style="color:#28a745;margin:0">✅ Seller Account Active</h3>
+          <p style="color:#666;margin:0.5rem 0 0 0">Member since: ${date}</p>
+        </div>
+      `;
+    } else if (status === 'pending') {
+      const paymentRef = localStorage.getItem('paymentRef') || 'N/A';
+      const paymentDate = localStorage.getItem('paymentDate');
+      const date = paymentDate ? new Date(parseInt(paymentDate)).toLocaleDateString() : 'N/A';
+      
+      html = `
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:1rem;text-align:center">
+          <i class="fas fa-clock" style="color:#ffc107;font-size:2rem;margin-bottom:0.5rem"></i>
+          <h3 style="color:#856404;margin:0">⏳ Pending Approval</h3>
+          <p style="color:#666;margin:0.5rem 0 0 0">Payment Ref: <strong>${paymentRef}</strong></p>
+          <p style="color:#666;margin:0">Submitted: ${date}</p>
+          <p style="color:#999;font-size:0.85rem;margin-top:0.5rem">Waiting for admin approval</p>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;text-align:center">
+          <i class="fas fa-shopping-bag" style="color:#6c757d;font-size:2rem;margin-bottom:0.5rem"></i>
+          <h3 style="color:#333;margin:0">Buyer Account</h3>
+          <p style="color:#666;margin:0.5rem 0 1rem 0">Want to start selling?</p>
+          <button class="btn btn-primary" onclick="window.location.href='/become-seller'">
+            <i class="fas fa-store"></i> Become a Seller
+          </button>
+          <button class="btn btn-outline" onclick="resetUserForDemo()" style="margin-top:0.5rem">
+            <i class="fas fa-user-plus"></i> New User (Demo)
+          </button>
+        </div>
+      `;
+    }
+    
+    container.innerHTML = html;
   }
 
   async function loadMyListings() {
@@ -675,9 +790,9 @@
       });
       
       // Update user stats
-      await AUBazaar.db.collection('users').doc(currentUser.uid).update({
+      await AUBazaar.db.collection('users').doc(currentUser.uid).set({
         totalSales: firebase.firestore.FieldValue.increment(1)
-      }).catch(() => {});
+      }, { merge: true }).catch(() => {});
       
       AUBazaar.showToast('Item marked as sold!', 'success');
       await loadMyListings();
@@ -902,10 +1017,29 @@
     btn.disabled = true;
     
     try {
+      // Get values
+      const fullName = document.getElementById('profile-fullname').value.trim();
+      const studentId = document.getElementById('profile-studentid').value.trim();
+      
+      // Validate required fields
+      if (!fullName) {
+        AUBazaar.showToast('Please enter your full name', 'error');
+        btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        btn.disabled = false;
+        return;
+      }
+      
+      if (!studentId) {
+        AUBazaar.showToast('Please enter your Student/Staff ID', 'error');
+        btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        btn.disabled = false;
+        return;
+      }
+      
       const updates = {
-        fullName: document.getElementById('profile-fullname').value.trim(),
+        fullName: fullName,
         phone: document.getElementById('profile-phone').value.trim(),
-        studentId: document.getElementById('profile-studentid').value.trim(),
+        studentId: studentId,
         department: document.getElementById('profile-department').value.trim(),
         bio: document.getElementById('profile-bio').value.trim(),
         preferredLocation: document.getElementById('profile-location').value,
@@ -931,12 +1065,44 @@
   }
 
   function showTab(tabName, linkEl) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.getElementById(`tab-${tabName}`).classList.add('active');
+    console.log('showTab called:', tabName);
     
-    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
-    if (linkEl) linkEl.classList.add('active');
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(t => {
+      t.classList.remove('active');
+      t.style.display = 'none';
+    });
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(`tab-${tabName}`);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+      selectedTab.style.display = 'block';
+      console.log('Tab found and shown:', `tab-${tabName}`);
+    } else {
+      console.error('Tab NOT found:', `tab-${tabName}`);
+    }
+    
+    // Update navigation
+    document.querySelectorAll('.sidebar-nav a').forEach(a => {
+      a.classList.remove('active');
+    });
+    if (linkEl) {
+      linkEl.classList.add('active');
+    }
   }
+  
+  // Direct click handler for Edit Profile (fallback)
+  function goToEditProfile() {
+    showTab('profile');
+  }
+
+function resetUserForDemo() {
+  // Clear localStorage and reload for demo purposes
+  localStorage.clear();
+  alert('New user session started! All seller data cleared.');
+  window.location.reload();
+}
 
   async function handleLogout() {
     const result = await Swal.fire({
@@ -949,6 +1115,11 @@
     });
     
     if (!result.isConfirmed) return;
+    
+    // Clear localStorage for fresh start
+    localStorage.removeItem('role');
+    localStorage.removeItem('sellerStatus');
+    localStorage.removeItem('paymentRef');
     
     await AUBazaar.auth.signOut();
     window.location.href = '/';
@@ -970,6 +1141,54 @@
         AUBazaar.showToast('Failed to send reset email: ' + error.message, 'error');
       });
   }
+
+  // Check seller status before going to sell page
+  function checkAndGoToSell(event) {
+    event.preventDefault();
+    
+    const status = localStorage.getItem('sellerStatus');
+    
+    if (status === 'approved') {
+      window.location.href = '/sell';
+    } else if (status === 'pending') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Pending Approval',
+        text: 'Your seller account is waiting for admin approval.',
+        confirmButtonText: 'View Status'
+      }).then(() => {
+        showTab('settings', document.querySelector('.sidebar-nav a:nth-child(5)'));
+      });
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Become a Seller',
+        text: 'You need to become a seller before posting items.',
+        showCancelButton: true,
+        confirmButtonText: 'Become a Seller',
+        cancelButtonText: 'Later'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = '/become-seller';
+        }
+      });
+    }
+  }
+
+  // Profile dropdown menu
+  function toggleProfileMenu() {
+    const dropdown = document.getElementById('profile-dropdown');
+    dropdown.classList.toggle('show');
+  }
+
+  // Close dropdown when clicking outside
+  window.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('profile-dropdown');
+    const avatar = document.getElementById('nav-user-avatar');
+    if (dropdown && avatar && !dropdown.contains(e.target) && !avatar.contains(e.target)) {
+      dropdown.classList.remove('show');
+    }
+  });
 
   async function deleteAccount() {
     const result = await Swal.fire({

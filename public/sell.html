@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Post an Item - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -201,8 +205,8 @@
 <nav class="navbar">
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
-      <div class="logo-icon">🛒</div>
-      AU<span>Bazaar</span>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
+      <span>AU<span>Bazaar</span></span>
     </a>
     <ul class="navbar-nav" id="guest-nav">
       <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
@@ -214,7 +218,22 @@
       <li><a href="/sell" class="active btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
       <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
       <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li><a href="/dashboard"><div class="user-avatar-nav" id="nav-user-avatar">U</div></a></li>
+      <li>
+        <div class="profile-menu">
+          <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
+          <div class="dropdown-menu" id="profile-dropdown">
+            <div class="dropdown-menu-header">
+              <div class="user-name" id="dropdown-name">Loading...</div>
+              <div class="user-email" id="dropdown-email">-</div>
+            </div>
+            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
+            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </li>
     </ul>
   </div>
 </nav>
@@ -406,12 +425,48 @@
   let isEditMode = false;
   let editListingId = null;
 
-  // Check auth
-  AUBazaar.auth.onAuthStateChanged((user) => {
+  // Check auth and seller status
+  AUBazaar.auth.onAuthStateChanged(async (user) => {
     if (!user) {
       document.getElementById('auth-required').style.display = 'block';
       document.getElementById('sell-form').style.display = 'none';
     } else {
+      // Check if user is a seller (approved)
+      // First check localStorage for immediate access (set during payment flow)
+      let role = localStorage.getItem('role');
+      let sellerStatus = localStorage.getItem('sellerStatus');
+      
+      // Also try to get from Firestore if available
+      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+      
+      // Prefer Firestore data if available, but fall back to localStorage
+      const isAdmin = userData.role === 'admin' || role === 'admin';
+      const isSeller = userData.role === 'seller' || role === 'seller';
+      sellerStatus = userData.sellerStatus || sellerStatus || 'none';
+      role = userData.role || role || 'student';
+      
+      // Debug log
+      console.log('Sell page access check:', { isAdmin, isSeller, sellerStatus, role, userData });
+      
+      if (!isAdmin && !isSeller && sellerStatus !== 'approved') {
+        // Not a seller - show message to become seller
+        document.getElementById('auth-required').innerHTML = `
+          <div style="text-align:center;padding:2rem">
+            <i class="fas fa-store-slash" style="font-size:4rem;color:var(--gray);margin-bottom:1rem"></i>
+            <h2>Seller Access Required</h2>
+            <p style="color:var(--gray);margin:1rem 0">You need to become a seller before posting items.</p>
+            <p style="color:var(--accent);margin:0.5rem 0">Debug: role=${role}, status=${sellerStatus}</p>
+            <button class="btn btn-primary" onclick="window.location.href='/become-seller'">
+              <i class="fas fa-user-plus"></i> Become a Seller
+            </button>
+          </div>
+        `;
+        document.getElementById('auth-required').style.display = 'block';
+        document.getElementById('sell-form').style.display = 'none';
+        return;
+      }
+      
       document.getElementById('auth-required').style.display = 'none';
       document.getElementById('sell-form').style.display = 'block';
       
@@ -663,24 +718,16 @@
         
         // Update user's listing count - use set with merge to avoid errors if doc doesn't exist
         const userRef = AUBazaar.db.collection('users').doc(user.uid);
-        const userDoc = await userRef.get();
-        if (userDoc.exists) {
-          await userRef.update({
-            totalListings: firebase.firestore.FieldValue.increment(1)
-          });
-        } else {
-          // Create user doc if it doesn't exist
-          await userRef.set({
-            totalListings: 1,
-            email: user.email,
-            fullName: user.displayName || '',
-            role: 'student',
-            rating: 0,
-            ratingCount: 0,
-            totalSales: 0,
-            createdAt: Date.now()
-          }, { merge: true });
-        }
+        await userRef.set({
+          totalListings: firebase.firestore.FieldValue.increment(1),
+          email: user.email,
+          fullName: user.displayName || '',
+          role: 'student',
+          rating: 0,
+          ratingCount: 0,
+          totalSales: 0,
+          createdAt: Date.now()
+        }, { merge: true });
         
         AUBazaar.showToast('Listing posted successfully!', 'success');
         setTimeout(() => window.location.href = `/listing/${docRef.id}`, 1500);

@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -11,7 +15,7 @@
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-circle">🛒</div>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="login-logo">
       <h1>AU<span>Bazaar</span></h1>
       <p>Africa University Campus Marketplace</p>
     </div>
@@ -32,33 +36,21 @@
           required
           autocomplete="email"
         >
-        <div class="form-hint">Use your Africa University email address</div>
+        <div class="form-hint">Must be a registered university email</div>
         <div class="form-error hidden" id="email-error"></div>
       </div>
       
       <div class="form-group">
         <label class="form-label"><i class="fas fa-lock"></i> Password</label>
-        <div class="password-toggle">
-          <input 
-            type="password" 
-            class="form-control" 
-            id="password" 
-            placeholder="Enter your password"
-            required
-            autocomplete="current-password"
-          >
-          <button type="button" class="toggle-btn" onclick="togglePassword('password')">
-            <i class="fas fa-eye" id="password-eye"></i>
-          </button>
-        </div>
+        <input 
+          type="password" 
+          class="form-control" 
+          id="password" 
+          placeholder="Enter your password"
+          required
+          autocomplete="current-password"
+        >
         <div class="form-error hidden" id="password-error"></div>
-      </div>
-      
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem">
-          <input type="checkbox" id="remember-me"> Remember me
-        </label>
-        <a href="#" onclick="resetPassword(); return false;" style="color:var(--primary);font-size:0.9rem;font-weight:600">Forgot password?</a>
       </div>
       
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="login-btn">
@@ -66,19 +58,19 @@
       </button>
     </form>
     
-    <div class="auth-divider"><span>or continue with</span></div>
+    <div class="auth-divider"><span>or</span></div>
     
-    <button class="btn btn-outline btn-block" onclick="handleGoogleLogin()" style="margin-bottom:0.8rem">
+    <button class="btn btn-outline btn-block" onclick="handleGoogleLogin()">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
       Continue with Google
     </button>
     
     <div class="auth-footer">
-      Don't have an account? <a href="/register">Create one free</a>
+      Don't have an account? <a href="/register">Create one</a>
     </div>
     
     <div style="margin-top:1rem;padding:1rem;background:#eaf4fb;border-radius:8px;font-size:0.82rem;color:var(--primary)">
-      <i class="fas fa-info-circle"></i> <strong>AU Community Only:</strong> Only @africau.edu and @students.africau.edu email addresses are accepted.
+      <i class="fas fa-university"></i> <strong>AU Students Only:</strong> You must have a valid @africau.edu Google account to use this app.
     </div>
   </div>
 </div>
@@ -98,6 +90,9 @@
     }
   });
 
+  // Email/password login removed - using Google only now
+
+  // Handle email/password login
   async function handleLogin(e) {
     e.preventDefault();
     
@@ -108,9 +103,9 @@
     // Clear errors
     clearErrors();
     
-    // Validate AU email
+    // Validate university email first
     if (!AUBazaar.isValidAUEmail(email)) {
-      showFieldError('email-error', 'Please use your Africa University email (@africau.edu or @students.africau.edu)');
+      showFieldError('email-error', 'This email is not registered in the university system');
       return;
     }
     
@@ -123,15 +118,13 @@
       
       // Update last login in Firestore (create if doesn't exist)
       await AUBazaar.db.collection('users').doc(userCredential.user.uid).set({
-        lastLogin: Date.now(),
-        email: userCredential.user.email
+        lastLogin: Date.now()
       }, { merge: true });
       
       showAlert('Login successful! Redirecting...', 'success');
       
       setTimeout(() => {
-        const redirect = new URLSearchParams(window.location.search).get('redirect') || '/marketplace';
-        window.location.href = redirect;
+        window.location.href = '/marketplace';
       }, 1000);
       
     } catch (error) {
@@ -159,22 +152,8 @@
         case 'auth/invalid-credential':
           message = 'Invalid email or password. Please check your credentials.';
           break;
-        case 'auth/operation-not-allowed':
-          message = 'Email/password login is not enabled. Go to Firebase Console > Authentication > Sign-in method and enable Email/Password.';
-          break;
-        case 'permission-denied':
-        case 'PERMISSION_DENIED':
-          message = 'Database error. Go to Firebase Console > Firestore > Rules and allow read/write.';
-          break;
         default:
-          // Check for common password-related errors
-          if (error.message && error.message.toLowerCase().includes('password')) {
-            message = 'Incorrect password. Please try again.';
-          } else if (error.message && error.message.toLowerCase().includes('email')) {
-            message = 'Invalid email address. Please check and try again.';
-          } else {
-            message = 'Login failed. Please check your email and password, then try again.';
-          }
+          message = 'Login failed: ' + error.message;
       }
       showAlert(message, 'danger');
     }
@@ -188,22 +167,45 @@
       const result = await AUBazaar.auth.signInWithPopup(provider);
       const user = result.user;
       
-      // Verify AU email
+      // Verify AU email - check against university database
       if (!AUBazaar.isValidAUEmail(user.email)) {
         await AUBazaar.auth.signOut();
-        showAlert('Only Africa University email addresses are allowed.', 'danger');
+        showAlert('This email is not registered in the university system. Contact admin to get access.', 'danger');
         return;
       }
       
-      // Create/update user in Firestore
-      await AUBazaar.db.collection('users').doc(user.uid).set({
+      // Create/update user in Firestore - get existing data first
+      const userRef = AUBazaar.db.collection('users').doc(user.uid);
+      const existingDoc = await userRef.get();
+      const existingData = existingDoc.exists ? existingDoc.data() : {};
+      
+      // If user document doesn't exist or is missing studentId, prompt for it
+      let studentId = existingData.studentId;
+      if (!studentId) {
+        studentId = prompt('Please enter your Student/Staff ID (e.g., AU2024001):');
+        if (!studentId) {
+          await AUBazaar.auth.signOut();
+          showAlert('Student ID is required to complete registration.', 'danger');
+          return;
+        }
+      }
+      
+      await userRef.set({
         fullName: user.displayName,
         email: user.email,
+        studentId: studentId,
         photoURL: user.photoURL,
-        role: 'student',
+        role: existingData.role || 'student', // Keep existing role
+        sellerStatus: existingData.sellerStatus || 'none', // Keep existing status
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
+      
+      // Sync localStorage with Firestore user data (now properly captured)
+      localStorage.setItem('uid', user.uid);
+      localStorage.setItem('role', existingData.role || 'student');
+      localStorage.setItem('sellerStatus', existingData.sellerStatus || 'none');
+      localStorage.setItem('paymentRef', existingData.paymentRef || '');
       
       showAlert('Login successful!', 'success');
       setTimeout(() => {
@@ -238,7 +240,7 @@
     }
     
     if (!AUBazaar.isValidAUEmail(email)) {
-      showAlert('Please enter a valid Africa University email', 'warning');
+      showAlert('This email is not registered in the university system', 'warning');
       return;
     }
     
@@ -269,3 +271,5 @@
 </script>
 </body>
 </html>
+
+

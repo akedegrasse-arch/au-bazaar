@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -160,8 +164,8 @@
 <nav class="navbar" style="background:linear-gradient(135deg,#1a2332,#2c3e50)">
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
-      <div class="logo-icon">🛒</div>
-      AU<span>Bazaar</span> <span style="font-size:0.8rem;background:var(--secondary);padding:2px 8px;border-radius:4px;margin-left:8px">ADMIN</span>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
+      <span>AU<span>Bazaar</span></span> <span style="font-size:0.8rem;background:var(--secondary);padding:2px 8px;border-radius:4px;margin-left:8px">ADMIN</span>
     </a>
     <ul class="navbar-nav">
       <li><a href="/marketplace"><i class="fas fa-store"></i> Marketplace</a></li>
@@ -190,6 +194,7 @@
     <div class="admin-nav-section">
       <div class="admin-nav-label">Management</div>
       <ul class="admin-nav">
+        <li><a href="#" onclick="showAdminTab('seller-requests', this)"><i class="fas fa-user-check"></i> Seller Requests</a></li>
         <li><a href="#" onclick="showAdminTab('users', this)"><i class="fas fa-users"></i> Users</a></li>
         <li><a href="#" onclick="showAdminTab('listings', this)"><i class="fas fa-list"></i> Listings</a></li>
         <li><a href="#" onclick="showAdminTab('reports', this)"><i class="fas fa-flag"></i> Reports <span class="notification-badge" id="reports-badge" style="display:none">0</span></a></li>
@@ -255,6 +260,20 @@
           <div id="recent-listings-admin">
             <div class="loading-spinner"><div class="spinner"></div></div>
           </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Seller Requests Tab -->
+    <div id="admin-tab-seller-requests" class="admin-tab">
+      <div class="admin-header">
+        <h1>📝 Seller Requests</h1>
+        <span id="seller-requests-count" class="badge badge-warning">0 pending</span>
+      </div>
+      
+      <div class="card">
+        <div class="card-body" id="seller-requests-container">
+          <div class="loading-spinner"><div class="spinner"></div></div>
         </div>
       </div>
     </div>
@@ -409,6 +428,34 @@
         <h1>⚙️ Platform Settings</h1>
       </div>
       
+      <!-- University Email Database -->
+      <div class="card mb-3">
+        <div class="card-header">🏛️ University Email Database</div>
+        <div class="card-body">
+          <p style="color: var(--gray); margin-bottom: 1rem;">
+            Manage approved university email addresses. Only these emails can register on the platform.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Add New Email</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="email" class="form-control" id="new-university-email" placeholder="student@africau.edu">
+              <button class="btn btn-primary" onclick="addEmailToUniversity(document.getElementById('new-university-email').value)">
+                <i class="fas fa-plus"></i> Add
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Approved Emails (Preview)</label>
+            <div id="university-emails-list" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: var(--light); border-radius: 8px;">
+              <!-- Will be populated by JavaScript -->
+            </div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--gray);">
+            <i class="fas fa-info-circle"></i> Total approved: <span id="total-emails-count">0</span> emails
+          </p>
+        </div>
+      </div>
+      
       <div class="card mb-3">
         <div class="card-header">Platform Configuration</div>
         <div class="card-body">
@@ -493,6 +540,15 @@
       loadAllListings(),
       loadReports()
     ]);
+    
+    // Render university emails in settings
+    renderUniversityEmails();
+    
+    // Update total emails count
+    const countEl = document.getElementById('total-emails-count');
+    if (countEl && typeof universityDatabase !== 'undefined') {
+      countEl.textContent = universityDatabase.length;
+    }
   }
 
   async function loadStats() {
@@ -837,7 +893,7 @@
     if (!result.isConfirmed) return;
     
     try {
-      await AUBazaar.db.collection('users').doc(userId).update({ status: newStatus });
+      await AUBazaar.db.collection('users').doc(userId).set({ status: newStatus }, { merge: true });
       AUBazaar.showToast(`User ${newStatus} successfully`, 'success');
       await loadUsers();
     } catch (error) {
@@ -873,37 +929,24 @@
   async function adminDeleteListing(listingId) {
     const result = await Swal.fire({
       title: 'Delete Listing?',
-      html: 'Choose how you want to delete this listing:<br><br>' +
-            '<button type="button" id="btn-hide" class="swal2-styled swal2-default-outline" style="padding:10px;margin:5px;width:100%">' +
-            '👁️ Hide (Can restore later)</button>' +
-            '<button type="button" id="btn-delete" class="swal2-styled swal2-danger" style="padding:10px;margin:5px;width:100%;background:#dc3545;border-color:#dc3545">' +
-            '🗑️ Delete Permanently</button>',
-      showConfirmButton: false,
+      text: 'Choose how you want to delete this listing:',
+      icon: 'question',
       showCancelButton: true,
-      cancelButtonText: 'Cancel'
+      confirmButtonText: '🗑️ Delete Permanently',
+      cancelButtonText: '👁️ Hide Instead',
+      cancelButtonColor: '#6c757d',
+      confirmButtonColor: '#dc3545',
+      reverseButtons: true
     });
     
-    // Handle custom button clicks
-    const btnHide = document.getElementById('btn-hide');
-    const btnDelete = document.getElementById('btn-delete');
-    
-    if (btnHide) {
-      btnHide.onclick = async () => {
-        Swal.close();
-        await adminHideListing(listingId);
-      };
+    if (result.isConfirmed) {
+      // User chose delete permanently
+      await adminPermanentlyDeleteListing(listingId);
+    } else if (result.dismiss === Swal.DismissReason.cancel) {
+      // User chose to hide instead
+      await adminHideListing(listingId);
     }
-    if (btnDelete) {
-      btnDelete.onclick = async () => {
-        Swal.close();
-        await adminPermanentlyDeleteListing(listingId);
-      };
-    }
-    
-    // If user clicked cancel or outside modal, do nothing
-    if (result.dismiss === Swal.DismissReason.cancel || result.dismiss === Swal.DismissReason.backdrop) {
-      return;
-    }
+    // If dismissed (clicked outside), do nothing
   }
   
   // Admin hide listing (soft delete)
@@ -992,6 +1035,105 @@
     document.getElementById(`admin-tab-${tabName}`).classList.add('active');
     document.querySelectorAll('.admin-nav a').forEach(a => a.classList.remove('active'));
     if (linkEl) linkEl.classList.add('active');
+    
+    // Load seller requests if that tab
+    if (tabName === 'seller-requests') {
+      loadSellerRequests();
+    }
+  }
+
+  // Load seller requests from localStorage (for demo)
+  function loadSellerRequests() {
+    const container = document.getElementById('seller-requests-container');
+    const status = localStorage.getItem('sellerStatus');
+    const paymentRef = localStorage.getItem('paymentRef');
+    const paymentDate = localStorage.getItem('paymentDate');
+    
+    if (status === 'pending' && paymentRef) {
+      const date = paymentDate ? new Date(parseInt(paymentDate)).toLocaleString() : 'N/A';
+      
+      document.getElementById('seller-requests-count').textContent = '1 pending';
+      
+      container.innerHTML = `
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:1.5rem;margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:start">
+            <div>
+              <h4 style="margin:0 0 0.5rem 0">📝 Seller Request</h4>
+              <p style="margin:0;color:#666"><strong>Payment Ref:</strong> ${paymentRef}</p>
+              <p style="margin:0;color:#666"><strong>Submitted:</strong> ${date}</p>
+              <p style="margin:0.5rem 0 0 0;color:#666"><strong>Status:</strong> <span class="badge badge-warning">Pending</span></p>
+            </div>
+            <div style="display:flex;gap:0.5rem">
+              <button class="btn btn-success" onclick="approveSellerRequest()">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button class="btn btn-danger" onclick="rejectSellerRequest()">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      document.getElementById('seller-requests-count').textContent = '0 pending';
+      container.innerHTML = `
+        <div style="text-align:center;padding:2rem;color:var(--gray)">
+          <i class="fas fa-inbox" style="font-size:3rem;opacity:0.3"></i>
+          <p>No pending seller requests</p>
+        </div>
+      `;
+    }
+  }
+
+  // Approve seller request
+  function approveSellerRequest() {
+    const userId = localStorage.getItem('uid');
+    
+    localStorage.setItem('sellerStatus', 'approved');
+    localStorage.setItem('role', 'seller');
+    localStorage.setItem('sellerSince', Date.now());
+    
+    // Remove payment info
+    localStorage.removeItem('paymentRef');
+    localStorage.removeItem('paymentDate');
+    
+    // Also update Firestore if userId is available
+    if (userId && typeof AUBazaar !== 'undefined') {
+      AUBazaar.db.collection('users').doc(userId).set({
+        sellerStatus: 'approved',
+        role: 'seller',
+        sellerSince: Date.now(),
+        approvedBy: 'admin',
+        approvedAt: Date.now()
+      }, { merge: true }).catch(e => console.log('Firestore sync skipped:', e));
+    }
+    
+    AUBazaar.showToast('Seller request approved!', 'success');
+    loadSellerRequests();
+  }
+
+  // Reject seller request
+  function rejectSellerRequest() {
+    const userId = localStorage.getItem('uid');
+    
+    localStorage.setItem('sellerStatus', 'none');
+    localStorage.setItem('role', 'buyer');
+    
+    // Remove payment info
+    localStorage.removeItem('paymentRef');
+    localStorage.removeItem('paymentDate');
+    
+    // Also update Firestore if userId is available
+    if (userId && typeof AUBazaar !== 'undefined') {
+      AUBazaar.db.collection('users').doc(userId).set({
+        sellerStatus: 'rejected',
+        role: 'buyer',
+        rejectedAt: Date.now()
+      }, { merge: true }).catch(e => console.log('Firestore sync skipped:', e));
+    }
+    
+    AUBazaar.showToast('Seller request rejected', 'info');
+    loadSellerRequests();
   }
 
   function refreshStats() {
@@ -1000,7 +1142,39 @@
   }
 
   function saveSettings() {
-    AUBazaar.showToast('Settings saved successfully', 'success');
+    // Save university email settings
+    const allowNewRegistrations = document.getElementById('allow-registrations')?.checked;
+    const autoApprove = document.getElementById('auto-approve')?.checked;
+    
+    // Show success message
+    AUBazaar.showToast('University settings saved successfully', 'success');
+  }
+  
+  // Add email to university database
+  function addEmailToUniversity(email) {
+    if (!email) {
+      AUBazaar.showToast('Please enter an email address', 'error');
+      return;
+    }
+    const success = AUBazaar.addToUniversityDatabase(email);
+    if (success) {
+      AUBazaar.showToast(`Email ${email} added to university database`, 'success');
+      // Update the display
+      renderUniversityEmails();
+    } else {
+      AUBazaar.showToast('Email already exists in database', 'warning');
+    }
+  }
+  
+  // Render university emails in settings
+  function renderUniversityEmails() {
+    const container = document.getElementById('university-emails-list');
+    if (!container) return;
+    
+    const emails = universityDatabase.slice(0, 10); // Show first 10
+    container.innerHTML = emails.map(email => 
+      `<span class="email-tag">${email}</span>`
+    ).join('') + (universityDatabase.length > 10 ? `<span class="email-tag">+${universityDatabase.length - 10} more</span>` : '');
   }
 
   function cleanupDeletedListings() {

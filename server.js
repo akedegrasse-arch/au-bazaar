@@ -14,6 +14,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve images from Images folder
+app.use('/images', express.static(path.join(__dirname, 'Images')));
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'aubazaar_secret',
   resave: false,
@@ -73,6 +76,30 @@ app.get('/admin', (req, res) => {
 
 app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+});
+
+app.get('/become-seller', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'become-seller.html'));
+});
+
+app.get('/setup-allowed-users', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'setup-allowed-users.html'));
+});
+
+app.get('/setup-allowed-users', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'setup-allowed-users.html'));
+});
+
+app.get('/top-sellers', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'top-sellers.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
 });
 
 app.get('/test-firebase', (req, res) => {

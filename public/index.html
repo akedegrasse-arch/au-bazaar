@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AUBazaar - Africa University Marketplace</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -64,7 +68,7 @@
       margin: 0 auto 1rem;
     }
     .cta-section {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      background: linear-gradient(135deg, #d32f2f 0%, #8e0000 100%);
       color: white;
       padding: 5rem 2rem;
       text-align: center;
@@ -102,8 +106,13 @@
     }
     .categories-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 1rem;
+    }
+    @media (max-width: 900px) {
+      .categories-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
     .mobile-nav {
       display: none;
@@ -149,11 +158,20 @@
 </head>
 <body>
 
+<!-- Floating Background Elements -->
+<div class="floating-elements">
+  <span class="floating-icon" style="top: 15%; left: 8%; animation-delay: 0s;">📚</span>
+  <span class="floating-icon" style="top: 25%; right: 12%; animation-delay: 2s;">💻</span>
+  <span class="floating-icon" style="top: 70%; left: 5%; animation-delay: 4s;">🎒</span>
+  <span class="floating-icon" style="top: 75%; right: 10%; animation-delay: 1s;">🎧</span>
+  <span class="floating-icon" style="top: 50%; right: 25%; animation-delay: 3s;">📱</span>
+</div>
+
 <!-- Navbar -->
 <nav class="navbar">
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
-      <div class="logo-icon">🛒</div>
+      <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-icon">
       AU<span>Bazaar</span>
     </a>
     
@@ -182,9 +200,20 @@
       </li>
       <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
       <li>
-        <a href="/dashboard">
-          <div class="user-avatar-nav" id="nav-user-avatar">U</div>
-        </a>
+        <div class="profile-menu">
+          <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
+          <div class="dropdown-menu" id="profile-dropdown">
+            <div class="dropdown-menu-header">
+              <div class="user-name" id="dropdown-name">Loading...</div>
+              <div class="user-email" id="dropdown-email">-</div>
+            </div>
+            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
+            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
       </li>
     </ul>
     
@@ -194,28 +223,30 @@
   </div>
 </nav>
 
+<!-- Floating Sell Button -->
+<a href="/sell" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
+
 <!-- Mobile Nav -->
 <div class="mobile-nav" id="mobile-nav">
   <a href="/marketplace"><i class="fas fa-store"></i> Browse Marketplace</a>
   <a href="/sell"><i class="fas fa-plus-circle"></i> Sell an Item</a>
   <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
-  <a href="/dashboard"><i class="fas fa-user"></i> Dashboard</a>
   <a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a>
   <a href="/register"><i class="fas fa-user-plus"></i> Register</a>
 </div>
 
 <!-- Hero Section -->
 <section class="hero">
-  <div style="position:relative;z-index:1">
-    <h1>🎓 Africa University's<br>Campus Marketplace</h1>
-    <p>Buy and sell textbooks, electronics, and more within the AU community. Safe, trusted, and exclusively for AU students, staff & faculty.</p>
+  <div style="position:relative;z-index:1" class="fade-in">
+    <h1 style="text-shadow: 0 2px 15px rgba(0,0,0,0.3)">🎓 Africa University's<br>Campus Marketplace</h1>
+    <p class="fade-in fade-in-delay-1" style="text-shadow: 0 2px 10px rgba(0,0,0,0.2)">Buy and sell textbooks, electronics, and more within the AU community. Safe, trusted, and exclusively for AU students, staff & faculty.</p>
     
-    <div class="hero-search">
+    <div class="hero-search fade-in fade-in-delay-2">
       <input type="text" placeholder="What are you looking for?" id="main-search" onkeypress="handleMainSearch(event)">
       <button onclick="doSearch()"><i class="fas fa-search"></i> Search</button>
     </div>
     
-    <div class="trust-badges">
+    <div class="trust-badges fade-in fade-in-delay-2">
       <div class="trust-badge"><i class="fas fa-shield-alt"></i> AU Email Verified</div>
       <div class="trust-badge"><i class="fas fa-users"></i> Campus Community</div>
       <div class="trust-badge"><i class="fas fa-lock"></i> Secure Platform</div>
@@ -232,7 +263,7 @@
         <div class="hero-stat-label">AU Members</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-number" id="stat-categories">9</div>
+        <div class="hero-stat-number" id="stat-categories">8</div>
         <div class="hero-stat-label">Categories</div>
       </div>
       <div class="hero-stat">
@@ -244,7 +275,7 @@
 </section>
 
 <!-- Categories Section -->
-<section class="categories-section">
+<section class="categories-section fade-in fade-in-delay-2">
   <div class="container">
     <div class="section-header">
       <div>
@@ -261,7 +292,7 @@
 </section>
 
 <!-- Recent Listings -->
-<section class="recent-listings">
+<section class="recent-listings fade-in fade-in-delay-3">
   <div class="container">
     <div class="section-header">
       <div>
@@ -397,66 +428,122 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
-  // Load categories
-  async function loadCategories() {
+  // Load categories - show immediately with counts from Firestore
+  function loadCategories() {
     const grid = document.getElementById('categories-grid');
-    try {
-      const response = await fetch('/api/listings/categories');
-      const data = await response.json();
-      
-      if (data.success) {
-        grid.innerHTML = data.data.map(cat => `
-          <div class="category-card" onclick="window.location.href='/marketplace?category=${cat.id}'">
-            <div class="category-icon">${AUBazaar.getCategoryIcon(cat.id)}</div>
-            <div class="category-name">${cat.name}</div>
-            <div class="category-count">${cat.count} items</div>
-          </div>
-        `).join('');
-      }
-    } catch (error) {
-      grid.innerHTML = '<p class="text-gray text-center">Failed to load categories</p>';
+    
+    // Define categories locally - show immediately
+    const categories = [
+      { id: 'textbooks', name: 'Textbooks & Study Materials', icon: '📚' },
+      { id: 'electronics', name: 'Electronics & Gadgets', icon: '💻' },
+      { id: 'clothing', name: 'Clothing & Accessories', icon: '👕' },
+      { id: 'dorm-essentials', name: 'Dorm Essentials', icon: '🛏️' },
+      { id: 'sports', name: 'Sports & Recreation', icon: '⚽' },
+      { id: 'services', name: 'Services & Tutoring', icon: '🤝' },
+      { id: 'food', name: 'Food & Beverages', icon: '🍽️' },
+      { id: 'other', name: 'Other Items', icon: '📦' }
+    ];
+    
+    // Wait for AUBazaar to be available
+    if (typeof AUBazaar === 'undefined' || !AUBazaar.db) {
+      // Show categories without counts if Firebase not ready
+      grid.innerHTML = categories.map(cat => `
+        <div class="category-card" onclick="window.location.href='/marketplace?category=${cat.id}'">
+          <div class="category-icon">${cat.icon}</div>
+          <div class="category-name">${cat.name}</div>
+          <div class="category-count">0 items</div>
+        </div>
+      `).join('');
+      return;
     }
+    
+    // Show categories initially with 0
+    grid.innerHTML = categories.map(cat => `
+      <div class="category-card" onclick="window.location.href='/marketplace?category=${cat.id}'">
+        <div class="category-icon">${cat.icon}</div>
+        <div class="category-name">${cat.name}</div>
+        <div class="category-count">0 items</div>
+      </div>
+    `).join('');
+    
+    // Get all active listings and count by category
+    AUBazaar.db.collection('listings')
+      .where('status', '==', 'active')
+      .get()
+      .then(snapshot => {
+        const counts = {};
+        categories.forEach(cat => counts[cat.id] = 0);
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const cat = data.category || 'other';
+          if (counts[cat] !== undefined) {
+            counts[cat]++;
+          } else {
+            counts['other']++;
+          }
+        });
+        
+        // Update counts in UI
+        const cards = grid.querySelectorAll('.category-card');
+        categories.forEach((cat, index) => {
+          if (cards[index]) {
+            cards[index].querySelector('.category-count').textContent = counts[cat.id] + ' items';
+          }
+        });
+      })
+      .catch(err => console.log('Error loading category counts:', err));
   }
 
   // Load recent listings from Firestore
-  async function loadRecentListings() {
+  function loadRecentListings() {
     const grid = document.getElementById('recent-listings-grid');
     const empty = document.getElementById('listings-empty');
     
-    try {
-      // Get all active listings and sort in JavaScript (avoids index requirement)
-      const snapshot = await AUBazaar.db.collection('listings')
-        .where('status', '==', 'active')
-        .get();
-      
-      if (snapshot.empty) {
-        grid.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-      }
-      
-      let listings = [];
-      snapshot.forEach(doc => listings.push({ id: doc.id, ...doc.data() }));
-      
-      // Sort by createdAt descending in JavaScript
-      listings.sort((a, b) => {
-        const aTime = a.createdAt ? (a.createdAt.seconds || 0) : 0;
-        const bTime = b.createdAt ? (b.createdAt.seconds || 0) : 0;
-        return bTime - aTime;
-      });
-      
-      // Take only 8 most recent
-      listings = listings.slice(0, 8);
-      
-      grid.innerHTML = listings.map(listing => createProductCard(listing)).join('');
-      
-      // Update stats
-      updateStats();
-    } catch (error) {
-      console.error('Error loading listings:', error);
+    // Show loading initially
+    grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    
+    // Check if AUBazaar is available
+    if (typeof AUBazaar === 'undefined' || !AUBazaar.db) {
       grid.innerHTML = '';
       empty.classList.remove('hidden');
+      return;
     }
+    
+    // Try to load from Firestore
+    AUBazaar.db.collection('listings')
+      .where('status', '==', 'active')
+      .get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          grid.innerHTML = '';
+          empty.classList.remove('hidden');
+          return;
+        }
+        
+        let listings = [];
+        snapshot.forEach(doc => listings.push({ id: doc.id, ...doc.data() }));
+        
+        // Sort by createdAt descending
+        listings.sort((a, b) => {
+          const aTime = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+          const bTime = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+          return bTime - aTime;
+        });
+        
+        // Take only 8 most recent
+        listings = listings.slice(0, 8);
+        
+        grid.innerHTML = listings.map(listing => createProductCard(listing)).join('');
+        
+        // Update stats
+        updateStats();
+      })
+      .catch(error => {
+        console.error('Error loading listings:', error);
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+      });
   }
 
   function createProductCard(listing) {
@@ -545,12 +632,23 @@
     document.getElementById('mobile-nav').classList.toggle('open');
   }
 
-  // Initialize
-  document.addEventListener('DOMContentLoaded', () => {
+  // Initialize - wait for Firebase to load
+  function init() {
+    if (typeof AUBazaar === 'undefined') {
+      setTimeout(init, 500);
+      return;
+    }
     loadCategories();
     loadRecentListings();
     updateStats();
-  });
+  }
+  
+  // Start initialization
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 </script>
 </body>
 </html>

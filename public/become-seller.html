@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Become a Seller - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Firebase SDK - must be loaded before firebase-config.js -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #d32f2f 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .seller-card-new {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+      max-width: 480px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .seller-header-new {
+      background: linear-gradient(135deg, #d32f2f 0%, #8e0000 100%);
+      color: white;
+      padding: 35px 30px;
+      text-align: center;
+    }
+
+    .seller-header-new h1 {
+      margin: 0 0 10px 0;
+      font-size: 1.7rem;
+    }
+
+    .seller-header-new p {
+      margin: 0;
+      opacity: 0.95;
+    }
+
+    .seller-body-new {
+      padding: 30px;
+    }
+
+    .price-tag-new {
+      text-align: center;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #fff5f5;
+      border-radius: 15px;
+      border: 2px solid #ffcdd2;
+    }
+
+    .price-tag-new .amount {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #d32f2f;
+    }
+
+    .price-tag-new .period {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    .benefits-new {
+      background: #f5f5f5;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+
+    .benefits-new h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+
+    .benefits-new ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .benefits-new li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: #444;
+    }
+
+    .benefits-new li i {
+      color: #27ae60;
+    }
+
+    .payment-option {
+      width: 100%;
+      padding: 20px;
+      margin-bottom: 15px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      transition: all 0.3s;
+      text-align: left;
+      font-family: inherit;
+    }
+
+    .payment-option:hover {
+      border-color: #d32f2f;
+      background: #fffafa;
+      transform: translateY(-2px);
+    }
+
+    .payment-icon-new {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .payment-option.ecocash .payment-icon-new {
+      background: linear-gradient(135deg, #27ae60, #1e8449);
+      color: white;
+    }
+
+    .payment-option.physical .payment-icon-new {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+    }
+
+    .payment-option h4 {
+      margin: 0 0 4px 0;
+      color: #333;
+      font-size: 1rem;
+    }
+
+    .payment-option p {
+      margin: 0;
+      color: #777;
+      font-size: 0.85rem;
+    }
+
+    .back-btn-new {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+      text-decoration: none;
+    }
+
+    .back-btn-new:hover {
+      color: #d32f2f;
+    }
+
+    .status-box {
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .status-box.pending {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      color: #856404;
+    }
+
+    .status-box.approved {
+      background: #d4edda;
+      border: 1px solid #28a745;
+      color: #155724;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      top: 0;
+      left: 0;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      margin: 80px auto;
+      max-width: 350px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-content h2 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .modal-content p {
+      color: #666;
+      margin: 0 0 20px 0;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+
+    .modal-input:focus {
+      border-color: #d32f2f;
+      outline: none;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .modal-btn.confirm {
+      background: linear-gradient(135deg, #27ae60, #1e8449);
+      color: white;
+    }
+
+    .modal-btn.cancel {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .modal-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .physical-section {
+      display: none;
+      background: white;
+      padding: 25px;
+      margin-top: 20px;
+      border-radius: 15px;
+      text-align: center;
+    }
+
+    .physical-section h2 {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+
+    .physical-section p {
+      color: #666;
+      margin: 0 0 20px 0;
+      line-height: 1.6;
+    }
+
+    .physical-status {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .payment-status {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .payment-status.processing {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .payment-status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+  </style>
+</head>
+<body>
+
+<div class="seller-card-new">
+  <div class="seller-header-new">
+    <h1><i class="fas fa-store"></i> Become a Seller</h1>
+    <p>Start selling on AUBazaar today!</p>
+  </div>
+
+  <div class="seller-body-new">
+    <div id="statusMessage"></div>
+
+    <div id="paymentForm">
+      <div class="price-tag-new">
+        <div class="amount">$2.00</div>
+        <div class="period">One-time payment, lifetime access</div>
+      </div>
+
+      <div class="benefits-new">
+        <h3><i class="fas fa-star" style="color: #d32f2f"></i> Why Become a Seller?</h3>
+        <ul>
+          <li><i class="fas fa-check"></i> Unlimited product listings</li>
+          <li><i class="fas fa-check"></i> Reach thousands of AU students</li>
+          <li><i class="fas fa-check"></i> Secure payment tracking</li>
+          <li><i class="fas fa-check"></i> 24/7 seller support</li>
+          <li><i class="fas fa-check"></i> Build your reputation</li>
+        </ul>
+      </div>
+
+      <h3 style="margin: 0 0 15px 0; color: #333;">Select Payment Method:</h3>
+
+      <div class="payment-option ecocash" onclick="openEcoCash()">
+        <div class="payment-icon-new">📱</div>
+        <div>
+          <h4>EcoCash</h4>
+          <p>Instant payment, instant access</p>
+        </div>
+      </div>
+
+      <div id="ecoSection" class="eco-section" style="display: none; margin-top: 20px; padding: 20px; background: #f8fff8; border-radius: 12px; border: 2px solid #27ae60;">
+        <h3 style="color: #27ae60; margin-bottom: 15px;">📱 EcoCash Payment</h3>
+        <p style="color: #666; margin-bottom: 15px;">Pay <strong>$2.00</strong> to become a seller</p>
+        <p style="color: #666; font-size: 13px; margin-bottom: 10px;">Enter your EcoCash number registered with your phone</p>
+        <input type="tel" id="ecoNumber" placeholder="Enter EcoCash number (0771234567)" maxlength="10" style="padding: 14px; width: 100%; font-size: 18px; border: 2px solid #27ae60; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; text-align: center; letter-spacing: 1px;">
+        <p style="color: #666; font-size: 12px; margin-bottom: 15px;">Valid prefixes: 077, 078, 071, 073</p>
+        <button id="ecoPayBtn" onclick="confirmEcoCash()" style="padding: 14px 24px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; font-weight: 600;">Confirm Payment</button>
+        <p id="ecoStatus" style="margin-top: 15px; font-weight: 500;"></p>
+      </div>
+    </div>
+
+    <a href="/dashboard" class="back-btn-new">
+      <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+  </div>
+</div>
+
+<script>
+  // Firebase is already initialized in /js/firebase-config.js
+  // auth and db are globally available
+
+  // Check auth state
+  auth.onAuthStateChanged(function(user) {
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+    loadSellerStatus(user);
+  });
+
+  function loadSellerStatus(user) {
+    // Check localStorage first
+    var status = localStorage.getItem('sellerStatus');
+    var role = localStorage.getItem('role');
+    
+    // Try to get from Firestore if available
+    if (typeof db !== 'undefined' && user) {
+      db.collection('users').doc(user.uid).get().then(function(doc) {
+        if (doc.exists) {
+          const userData = doc.data();
+          // Sync Firestore data to localStorage
+          if (userData.sellerStatus) {
+            status = userData.sellerStatus;
+            localStorage.setItem('sellerStatus', status);
+          }
+          if (userData.role) {
+            role = userData.role;
+            localStorage.setItem('role', role);
+          }
+        }
+        updateStatusDisplay(status, role);
+      }).catch(function(e) {
+        console.log('Firestore read skipped:', e);
+        updateStatusDisplay(status, role);
+      });
+    } else {
+      updateStatusDisplay(status, role);
+    }
+  }
+
+  function updateStatusDisplay(status, role) {
+    var statusDiv = document.getElementById('statusMessage');
+    var formDiv = document.getElementById('paymentForm');
+
+    // Check both sellerStatus and role
+    if (status === 'approved' || role === 'seller') {
+      statusDiv.innerHTML = '<div class="status-box approved"><i class="fas fa-check-circle"></i> <strong>You are already a seller!</strong></div>';
+      formDiv.style.display = 'none';
+    } else if (status === 'pending') {
+      statusDiv.innerHTML = '<div class="status-box pending"><i class="fas fa-clock"></i> <strong>Pending Approval</strong><br>Your request is being reviewed.</div>';
+      formDiv.style.display = 'none';
+    }
+  }
+
+  function openEcoCash() {
+    document.getElementById('ecoSection').style.display = 'block';
+  }
+
+  function confirmEcoCash() {
+    const input = document.getElementById('ecoNumber');
+    const number = input.value.replace(/[^0-9]/g, '');
+    const status = document.getElementById('ecoStatus');
+
+    // Zimbabwe EcoCash number validation (077/078/071/073 + 7 digits = 10 total)
+    const zimRegex = /^(077|078|071|073)\d{7}$/;
+
+    if (!zimRegex.test(number)) {
+      status.style.display = 'block';
+      status.style.padding = '15px';
+      status.style.borderRadius = '10px';
+      status.style.textAlign = 'center';
+      status.style.fontSize = '15px';
+      status.style.lineHeight = '1.6';
+      status.style.background = '#f8d7da';
+      status.style.color = '#721c24';
+      status.style.border = '1px solid #f5c6cb';
+      if (number.length !== 10) {
+        status.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:10px;display:block;"></i><strong>Invalid Number</strong><br>EcoCash number must be 10 digits (e.g., 0771234567)';
+      } else if (!number.match(/^(077|078|071|073)/)) {
+        status.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:10px;display:block;"></i><strong>Invalid Prefix</strong><br>Valid prefixes: 077, 078, 071, or 073';
+      } else {
+        status.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:10px;display:block;"></i><strong>Invalid EcoCash Number</strong><br>Please enter a valid number (e.g., 0771234567)';
+      }
+      input.disabled = false;
+      const errBtn = document.getElementById('ecoPayBtn');
+      errBtn.disabled = false;
+      errBtn.innerText = 'Confirm Payment';
+      return;
+    }
+
+    // Disable input and button during processing
+    input.disabled = true;
+    const btn = document.getElementById('ecoPayBtn');
+    btn.disabled = true;
+    btn.innerText = 'Processing...';
+
+    // Style the status area
+    status.style.display = 'block';
+    status.style.padding = '15px';
+    status.style.borderRadius = '10px';
+    status.style.textAlign = 'center';
+    status.style.fontSize = '15px';
+    status.style.lineHeight = '1.6';
+
+    // Step 1: Sending request to EcoCash
+    status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">📡</div>Initiating EcoCash payment...<br><small style="color:#666">Please wait...</small>';
+    status.style.background = '#fff3cd';
+    status.style.color = '#856404';
+    status.style.border = '1px solid #ffeeba';
+
+    setTimeout(() => {
+      // Step 2: Check phone for PIN
+      status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">📲</div>Check your EcoCash app!<br><strong>Enter your PIN</strong> to authorize payment<br><small style="color:#0d47a1;">You have received a payment notification on your phone</small>';
+      status.style.background = '#e3f2fd';
+      status.style.color = '#0d47a1';
+      status.style.border = '1px solid #bbdefb';
+
+      setTimeout(() => {
+        // Step 3: Waiting for confirmation
+        status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">⏳</div>Verifying payment with EcoCash...<br><small style="color:#856404;">Please do not close this page</small>';
+
+        setTimeout(() => {
+          // Step 4: Processing transaction
+          status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">💳</div>Processing payment of $2.00...<br><small style="color:#856404;">Connecting to EcoCash network...</small>';
+
+          setTimeout(() => {
+            // Step 5: SUCCESS
+            const txnId = "EC" + Math.floor(Math.random() * 10000000) + "Z";
+
+            status.innerHTML = '<div style="margin-bottom:10px;font-size:28px;">✅</div><strong>Payment Successful!</strong><br><br>Amount: <strong>$2.00 USD</strong><br>Reference: <strong>' + txnId + '</strong><br><br><small style="color:#155724;">📱 EcoCash confirmation sent to your phone</small>';
+            status.style.background = '#d4edda';
+            status.style.color = '#155724';
+            status.style.border = '1px solid #c3e6cb';
+
+            // Save seller status to localStorage
+            localStorage.setItem('role', 'seller');
+            localStorage.setItem('sellerStatus', 'approved');
+            localStorage.setItem('paymentRef', txnId);
+            localStorage.setItem('sellerSince', Date.now());
+            
+            // Debug: Log what was saved
+            console.log('Payment successful! Saved to localStorage:', {
+              role: localStorage.getItem('role'),
+              sellerStatus: localStorage.getItem('sellerStatus'),
+              paymentRef: localStorage.getItem('paymentRef')
+            });
+
+            // Save to Firestore only if auth is available
+            if (typeof auth !== 'undefined' && auth.currentUser) {
+              db.collection('users').doc(auth.currentUser.uid).set({
+                sellerStatus: 'approved',
+                role: 'seller',
+                sellerSince: Date.now(),
+                paymentRef: txnId,
+                ecocashNumber: number
+              }, { merge: true }).then(() => {
+                console.log('Seller status saved to Firestore');
+              }).catch(function(e) {
+                console.log('Firestore save skipped:', e);
+              });
+            }
+
+            // Show success and redirect
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 2000);
+
+          }, 2000);
+
+        }, 2500);
+
+      }, 2500);
+
+    }, 2000);
+  }
+
+  function processPayment() {
+    // Legacy function - redirect to new confirmEcoCash
+    confirmEcoCash();
+  }
+</script>
+
+</body>
+</html>

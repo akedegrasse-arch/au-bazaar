@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Top Sellers - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -13,13 +17,14 @@
       margin-bottom: 2rem;
     }
     .leaderboard-header h1 {
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: 800;
-      color: #1a5276;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
     }
     .leaderboard-header p {
-      color: #7f8c8d;
-      margin-top: 0.5rem;
+      color: var(--gray);
+      font-size: 1.1rem;
     }
     .leaderboard-card {
       background: white;
@@ -108,17 +113,21 @@
 </head>
 <body>
   <!-- Navigation -->
-  <nav style="background: linear-gradient(135deg, #1a5276 0%, #154360 100%); padding: 0.75rem 2rem;">
-    <div class="container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;max-width:1200px;margin:0 auto">
-      <a href="/" style="font-size:1.5rem;font-weight:800;color:#f39c12;text-decoration:none">AUBazaar</a>
-      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.9rem">
-        <a href="/marketplace" style="color:white;text-decoration:none">Marketplace</a>
-        <a href="/top-sellers" style="color:#f39c12;font-weight:600;text-decoration:none">Top Sellers</a>
-        <a href="/sell" style="color:white;text-decoration:none">Sell</a>
-        <a href="/messages" id="nav-messages" style="color:white;text-decoration:none;display:none">Messages</a>
-        <a href="/dashboard" id="nav-dashboard" style="color:white;text-decoration:none;display:none">Dashboard</a>
-        <a href="/profile" id="nav-profile" style="color:white;text-decoration:none;display:none">Profile</a>
-        <a href="/login" id="nav-login" style="color:white;text-decoration:none">Login</a>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">
+        <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
+        <span>AU<span>Bazaar</span></span>
+      </a>
+      
+      <div class="navbar-menu">
+        <a href="/marketplace" class="navbar-link">Marketplace</a>
+        <a href="/top-sellers" class="navbar-link active">Top Sellers</a>
+        <a href="/sell" class="navbar-link">Sell</a>
+        <a href="/messages" id="nav-messages" class="navbar-link" style="display:none">Messages</a>
+        <a href="/dashboard" id="nav-dashboard" class="navbar-link" style="display:none">Dashboard</a>
+        <a href="/profile" id="nav-profile" class="navbar-link" style="display:none">Profile</a>
+        <a href="/login" id="nav-login" class="navbar-link">Login</a>
       </div>
     </div>
   </nav>

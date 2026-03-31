@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup Allowed Users - AUBazaar</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: #f5f5f5;
+    }
+    .setup-container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+    .setup-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 2rem;
+    }
+    .setup-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .setup-header h1 {
+      color: #121212;
+      margin-bottom: 0.5rem;
+    }
+    .setup-header p {
+      color: #666;
+    }
+    .email-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin: 1rem 0;
+      padding: 1rem;
+      background: #fafafa;
+    }
+    .email-item {
+      padding: 0.75rem;
+      border-bottom: 1px solid #e0e0e0;
+      font-family: monospace;
+      color: #333;
+      background: white;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+    .email-item:last-child {
+      border-bottom: none;
+    }
+    .email-item:hover {
+      background: #f5f5f5;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .stat-box {
+      text-align: center;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .stat-box .number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #d32f2f;
+    }
+    .stat-box .label {
+      font-size: 0.85rem;
+      color: #666;
+    }
+    .btn-import {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    .btn-import:hover {
+      background: #1e8449;
+    }
+    .btn-import:disabled {
+      background: #e0e0e0;
+      cursor: not-allowed;
+    }
+    .log {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #1a1a1a;
+      color: #00ff00;
+      font-family: monospace;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-error {
+      color: #ff6b6b;
+    }
+    .log-success {
+      color: #00ff00;
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-container">
+    <div class="setup-card">
+      <div class="setup-header">
+        <h1><i class="fas fa-database"></i> Allowed Users Database Setup</h1>
+        <p>Populate Firestore with allowed registration emails</p>
+      </div>
+      
+      <div class="stats">
+        <div class="stat-box">
+          <div class="number" id="local-count">0</div>
+          <div class="label">Local Emails</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="firestore-count">0</div>
+          <div class="label">In Firestore</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="pending-count">0</div>
+          <div class="label">To Add</div>
+        </div>
+      </div>
+      
+      <h3><i class="fas fa-list"></i> Emails to Import:</h3>
+      <div class="email-list" id="email-list"></div>
+      
+      <button class="btn-import" id="import-btn" onclick="importToFirestore()">
+        <i class="fas fa-cloud-upload-alt"></i> Import All to Firestore
+      </button>
+      
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3Vu-kHTGeReLgBPyUQZfC629gau_4qys",
+      authDomain: "aubazaar-12d35.firebaseapp.com",
+      projectId: "aubazaar-12d35",
+      storageBucket: "aubazaar-12d35.firebasestorage.app",
+      messagingSenderId: "711155540514",
+      appId: "1:711155540514:web:26c64d452b9f62d68de07b"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    // Local email list
+    const universityDatabase = [
+      'admin@africau.edu',
+      'principal@africau.edu',
+      'dean@africau.edu',
+      'registrar@africau.edu',
+      'finance@africau.edu',
+      'student1@africau.edu',
+      'student2@africau.edu',
+      'student3@africau.edu',
+      'student4@africau.edu',
+      'student5@africau.edu',
+      'akek@africau.edu',
+      'mjmatongo@africau.edu',
+      'gnagnej@africau.edu',
+      'magrimussat@africau.edu',
+      'ndlovu@africau.edu',
+      'allaj@africau.edu',
+      'zulu@africau.edu',
+      'sibanda@africau.edu',
+      'josuek@africau.edu',
+      'sessk@africau.edu',
+      'mutandwa@africau.edu',
+      'gumede@africau.edu'
+    ];
+    
+    // Display local emails
+    document.getElementById('local-count').textContent = universityDatabase.length;
+    document.getElementById('email-list').innerHTML = universityDatabase
+      .map(email => `<div class="email-item">${email}</div>`)
+      .join('');
+    
+    // Check Firestore
+    async function checkFirestore() {
+      try {
+        const snapshot = await db.collection('allowed_users').get();
+        document.getElementById('firestore-count').textContent = snapshot.size;
+        
+        const existingEmails = snapshot.docs.map(doc => doc.data().email.toLowerCase());
+        const pending = universityDatabase.filter(email => !existingEmails.includes(email.toLowerCase()));
+        document.getElementById('pending-count').textContent = pending.length;
+        
+        return existingEmails;
+      } catch (error) {
+        log('Error checking Firestore: ' + error.message, 'error');
+        return [];
+      }
+    }
+    
+    // Initial check
+    checkFirestore();
+    
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `<div class="log-${type}">[${time}] ${message}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    async function importToFirestore() {
+      const btn = document.getElementById('import-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+      
+      log('Starting import to Firestore...');
+      
+      try {
+        // Get existing emails from Firestore
+        const snapshot = await db.collection('allowed_users').get();
+        const existingEmails = snapshot.docs.map(doc => doc.data().email.toLowerCase());
+        
+        let added = 0;
+        let skipped = 0;
+        
+        for (const email of universityDatabase) {
+          if (existingEmails.includes(email.toLowerCase())) {
+            log(`Skipped (already exists): ${email}`);
+            skipped++;
+          } else {
+            await db.collection('allowed_users').add({
+              email: email.toLowerCase(),
+              addedAt: Date.now(),
+              addedBy: 'setup-script'
+            });
+            log(`Added: ${email}`, 'success');
+            added++;
+          }
+        }
+        
+        log(`Import complete! Added: ${added}, Skipped: ${skipped}`, 'success');
+        
+        // Refresh counts
+        await checkFirestore();
+        
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Import Complete!';
+        
+      } catch (error) {
+        log('Import error: ' + error.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Try Again';
+      }
+    }
+  </script>
+</body>
+</html>
