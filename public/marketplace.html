@@ -254,8 +254,33 @@
         </div>
       </li>
     </ul>
+    
+    <div class="hamburger" onclick="toggleMobileNav()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
+
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="toggleMobileNav()"></div>
+<div class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-close" onclick="toggleMobileNav()">&times;</button>
+  <ul id="mobile-guest-nav">
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/contact" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Contact</a></li>
+    <li><a href="/login" onclick="closeMobileNav()"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="/register" onclick="closeMobileNav()"><i class="fas fa-user-plus"></i> Register</a></li>
+  </ul>
+  <ul id="mobile-user-nav" style="display:none">
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
+    <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
+    <li><a href="/profile" onclick="closeMobileNav()"><i class="fas fa-user"></i> Profile</a></li>
+    <li id="mobile-admin-link" style="display:none"><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Admin</a></li>
+    <li><a href="#" onclick="handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</div>
 
 <!-- Floating Sell Button -->
 <a href="#" onclick="AUBazaar.checkAndGoToSell(event)" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
@@ -740,6 +765,25 @@
       });
     });
   });
+  
+  // Mobile Navigation Functions
+  function toggleMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav && overlay) {
+      mobileNav.classList.toggle('active');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+    }
+  }
+  
+  function closeMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav) mobileNav.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
 </script>
 </body>
 </html>

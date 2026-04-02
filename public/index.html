@@ -223,6 +223,26 @@
   </div>
 </nav>
 
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="toggleMobileNav()"></div>
+<div class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-close" onclick="toggleMobileNav()">&times;</button>
+  <ul id="mobile-guest-nav">
+    <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="/register"><i class="fas fa-user-plus"></i> Register</a></li>
+  </ul>
+  <ul id="mobile-user-nav" style="display:none">
+    <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/dashboard"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/sell"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
+    <li><a href="/messages"><i class="fas fa-envelope"></i> Messages</a></li>
+    <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
+    <li id="mobile-admin-link" style="display:none"><a href="/admin"><i class="fas fa-cog"></i> Admin</a></li>
+    <li><a href="#" onclick="handleLogout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</div>
+
 <!-- Floating Sell Button -->
 <a href="/sell" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
 
@@ -629,7 +649,22 @@
   }
 
   function toggleMobileNav() {
-    document.getElementById('mobile-nav').classList.toggle('open');
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav && overlay) {
+      mobileNav.classList.toggle('active');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+    }
+  }
+  
+  // Close mobile nav when clicking a link
+  function closeMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav) mobileNav.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
   }
 
   // Initialize - wait for Firebase to load

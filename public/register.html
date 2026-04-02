@@ -274,7 +274,7 @@
       return;
     }
     
-    // Validate university email first (async)
+    // Validate university email first (async function - must await!)
     const isValidEmail = await AUBazaar.isValidAUEmail(email);
     if (!isValidEmail) {
       showFieldError('email-error', 'This email is not registered in the university system');

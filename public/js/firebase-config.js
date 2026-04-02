@@ -36,7 +36,7 @@ auth.onAuthStateChanged(async (user) => {
         ratingCount: 0,
         totalListings: 0,
         totalSales: 0
-      }, { merge: false });
+      }, { merge: true });
     }
     
     // ALWAYS sync localStorage with Firestore user data on login
@@ -86,6 +86,19 @@ function updateNavbarForUser(user) {
   if (guestNav) guestNav.style.display = 'none';
   if (userNav) userNav.style.display = 'flex';
   
+  // Update mobile nav
+  const mobileGuestNav = document.getElementById('mobile-guest-nav');
+  const mobileUserNav = document.getElementById('mobile-user-nav');
+  if (mobileGuestNav) mobileGuestNav.style.display = 'none';
+  if (mobileUserNav) mobileUserNav.style.display = 'block';
+  
+  // Check for admin and show mobile admin link
+  const role = localStorage.getItem('role');
+  const mobileAdminLink = document.getElementById('mobile-admin-link');
+  if (mobileAdminLink && role === 'admin') {
+    mobileAdminLink.style.display = 'block';
+  }
+  
   if (userNameEl) {
     const displayName = user.displayName || user.email.split('@')[0];
     userNameEl.textContent = displayName;
@@ -112,6 +125,12 @@ function updateNavbarForGuest() {
   
   if (guestNav) guestNav.style.display = 'flex';
   if (userNav) userNav.style.display = 'none';
+  
+  // Update mobile nav
+  const mobileGuestNav = document.getElementById('mobile-guest-nav');
+  const mobileUserNav = document.getElementById('mobile-user-nav');
+  if (mobileGuestNav) mobileGuestNav.style.display = 'block';
+  if (mobileUserNav) mobileUserNav.style.display = 'none';
 }
 
 // Utility: Require authentication
@@ -220,16 +239,17 @@ const universityDatabase = [
   // Sample names
   'akek@africau.edu',
   'mjmatongo@africau.edu',
-  'gnagnejafricau.edu',
+  'gnagnej@africau.edu',
   'magrimussat@africau.edu',
-  'Ndlovu@africau.edu',
-  'allak@africau.edu',
-  'Zulu@africau.edu',
-  'Sibanda@africau.edu',
+  'ndlovu@africau.edu',
+  'allaj@africau.edu',
+  'allk@africau.edu',
+  'zulu@africau.edu',
+  'sibanda@africau.edu',
   'josuek@africau.edu',
   'sessk@africau.edu',
-  'Mutandwa@africau.edu',
-  'Gumede@africau.edu'
+  'mutandwa@africau.edu',
+  'gumede@africau.edu'
 ];
 
 // NEW: Check if user is allowed via Firestore (real database approach)
@@ -237,13 +257,17 @@ async function isAllowedUserInFirestore(email) {
   if (!email) return false;
   const normalizedEmail = email.toLowerCase();
   
+  console.log('Checking Firestore allowed_users for:', normalizedEmail);
+  
   try {
     // Query Firestore 'allowed_users' collection
     const snapshot = await db.collection('allowed_users')
       .where('email', '==', normalizedEmail)
       .get();
     
-    return !snapshot.empty;
+    const isAllowed = !snapshot.empty;
+    console.log('Firestore result for', normalizedEmail, ':', isAllowed);
+    return isAllowed;
   } catch (error) {
     console.error('Error checking allowed users in Firestore:', error);
     // Fallback to local database if Firestore fails
@@ -286,18 +310,26 @@ async function isValidAUEmail(email) {
   
   // First check domain
   const hasValidDomain = normalizedEmail.endsWith('@africau.edu') || normalizedEmail.endsWith('@students.africau.edu');
-  if (!hasValidDomain) return false;
+  if (!hasValidDomain) {
+    console.log('Invalid domain for:', email);
+    return false;
+  }
   
   // Check Firestore allowed_users collection
   try {
     const isAllowed = await isAllowedUserInFirestore(normalizedEmail);
-    if (isAllowed) return true;
+    if (isAllowed) {
+      console.log('Email allowed (Firestore):', normalizedEmail);
+      return true;
+    }
   } catch (error) {
     console.error('Firestore check failed, using fallback:', error);
   }
   
   // Fallback to local database if Firestore has no data yet
-  return universityDatabase.includes(normalizedEmail);
+  const isInLocalDb = universityDatabase.includes(normalizedEmail);
+  console.log('Email check result (local):', normalizedEmail, '=', isInLocalDb);
+  return isInLocalDb;
 }
 
 // Sync wrapper for backward compatibility (returns false - use async version)

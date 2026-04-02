@@ -103,8 +103,9 @@
     // Clear errors
     clearErrors();
     
-    // Validate university email first
-    if (!AUBazaar.isValidAUEmail(email)) {
+    // Validate university email first (must await async function!)
+    const isValid = await AUBazaar.isValidAUEmail(email);
+    if (!isValid) {
       showFieldError('email-error', 'This email is not registered in the university system');
       return;
     }
@@ -239,7 +240,9 @@
       return;
     }
     
-    if (!AUBazaar.isValidAUEmail(email)) {
+    // Validate university email first (must await async function!)
+    const isValid = await AUBazaar.isValidAUEmail(email);
+    if (!isValid) {
       showAlert('This email is not registered in the university system', 'warning');
       return;
     }
