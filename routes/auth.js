@@ -2,11 +2,15 @@ const express = require('express');
 const router = express.Router();
 
 const { getDb } = require('../config/firebase');
-const db = getDb();
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
+    const db = getDb();
+    if (!db) {
+      return res.status(503).json({ success: false, message: 'Database not available' });
+    }
+    
     const { uid, email, fullName, studentId, role } = req.body;
 
     if (!uid || !email) {
@@ -38,7 +42,7 @@ router.post('/register', async (req, res) => {
       email,
       fullName: fullName || '',
       studentId: studentId || '',
-      role: role || 'student',
+      role: assignedRole,
       status: 'active',
       rating: 0,
       ratingCount: 0,

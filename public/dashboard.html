@@ -11,6 +11,11 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    /* Hide navbar nav on mobile */
+    @media (max-width: 768px) {
+      .navbar-nav { display: none !important; }
+      .navbar-search { display: none !important; }
+    }
     .listing-row {
       display: flex;
       align-items: center;
@@ -140,30 +145,61 @@
       <i class="fas fa-search search-icon"></i>
       <input type="text" placeholder="Search listings..." onkeypress="if(event.key==='Enter') window.location.href='/marketplace?search='+this.value">
     </div>
-    <ul class="navbar-nav" id="user-nav">
-      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-      <li><a href="#" onclick="checkAndGoToSell(event)" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
-      <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
-      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li>
-        <div class="profile-menu">
-          <div class="profile-avatar" id="nav-user-avatar" onclick="toggleProfileMenu()">U</div>
-          <div class="dropdown-menu" id="profile-dropdown">
-            <div class="dropdown-menu-header">
-              <div class="user-name" id="dropdown-name">Loading...</div>
-              <div class="user-email" id="dropdown-email">-</div>
+    <div class="navbar-right" style="display:flex;align-items:center;gap:0.5rem">
+      <ul class="navbar-nav" id="user-nav">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="#" onclick="checkAndGoToSell(event)" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+        <li><a href="/messages"><i class="fas fa-envelope"></i></a></li>
+        <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+        <li>
+          <div class="profile-menu">
+            <div class="profile-avatar" id="nav-user-avatar" onclick="toggleProfileMenu()">U</div>
+            <div class="dropdown-menu" id="profile-dropdown">
+              <div class="dropdown-menu-header">
+                <div class="user-name" id="dropdown-name">Loading...</div>
+                <div class="user-email" id="dropdown-email">-</div>
+              </div>
+              <a href="/profile" onclick="AUBazaar.toggleProfileMenu()"><i class="fas fa-user"></i> My Profile</a>
+              <a href="/dashboard" onclick="AUBazaar.toggleProfileMenu()"><i class="fas fa-box"></i> My Listings</a>
+              <a href="/messages" onclick="AUBazaar.toggleProfileMenu(); window.location.href='/messages'; return false;"><i class="fas fa-envelope"></i> Messages</a>
+              <div class="dropdown-divider"></div>
+              <a href="#" onclick="handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
-            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
-            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
-            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
-            <div class="dropdown-divider"></div>
-            <a href="#" onclick="handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
           </div>
-        </div>
-      </li>
-    </ul>
+        </li>
+      </ul>
+      
+      <div class="hamburger" onclick="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
   </div>
 </nav>
+
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="toggleMobileNav()"></div>
+<div class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-close" onclick="toggleMobileNav()">&times;</button>
+  <ul id="mobile-guest-nav">
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/top-sellers" onclick="closeMobileNav()"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+    <li><a href="/contact" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Contact</a></li>
+    <li><a href="/login" onclick="closeMobileNav()"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="/register" onclick="closeMobileNav()"><i class="fas fa-user-plus"></i> Register</a></li>
+  </ul>
+  <ul id="mobile-user-nav" style="display:none">
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
+    <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="/dashboard?tab=profile" onclick="closeMobileNav()"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+    <li><a href="/dashboard?tab=settings" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Settings</a></li>
+    <li id="mobile-admin-link" style="display:none"><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-shield-alt"></i> Admin Panel</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="#" onclick="handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</div>
 
 <!-- Floating Sell Button -->
 <a href="#" onclick="checkAndGoToSell(event)" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
@@ -185,6 +221,9 @@
       <li><a href="#" onclick="showTab('notifications', this); return false;"><i class="fas fa-bell"></i> Notifications</a></li>
       <li><a href="#" onclick="showTab('profile', this); return false;"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
       <li><a href="#" onclick="showTab('settings', this); return false;"><i class="fas fa-cog"></i> Settings</a></li>
+      <li id="sidebar-admin-link" style="display:none;border-top:1px solid var(--gray-light);padding-top:1rem;margin-top:1rem">
+        <a href="/admin" style="color:var(--secondary)!important"><i class="fas fa-cogs"></i> Admin Panel</a>
+      </li>
       <li style="margin-top:1rem;border-top:1px solid var(--gray-light);padding-top:1rem">
         <a href="#" onclick="handleLogout()" style="color:var(--danger)!important"><i class="fas fa-sign-out-alt"></i> Logout</a>
       </li>
@@ -430,6 +469,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
   let currentUser = null;
@@ -447,6 +487,21 @@
     currentUser = user;
     await loadUserData();
     loadDashboardData();
+    
+    // Show admin link if user is admin
+    const adminLink = document.getElementById('admin-link');
+    const sidebarAdminLink = document.getElementById('sidebar-admin-link');
+    if (userData && userData.role === 'admin') {
+      if (adminLink) adminLink.style.display = 'block';
+      if (sidebarAdminLink) sidebarAdminLink.style.display = 'block';
+    }
+    
+    // Check URL for tab parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam) {
+      setTimeout(() => showTab(tabParam), 500);
+    }
   });
 
   async function loadUserData() {
@@ -561,8 +616,6 @@
     let html = '';
     
     // Check if approved OR has seller role
-    console.log('Dashboard seller check:', { status, role });
-    
     if (status === 'approved' || role === 'seller') {
       const sellerSince = localStorage.getItem('sellerSince');
       const date = sellerSince ? new Date(parseInt(sellerSince)).toLocaleDateString() : 'N/A';
@@ -1070,14 +1123,12 @@
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(t => {
       t.classList.remove('active');
-      t.style.display = 'none';
     });
     
     // Show selected tab
     const selectedTab = document.getElementById(`tab-${tabName}`);
     if (selectedTab) {
       selectedTab.classList.add('active');
-      selectedTab.style.display = 'block';
       console.log('Tab found and shown:', `tab-${tabName}`);
     } else {
       console.error('Tab NOT found:', `tab-${tabName}`);
@@ -1247,7 +1298,49 @@ function resetUserForDemo() {
       }
     }
   }
+  
+  // Mobile Navigation (hamburger menu)
+  function toggleMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav && overlay) {
+      mobileNav.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+  }
+
+  // Close mobile nav when clicking a link
+  function closeMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav) mobileNav.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  }
+  
+  // Update mobile nav based on auth state
+  const isLoggedIn = localStorage.getItem('uid');
+  const mobileGuestNav = document.getElementById('mobile-guest-nav');
+  const mobileUserNav = document.getElementById('mobile-user-nav');
+  const role = localStorage.getItem('role');
+  const mobileAdminLink = document.getElementById('mobile-admin-link');
+  
+  if (isLoggedIn && mobileGuestNav && mobileUserNav) {
+    mobileGuestNav.style.display = 'none';
+    mobileUserNav.style.display = 'block';
+    
+    if (mobileAdminLink && role === 'admin') {
+      mobileAdminLink.style.display = 'block';
+    }
+  } else if (mobileGuestNav && mobileUserNav) {
+    mobileGuestNav.style.display = 'block';
+    mobileUserNav.style.display = 'none';
+  }
+
+  // Handle logout
+  window.handleLogout = async function() {
+    closeMobileNav();
+    await AUBazaar.handleLogout();
+  };
 </script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

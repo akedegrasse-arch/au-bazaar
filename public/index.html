@@ -11,6 +11,12 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    /* Hide navbar elements on mobile */
+    @media (max-width: 768px) {
+      .navbar-search { display: none !important; }
+      .navbar-nav { display: none !important; }
+      .navbar-container > ul { display: none !important; }
+    }
     .features-section {
       background: white;
       padding: 4rem 2rem;
@@ -114,21 +120,6 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
-    .mobile-nav {
-      display: none;
-      position: fixed;
-      top: 70px;
-      left: 0;
-      right: 0;
-      background: var(--primary-dark);
-      z-index: 999;
-      padding: 1rem;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .mobile-nav.open {
-      display: flex;
-    }
     .mobile-nav a {
       color: white;
       padding: 10px 15px;
@@ -180,45 +171,46 @@
       <input type="text" placeholder="Search for textbooks, electronics, and more..." id="hero-search-nav" onkeypress="handleNavSearch(event)">
     </div>
     
-    <ul class="navbar-nav" id="guest-nav">
-      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-      <li><a href="/top-sellers"><i class="fas fa-trophy"></i> Top Sellers</a></li>
-      <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
-      <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-      <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
-    </ul>
-    
-    <ul class="navbar-nav" id="user-nav" style="display:none">
-      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-      <li><a href="/top-sellers"><i class="fas fa-trophy"></i> Top Sellers</a></li>
-      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
-      <li>
-        <a href="/messages">
-          <i class="fas fa-envelope"></i>
-          <span class="notification-badge" id="msg-badge" style="display:none">0</span>
-        </a>
-      </li>
-      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li>
-        <div class="profile-menu">
-          <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
-          <div class="dropdown-menu" id="profile-dropdown">
-            <div class="dropdown-menu-header">
-              <div class="user-name" id="dropdown-name">Loading...</div>
-              <div class="user-email" id="dropdown-email">-</div>
+    <div class="navbar-right" style="display:flex;align-items:center;gap:0.5rem">
+      <ul class="navbar-nav" id="guest-nav">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/top-sellers"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+        <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+        <li><a href="/register" class="btn-sell-nav"><i class="fas fa-user-plus"></i> Join Free</a></li>
+      </ul>
+      
+      <ul class="navbar-nav" id="user-nav" style="display:none">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/top-sellers"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+        <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+        <li>
+          <a href="/messages">
+            <i class="fas fa-envelope"></i>
+            <span class="notification-badge" id="msg-badge" style="display:none">0</span>
+          </a>
+        </li>
+        <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+        <li>
+          <div class="profile-menu">
+            <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
+            <div class="dropdown-menu" id="profile-dropdown">
+              <div class="dropdown-menu-header">
+                <div class="user-name" id="dropdown-name">Loading...</div>
+                <div class="user-email" id="dropdown-email">-</div>
+              </div>
+              <a href="/profile" onclick="AUBazaar.toggleProfileMenu()"><i class="fas fa-user"></i> My Profile</a>
+              <a href="/dashboard" onclick="AUBazaar.toggleProfileMenu()"><i class="fas fa-box"></i> My Listings</a>
+              <a href="/messages" onclick="AUBazaar.toggleProfileMenu(); window.location.href='/messages'; return false;"><i class="fas fa-envelope"></i> Messages</a>
+              <div class="dropdown-divider"></div>
+              <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
-            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
-            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
-            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
-            <div class="dropdown-divider"></div>
-            <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
           </div>
-        </div>
-      </li>
-    </ul>
-    
-    <div class="hamburger" onclick="toggleMobileNav()">
-      <span></span><span></span><span></span>
+        </li>
+      </ul>
+      
+      <div class="hamburger" onclick="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </div>
     </div>
   </div>
 </nav>
@@ -228,18 +220,23 @@
 <div class="mobile-nav" id="mobileNav">
   <button class="mobile-nav-close" onclick="toggleMobileNav()">&times;</button>
   <ul id="mobile-guest-nav">
-    <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-    <li><a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-    <li><a href="/register"><i class="fas fa-user-plus"></i> Register</a></li>
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/top-sellers" onclick="closeMobileNav()"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+    <li><a href="/contact" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Contact</a></li>
+    <li><a href="/login" onclick="closeMobileNav()"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="/register" onclick="closeMobileNav()"><i class="fas fa-user-plus"></i> Register</a></li>
   </ul>
   <ul id="mobile-user-nav" style="display:none">
-    <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-    <li><a href="/dashboard"><i class="fas fa-th"></i> My Listings</a></li>
-    <li><a href="/sell"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
-    <li><a href="/messages"><i class="fas fa-envelope"></i> Messages</a></li>
-    <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
-    <li id="mobile-admin-link" style="display:none"><a href="/admin"><i class="fas fa-cog"></i> Admin</a></li>
-    <li><a href="#" onclick="handleLogout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
+    <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="/dashboard?tab=profile" onclick="closeMobileNav()"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+    <li><a href="/dashboard?tab=settings" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Settings</a></li>
+    <li id="mobile-admin-link" style="display:none"><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-shield-alt"></i> Admin Panel</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="#" onclick="handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
   </ul>
 </div>
 
@@ -247,13 +244,7 @@
 <a href="/sell" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
 
 <!-- Mobile Nav -->
-<div class="mobile-nav" id="mobile-nav">
-  <a href="/marketplace"><i class="fas fa-store"></i> Browse Marketplace</a>
-  <a href="/sell"><i class="fas fa-plus-circle"></i> Sell an Item</a>
-  <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
-  <a href="/login"><i class="fas fa-sign-in-alt"></i> Login</a>
-  <a href="/register"><i class="fas fa-user-plus"></i> Register</a>
-</div>
+<!-- NOTE: This section is deprecated, using proper mobile-nav above -->
 
 <!-- Hero Section -->
 <section class="hero">
@@ -446,6 +437,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
   // Load categories - show immediately with counts from Firestore
@@ -596,7 +588,8 @@
     try {
       const response = await fetch('/api/users/stats');
       const statsData = await response.json();
-      if (statsData.success) {
+      // Only use server data if it has actual data
+      if (statsData.success && (statsData.data.activeListings > 0 || statsData.data.totalUsers > 0)) {
         document.getElementById('stat-listings').textContent = statsData.data.activeListings + '+';
         document.getElementById('stat-users').textContent = statsData.data.totalUsers + '+';
         return;
@@ -605,15 +598,21 @@
       console.log('Server stats failed, trying Firestore...');
     }
     
-    // Fallback to direct Firestore
+    // Fallback to direct Firestore - use setTimeout to ensure AUBazaar is ready
+    if (typeof AUBazaar === 'undefined' || !AUBazaar.db) {
+      console.log('AUBazaar not ready');
+      setTimeout(updateStats, 1000);
+      return;
+    }
+    
     try {
-      const listingsSnap = await AUBazaar.db.collection('listings')
-        .where('status', '==', 'active')
-        .get();
+      // Get all listings and filter by status (Firestore may not have index)
+      const allListingsSnap = await AUBazaar.db.collection('listings').get();
+      const activeListings = allListingsSnap.docs.filter(d => d.data().status === 'active').length;
       
       const usersSnap = await AUBazaar.db.collection('users').get();
       
-      document.getElementById('stat-listings').textContent = listingsSnap.size + '+';
+      document.getElementById('stat-listings').textContent = activeListings + '+';
       document.getElementById('stat-users').textContent = usersSnap.size + '+';
     } catch (e) {
       console.error('Error loading stats:', e);
@@ -654,17 +653,15 @@
     if (mobileNav && overlay) {
       mobileNav.classList.toggle('active');
       overlay.classList.toggle('active');
-      document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
     }
   }
-  
+
   // Close mobile nav when clicking a link
   function closeMobileNav() {
     const mobileNav = document.getElementById('mobileNav');
     const overlay = document.getElementById('mobileNavOverlay');
     if (mobileNav) mobileNav.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
-    document.body.style.overflow = '';
   }
 
   // Initialize - wait for Firebase to load
@@ -676,6 +673,34 @@
     loadCategories();
     loadRecentListings();
     updateStats();
+    
+    // Update mobile nav based on auth state
+    const isLoggedIn = localStorage.getItem('uid');
+    const mobileGuestNav = document.getElementById('mobile-guest-nav');
+    const mobileUserNav = document.getElementById('mobile-user-nav');
+    if (isLoggedIn && mobileGuestNav && mobileUserNav) {
+      mobileGuestNav.style.display = 'none';
+      mobileUserNav.style.display = 'block';
+      
+      const role = localStorage.getItem('role');
+      const mobileAdminLink = document.getElementById('mobile-admin-link');
+      if (mobileAdminLink && role === 'admin') {
+        mobileAdminLink.style.display = 'block';
+      }
+    } else if (mobileGuestNav && mobileUserNav) {
+      mobileGuestNav.style.display = 'block';
+      mobileUserNav.style.display = 'none';
+    }
+    
+    // Also check navbar admin link in init (fallback)
+    const navAdminLink = document.getElementById('admin-link');
+    const userRole = localStorage.getItem('role');
+    console.log('init: role from localStorage:', userRole);
+    if (navAdminLink && userRole === 'admin') {
+      console.log('init: showing admin link');
+      navAdminLink.style.display = 'flex';
+      navAdminLink.style.alignItems = 'center';
+    }
   }
   
   // Start initialization
@@ -684,6 +709,12 @@
   } else {
     init();
   }
+  
+  // Handle logout
+  window.handleLogout = async function() {
+    closeMobileNav();
+    await AUBazaar.handleLogout();
+  };
 </script>
 </body>
 </html>

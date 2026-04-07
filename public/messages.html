@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    /* Hide navbar nav on mobile */
+    @media (max-width: 768px) {
+      .navbar-nav { display: none !important; }
+    }
     .messages-page {
       height: calc(100vh - 70px);
       display: flex;
@@ -26,6 +30,7 @@
       border-right: 1px solid var(--gray-light);
       overflow-y: auto;
       background: white;
+      -webkit-overflow-scrolling: touch;
     }
     .conversations-header {
       padding: 1.2rem 1.5rem;
@@ -147,6 +152,7 @@
       flex-direction: column;
       gap: 0.8rem;
       min-height: 0;
+      -webkit-overflow-scrolling: touch;
     }
     .message-group {
       display: flex;
@@ -251,6 +257,11 @@
     }
     .no-conversation-icon { font-size: 4rem; opacity: 0.3; }
     
+    /* Mobile back button */
+    @media (max-width: 1024px) {
+      #back-btn { display: block !important; }
+    }
+    
     /* Chat open animation */
     .chat-area.fade-in {
       animation: chatFadeIn 0.35s ease;
@@ -284,10 +295,49 @@
     }
     
     @media (max-width: 768px) {
-      .messages-layout { grid-template-columns: 1fr; }
-      .chat-area { display: none; }
-      .chat-area.active { display: flex; }
-      .conversations-list.hidden { display: none; }
+      .messages-layout {
+        grid-template-columns: 1fr;
+        height: calc(100vh - 70px);
+      }
+
+      /* Montrer la liste par défaut */
+      .conversations-list {
+        display: flex !important;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+      }
+
+      .conversations-list.hidden {
+        display: none !important;
+      }
+
+      /* Cacher le chat par défaut */
+      .chat-area {
+        display: none !important;
+        position: fixed !important;
+        inset: 0 !important;
+        top: 70px !important;
+        z-index: 1050 !important;
+        background: white !important;
+        flex-direction: column !important;
+        height: calc(100vh - 70px) !important;
+      }
+
+      /* Afficher le chat quand active */
+      .chat-area.active {
+        display: flex !important;
+      }
+
+      /* Toujours afficher le bouton retour sur mobile */
+      #back-btn {
+        display: flex !important;
+      }
+
+      /* Réduire les bulles de message */
+      .message-bubble {
+        max-width: 85%;
+      }
     }
   </style>
 </head>
@@ -300,33 +350,61 @@
       <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
       <span>AU<span>Bazaar</span></span>
     </a>
-    <ul class="navbar-nav" id="user-nav">
-      <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
-      <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
-      <li><a href="/messages" class="active"><i class="fas fa-envelope"></i></a></li>
-      <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
-      <li>
-        <div class="profile-menu">
-          <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
-          <div class="dropdown-menu" id="profile-dropdown">
-            <div class="dropdown-menu-header">
-              <div class="user-name" id="dropdown-name">Loading...</div>
-              <div class="user-email" id="dropdown-email">-</div>
+    <div class="navbar-right" style="display:flex;align-items:center;gap:0.5rem">
+      <ul class="navbar-nav" id="user-nav">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Browse</a></li>
+        <li><a href="/sell" class="btn-sell-nav"><i class="fas fa-plus"></i> Sell</a></li>
+        <li><a href="/messages" class="active"><i class="fas fa-envelope"></i></a></li>
+        <li><a href="/admin" id="admin-link" style="display:none"><i class="fas fa-cog"></i></a></li>
+        <li>
+          <div class="profile-menu">
+            <div class="profile-avatar" id="nav-user-avatar" onclick="AUBazaar.toggleProfileMenu()">U</div>
+            <div class="dropdown-menu" id="profile-dropdown">
+              <div class="dropdown-menu-header">
+                <div class="user-name" id="dropdown-name">Loading...</div>
+                <div class="user-email" id="dropdown-email">-</div>
+              </div>
+              <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
+              <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+              <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
+              <div class="dropdown-divider"></div>
+              <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
-            <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
-            <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
-            <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
-            <div class="dropdown-divider"></div>
-            <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
           </div>
-        </div>
-      </li>
-    </ul>
+        </li>
+      </ul>
+      
+      <div class="hamburger" onclick="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
   </div>
 </nav>
 
-<!-- Floating Sell Button -->
-<a href="/sell" class="fab"><i class="fas fa-plus"></i><span>SELL</span></a>
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<div class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-close" onclick="toggleMobileNav()">&times;</button>
+  <ul id="mobile-guest-nav">
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/top-sellers" onclick="closeMobileNav()"><i class="fas fa-trophy"></i> Top Sellers</a></li>
+    <li><a href="/contact" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Contact</a></li>
+    <li><a href="/login" onclick="closeMobileNav()"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="/register" onclick="closeMobileNav()"><i class="fas fa-user-plus"></i> Register</a></li>
+  </ul>
+  <ul id="mobile-user-nav" style="display:none">
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
+    <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="/dashboard?tab=profile" onclick="closeMobileNav()"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+    <li><a href="/dashboard?tab=settings" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Settings</a></li>
+    <li id="mobile-admin-link" style="display:none"><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-shield-alt"></i> Admin Panel</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="#" onclick="handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</div>
 
 <div class="messages-page">
   <div class="messages-layout">
@@ -407,6 +485,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
   let currentUser = null;
@@ -519,12 +598,14 @@
 
   function updateUnreadCount() {
     const total = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-    const badge = document.getElementById('unread-count');
-    if (total > 0) {
-      badge.textContent = total;
-      badge.style.display = 'inline-flex';
-    } else {
-      badge.style.display = 'none';
+    const badge = document.getElementById('msg-badge');
+    if (badge) {
+      if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
     }
   }
 
@@ -1200,7 +1281,58 @@
     div.appendChild(document.createTextNode(text));
     return div.innerHTML;
   }
+  
+  // Show admin link if admin
+  const role = localStorage.getItem('role');
+  const mobileAdminLink = document.getElementById('mobile-admin-link');
+  if (mobileAdminLink && role === 'admin') {
+    mobileAdminLink.style.display = 'block';
+  }
+
+  function toggleMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav && overlay) {
+      mobileNav.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+  }
+
+  // Close mobile nav when clicking a link
+  function closeMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav) mobileNav.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  }
+
+  // Mobile nav auth handling
+  function updateMobileNavAuth() {
+    const isLoggedIn = localStorage.getItem('uid');
+    const mobileGuestNav = document.getElementById('mobile-guest-nav');
+    const mobileUserNav = document.getElementById('mobile-user-nav');
+    const mobileAdminLink = document.getElementById('mobile-admin-link');
+    const role = localStorage.getItem('role');
+    
+    if (isLoggedIn) {
+      if (mobileGuestNav) mobileGuestNav.style.display = 'none';
+      if (mobileUserNav) mobileUserNav.style.display = 'block';
+      if (mobileAdminLink && role === 'admin') {
+        mobileAdminLink.style.display = 'block';
+      }
+    } else {
+      if (mobileGuestNav) mobileGuestNav.style.display = 'block';
+      if (mobileUserNav) mobileUserNav.style.display = 'none';
+    }
+  }
+
+  function handleLogout() {
+    closeMobileNav();
+    AUBazaar.handleLogout();
+  }
+
+  // Initialize
+  updateMobileNavAuth();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

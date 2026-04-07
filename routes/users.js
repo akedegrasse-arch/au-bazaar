@@ -1,13 +1,21 @@
 const express = require('express');
 const router = express.Router();
 
-// ✅ Correct way to import your firebase.js
-const { getDb } = require('../config/firebase'); // adjust path if needed
-const db = getDb();
+const { getDb } = require('../config/firebase');
+
+function getDatabase() {
+  const db = getDb();
+  if (!db) {
+    throw new Error('Database not available');
+  }
+  return db;
+}
 
 // GET /api/users/stats - Get public platform stats (no auth required)
 router.get('/stats', async (req, res) => {
   try {
+    const db = getDatabase();
+    
     const usersSnap = await db.collection('users').get();
     const listingsSnap = await db.collection('listings').where('status', '==', 'active').get();
     
@@ -20,9 +28,13 @@ router.get('/stats', async (req, res) => {
     });
   } catch (error) {
     console.error('STATS ERROR:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
+    // Return dummy data if Firebase is not available
+    res.json({
+      success: true,
+      data: {
+        totalUsers: 0,
+        activeListings: 0
+      }
     });
   }
 });
@@ -31,6 +43,7 @@ router.get('/stats', async (req, res) => {
 // GET /api/users/:id - Get user profile
 router.get('/:id', async (req, res) => {
   try {
+    const db = getDatabase();
     const { id } = req.params;
 
     const userDoc = await db.collection('users').doc(id).get();
@@ -60,10 +73,10 @@ router.get('/:id', async (req, res) => {
 // PUT /api/users/:id - Update user profile
 router.put('/:id', async (req, res) => {
   try {
+    const db = getDatabase();
     const { id } = req.params;
     const updates = req.body;
 
-    // ✅ Use set with merge to avoid crash if doc doesn't exist
     await db.collection('users').doc(id).set(updates, { merge: true });
 
     res.json({
@@ -84,6 +97,7 @@ router.put('/:id', async (req, res) => {
 // GET /api/users/:id/listings
 router.get('/:id/listings', async (req, res) => {
   try {
+    const db = getDatabase();
     const { id } = req.params;
 
     const snapshot = await db
@@ -114,6 +128,7 @@ router.get('/:id/listings', async (req, res) => {
 // GET /api/users/:id/favorites
 router.get('/:id/favorites', async (req, res) => {
   try {
+    const db = getDatabase();
     const { id } = req.params;
 
     const snapshot = await db
@@ -144,6 +159,7 @@ router.get('/:id/favorites', async (req, res) => {
 // POST /api/users/:id/rate
 router.post('/:id/rate', async (req, res) => {
   try {
+    const db = getDatabase();
     const { id } = req.params;
     const { rating, comment, raterId } = req.body;
 

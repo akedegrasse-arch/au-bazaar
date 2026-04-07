@@ -167,13 +167,31 @@
       <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
       <span>AU<span>Bazaar</span></span> <span style="font-size:0.8rem;background:var(--secondary);padding:2px 8px;border-radius:4px;margin-left:8px">ADMIN</span>
     </a>
-    <ul class="navbar-nav">
-      <li><a href="/marketplace"><i class="fas fa-store"></i> Marketplace</a></li>
-      <li><a href="/dashboard"><i class="fas fa-user"></i> My Account</a></li>
-      <li><a href="#" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-    </ul>
+    <div class="navbar-right" style="display:flex;align-items:center;gap:0.5rem">
+      <ul class="navbar-nav">
+        <li><a href="/marketplace"><i class="fas fa-store"></i> Marketplace</a></li>
+        <li><a href="/dashboard"><i class="fas fa-user"></i> My Account</a></li>
+        <li><a href="#" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      </ul>
+      
+      <div class="hamburger" onclick="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
   </div>
 </nav>
+
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<div class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-close" onclick="toggleMobileNav()">&times;</button>
+  <ul>
+    <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Marketplace</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-user"></i> My Account</a></li>
+    <li><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Dashboard</a></li>
+    <li><a href="#" onclick="handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</div>
 
 <div class="admin-page">
   <!-- Admin Sidebar -->
@@ -503,6 +521,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
   let allUsers = [];
@@ -1245,7 +1264,26 @@
     await AUBazaar.auth.signOut();
     window.location.href = '/';
   }
+  
+  // Mobile Navigation Functions
+  function toggleMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav && overlay) {
+      mobileNav.classList.toggle('active');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+    }
+  }
+  
+  function closeMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    const overlay = document.getElementById('mobileNavOverlay');
+    if (mobileNav) mobileNav.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = ''; // Réinitialiser le scroll
+    document.body.style.position = ''; // S'assurer que le body est normal
+  }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>
