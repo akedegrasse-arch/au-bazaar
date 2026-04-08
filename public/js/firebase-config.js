@@ -458,5 +458,76 @@ window.AUBazaar = {
       return true;
     }
     return false;
+  },
+  // Notification functions
+  requestNotificationPermission: async function() {
+    if (!('Notification' in window)) {
+      console.log('This browser does not support notifications');
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+
+    return false;
+  },
+  showMessageNotification: function(title, body, icon = '/favicon.png') {
+    if (Notification.permission === 'granted' && document.hidden) {
+      const notification = new Notification(title, {
+        body: body,
+        icon: icon,
+        badge: '/favicon.png',
+        tag: 'aubazaar-message',
+        requireInteraction: false,
+        silent: false
+      });
+
+      // Play notification sound
+      this.playNotificationSound();
+
+      // Auto-close after 5 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+
+      // Click handler to focus window
+      notification.onclick = function() {
+        window.focus();
+        notification.close();
+      };
+
+      return notification;
+    }
+    return null;
+  },
+  playNotificationSound: function() {
+    // Try to play a notification sound using Audio API
+    try {
+      // Create a simple beep sound
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+      // Fallback: no sound if Web Audio API is not supported
+      console.log('Audio notification not supported');
+    }
   }
 };

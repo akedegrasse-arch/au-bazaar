@@ -512,14 +512,22 @@
             localStorage.setItem('sellerStatus', 'approved');
             localStorage.setItem('paymentRef', txnId);
             localStorage.setItem('sellerSince', Date.now());
-            localStorage.setItem('sellerSince', Date.now());
             
             // Debug: Log what was saved
             console.log('Payment successful! Saved to localStorage:', {
               role: localStorage.getItem('role'),
               sellerStatus: localStorage.getItem('sellerStatus'),
-              paymentRef: localStorage.getItem('paymentRef')
+              paymentRef: localStorage.getItem('paymentRef'),
+              sellerSince: localStorage.getItem('sellerSince')
             });
+            
+            // Verify localStorage values
+            setTimeout(() => {
+              console.log('After timeout, localStorage values:', {
+                role: localStorage.getItem('role'),
+                sellerStatus: localStorage.getItem('sellerStatus')
+              });
+            }, 100);
 
             // Save to Firestore only if auth is available
             if (typeof auth !== 'undefined' && auth.currentUser) {

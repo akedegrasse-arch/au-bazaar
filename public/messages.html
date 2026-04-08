@@ -493,14 +493,20 @@
   let activeConversation = null;
   let messagesUnsubscribe = null;
   let conversationsUnsubscribe = null;
+  let lastMessageCount = 0;
+  let lastConversationCount = 0;
 
-  AUBazaar.auth.onAuthStateChanged((user) => {
+  AUBazaar.auth.onAuthStateChanged(async (user) => {
     if (!user) {
       window.location.href = '/login?redirect=/messages';
       return;
     }
     currentUser = user;
     document.getElementById('nav-user-avatar').textContent = (user.displayName || user.email).charAt(0).toUpperCase();
+    
+    // Request notification permission
+    await AUBazaar.requestNotificationPermission();
+    
     loadConversations();
   });
 
@@ -553,6 +559,18 @@
           const bTime = b.updatedAt ? (b.updatedAt.seconds || 0) : 0;
           return bTime - aTime;
         });
+        
+        // Check for new conversations
+        if (conversations.length > lastConversationCount && lastConversationCount > 0) {
+          const newConversation = conversations[0]; // Most recent conversation
+          if (newConversation && newConversation.otherUser) {
+            AUBazaar.showMessageNotification(
+              'New Conversation',
+              `${newConversation.otherUser.fullName} started a conversation with you`
+            );
+          }
+        }
+        lastConversationCount = conversations.length;
         
         renderConversations();
         updateUnreadCount();
@@ -715,6 +733,9 @@
     const messagesContainer = document.getElementById('chat-messages');
     messagesContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
     
+    // Reset message count for new conversation
+    lastMessageCount = 0;
+    
     // Query without orderBy first, sort in JavaScript
     messagesUnsubscribe = AUBazaar.db.collection('messages')
       .where('conversationId', '==', convId)
@@ -727,6 +748,28 @@
           const bTime = b.createdAt ? (b.createdAt.seconds || 0) : 0;
           return aTime - bTime;
         });
+        
+        // Check for new messages from other users
+        const newMessages = messages.filter(msg => msg.senderId !== currentUser.uid);
+        if (newMessages.length > lastMessageCount) {
+          const latestMessage = newMessages[newMessages.length - 1];
+          if (latestMessage && latestMessage.senderId !== currentUser.uid) {
+            // Only show notification if user is not actively viewing this conversation
+            if (!activeConversation || activeConversation.id !== convId || document.hidden) {
+              // Get sender info
+              const conversation = conversations.find(c => c.id === convId);
+              const senderName = conversation?.otherUser?.fullName || 'Someone';
+              
+              // Show notification
+              AUBazaar.showMessageNotification(
+                'New Message from ' + senderName,
+                latestMessage.content.length > 50 ? latestMessage.content.substring(0, 50) + '...' : latestMessage.content
+              );
+            }
+          }
+        }
+        lastMessageCount = newMessages.length;
+        
         renderMessages(messages);
       });
   }

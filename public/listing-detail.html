@@ -438,6 +438,13 @@
   // Get listing ID from URL
   const listingId = window.location.pathname.split('/').pop();
   
+  // Request notification permission when user is authenticated
+  AUBazaar.auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      await AUBazaar.requestNotificationPermission();
+    }
+  });
+  
   async function loadListing() {
     try {
       const doc = await AUBazaar.db.collection('listings').doc(listingId).get();

@@ -670,6 +670,12 @@
       setTimeout(init, 500);
       return;
     }
+    
+    // Request notification permission for logged-in users
+    if (localStorage.getItem('uid')) {
+      AUBazaar.requestNotificationPermission();
+    }
+    
     loadCategories();
     loadRecentListings();
     updateStats();

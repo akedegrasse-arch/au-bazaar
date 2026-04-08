@@ -485,6 +485,10 @@
     }
     
     currentUser = user;
+    
+    // Request notification permission
+    await AUBazaar.requestNotificationPermission();
+    
     await loadUserData();
     loadDashboardData();
     
@@ -525,6 +529,23 @@
           email: currentUser.email,
           role: 'student'
         };
+      }
+      
+      // Update localStorage with user data (don't overwrite if already seller)
+      const currentRole = localStorage.getItem('role');
+      const currentSellerStatus = localStorage.getItem('sellerStatus');
+      
+      console.log('loadUserData - current localStorage:', { currentRole, currentSellerStatus });
+      
+      // Only update if not already a seller
+      if (!(currentRole === 'seller' || currentSellerStatus === 'approved' || currentSellerStatus === 'active')) {
+        localStorage.setItem('role', userData.role || 'student');
+        localStorage.setItem('sellerStatus', userData.sellerStatus || 'none');
+        localStorage.setItem('paymentRef', userData.paymentRef || '');
+        localStorage.setItem('sellerSince', userData.sellerSince || '');
+        console.log('loadUserData - updated localStorage from Firestore');
+      } else {
+        console.log('loadUserData - kept existing localStorage (already seller)');
       }
       
       // Update UI
@@ -591,20 +612,67 @@
     await loadMyListings();
     await loadFavorites();
     updateStats();
-    updateSellerStatusUI();
+    await updateSellerStatusUI();
   }
 
-  function updateSellerStatusUI() {
-    // First sync from Firestore
+  async function updateSellerStatusUI() {
+    // First check localStorage for immediate response
+    const localStatus = localStorage.getItem('sellerStatus');
+    const localRole = localStorage.getItem('role');
+    
+    // Debug logging
+    console.log('updateSellerStatusUI called with localStorage:', {
+      sellerStatus: localStatus,
+      role: localRole,
+      sellerSince: localStorage.getItem('sellerSince'),
+      paymentRef: localStorage.getItem('paymentRef')
+    });
+    
+    // If localStorage indicates seller status, show it immediately
+    const isSeller = localStatus === 'approved' || localRole === 'seller' || localStatus === 'active';
+    console.log('Is seller check:', { localStatus, localRole, isSeller });
+    
+    if (isSeller) {
+      const sellerSince = localStorage.getItem('sellerSince');
+      const date = sellerSince ? new Date(parseInt(sellerSince)).toLocaleDateString() : 'N/A';
+      
+      const container = document.getElementById('seller-status-section');
+      console.log('Container found:', !!container);
+      if (container) {
+        container.innerHTML = `
+          <div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;padding:1rem;text-align:center">
+            <i class="fas fa-check-circle" style="color:#28a745;font-size:2rem;margin-bottom:0.5rem"></i>
+            <h3 style="color:#28a745;margin:0">✅ Seller Account Active</h3>
+            <p style="color:#666;margin:0.5rem 0 0 0">Member since: ${date}</p>
+          </div>
+        `;
+        console.log('Seller status UI updated');
+      }
+      console.log('Showing seller status from localStorage');
+      return;
+    }
+    
+    // Then sync from Firestore for accuracy (don't overwrite if already seller)
     if (currentUser) {
-      AUBazaar.db.collection('users').doc(currentUser.uid).get().then(doc => {
+      try {
+        const doc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
         if (doc.exists) {
           const userData = doc.data();
-          localStorage.setItem('role', userData.role || 'buyer');
-          localStorage.setItem('sellerStatus', userData.sellerStatus || 'none');
-          localStorage.setItem('paymentRef', userData.paymentRef || '');
+          
+          // Only update localStorage if not already a seller
+          const currentRole = localStorage.getItem('role');
+          const currentSellerStatus = localStorage.getItem('sellerStatus');
+          
+          if (!(currentRole === 'seller' || currentSellerStatus === 'approved' || currentSellerStatus === 'active')) {
+            localStorage.setItem('role', userData.role || 'buyer');
+            localStorage.setItem('sellerStatus', userData.sellerStatus || 'none');
+            localStorage.setItem('paymentRef', userData.paymentRef || '');
+            localStorage.setItem('sellerSince', userData.sellerSince || '');
+          }
         }
-      });
+      } catch (error) {
+        console.error('Error syncing seller status from Firestore:', error);
+      }
     }
     
     const status = localStorage.getItem('sellerStatus');
@@ -613,10 +681,13 @@
     
     if (!container) return;
     
+    // Debug logging
+    console.log('Seller status check:', { status, role, sellerSince: localStorage.getItem('sellerSince') });
+    
     let html = '';
     
-    // Check if approved OR has seller role
-    if (status === 'approved' || role === 'seller') {
+    // Check if approved OR has seller role - be more permissive
+    if (status === 'approved' || role === 'seller' || status === 'active' || (status && status !== 'none' && status !== 'rejected')) {
       const sellerSince = localStorage.getItem('sellerSince');
       const date = sellerSince ? new Date(parseInt(sellerSince)).toLocaleDateString() : 'N/A';
       
@@ -1117,7 +1188,7 @@
     }
   }
 
-  function showTab(tabName, linkEl) {
+  async function showTab(tabName, linkEl) {
     console.log('showTab called:', tabName);
     
     // Hide all tabs
@@ -1130,6 +1201,11 @@
     if (selectedTab) {
       selectedTab.classList.add('active');
       console.log('Tab found and shown:', `tab-${tabName}`);
+      
+      // Update seller status when settings tab is shown
+      if (tabName === 'settings') {
+        await updateSellerStatusUI();
+      }
     } else {
       console.error('Tab NOT found:', `tab-${tabName}`);
     }
