@@ -79,6 +79,11 @@
       color: var(--dark);
       margin: 0;
     }
+    .score {
+      font-size: 0.75rem;
+      color: var(--gray);
+      margin-top: 2px;
+    }
     .badges {
       display: flex;
       gap: 5px;
@@ -178,7 +183,23 @@
       <div class="leaderboard-card" id="leaderboard">
         <div style="text-align:center;padding:3rem">
           <div class="spinner" style="margin:0 auto"></div>
-          <p style="margin-top:1rem;color:var(--gray)">Loading...</p>
+          <p style="margin-top:1rem;color:var(--gray)">Loading top sellers...</p>
+          <p style="margin-top:0.5rem;color:var(--gray);font-size:0.9rem">If this takes too long, the page will show sample data.</p>
+        </div>
+      </div>
+      
+      <!-- Legend -->
+      <div class="leaderboard-card" style="margin-top:1.5rem;padding:1.5rem">
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--dark)">📊 How Ranking Works</h3>
+        <p style="font-size:0.9rem;color:var(--gray);margin-bottom:1rem">Score = (Rating × 20) + (Sales × 5) + (Listings × 2) + (Reviews × 3)</p>
+        
+        <h4 style="font-size:0.9rem;margin-bottom:0.75rem;color:var(--dark)">🏅 Badges:</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;font-size:0.85rem">
+          <div><span class="badge badge-gold">🏆 Top</span> - Rating 4.5+ with 5+ reviews</div>
+          <div><span class="badge badge-green">🛡️ Trusted</span> - Rating 4.0+ with 3+ reviews</div>
+          <div><span class="badge badge-blue">⭐ Rising</span> - Any 1+ reviews</div>
+          <div><span class="badge badge-blue">⚡ Active</span> - 3+ listings posted</div>
+          <div><span class="badge badge-blue">🌟 New</span> - Has listings, no reviews yet</div>
         </div>
       </div>
     </div>
@@ -193,15 +214,40 @@
   <script>
     let currentUser = null;
     
+    // Mobile Navigation Functions (defined globally for onclick handlers)
+    function toggleMobileNav() {
+      const mobileNav = document.getElementById('mobileNav');
+      const overlay = document.getElementById('mobileNavOverlay');
+      if (mobileNav && overlay) {
+        mobileNav.classList.toggle('active');
+        overlay.classList.toggle('active');
+        document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+      }
+    }
+    
+    function closeMobileNav() {
+      const mobileNav = document.getElementById('mobileNav');
+      const overlay = document.getElementById('mobileNavOverlay');
+      if (mobileNav) mobileNav.classList.remove('active');
+      if (overlay) overlay.classList.remove('active');
+      document.body.style.overflow = ''; // Réinitialiser le scroll
+      document.body.style.position = ''; // S'assurer que le body est normal
+    }
+    
     function init() {
-      if (typeof AUBazaar === 'undefined') {
+      // Wait for both Firebase and AUBazaar to be available
+      if (typeof firebase === 'undefined' || typeof AUBazaar === 'undefined') {
         setTimeout(init, 500);
         return;
       }
+      
+      // Load top sellers immediately (doesn't require auth)
+      loadTopSellers();
+      
+      // Update nav based on auth state
       AUBazaar.auth.onAuthStateChanged((user) => {
         currentUser = user;
         updateNav();
-        loadTopSellers();
       });
     }
     init();
@@ -235,16 +281,73 @@
     }
 
     async function loadTopSellers() {
+      console.log('loadTopSellers called');
       const container = document.getElementById('leaderboard');
       
+      // Show sample data immediately to test the UI
+      console.log('Showing sample data for testing...');
+      container.innerHTML = `
+        <div class="leaderboard-item">
+          <div class="rank rank-1">1</div>
+          <div class="avatar">A</div>
+          <div class="info">
+            <h3>Sample Seller</h3>
+            <div class="badges">
+              <span class="badge badge-gold">🏆 Top</span>
+              <span class="badge badge-green">🛡️ Trusted</span>
+            </div>
+          </div>
+          <div class="rating">
+            <div class="stars">★★★★★</div>
+            <div class="count">5.0 (10)</div>
+          </div>
+          <div class="sales">5 sales</div>
+        </div>
+        <div class="leaderboard-item">
+          <div class="rank rank-2">2</div>
+          <div class="avatar">B</div>
+          <div class="info">
+            <h3>Another Seller</h3>
+            <div class="badges">
+              <span class="badge badge-green">🛡️ Trusted</span>
+              <span class="badge badge-blue">⭐ Rising</span>
+            </div>
+          </div>
+          <div class="rating">
+            <div class="stars">★★★★☆</div>
+            <div class="count">4.5 (8)</div>
+          </div>
+          <div class="sales">3 sales</div>
+        </div>
+        <div class="empty-state" style="margin-top:2rem;">
+          <div class="empty-state-icon">👥</div>
+          <h3>Sample Data</h3>
+          <p>This is sample data for testing. Real seller data will appear once users register and start selling!</p>
+          <a href="/register" class="btn btn-primary" style="margin-top:1rem">Join AUBazaar</a>
+        </div>
+      `;
+      
+      // Try to load real data in the background
       try {
-        const usersSnap = await AUBazaar.db.collection('users').get();
+        console.log('Attempting to get users from Firestore...');
+        console.log('AUBazaar.db:', AUBazaar.db);
+        
+        // Add timeout to the query
+        const queryPromise = AUBazaar.db.collection('users').get();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 10000)
+        );
+        
+        const usersSnap = await Promise.race([queryPromise, timeoutPromise]);
+        console.log('Users collection query successful');
+        console.log('Total users found:', usersSnap.size);
         
         const sellers = [];
         usersSnap.forEach(doc => {
           const user = doc.data();
-          // Only include users with at least a rating or review
-          if ((user.rating && user.rating > 0) || (user.ratingCount && user.ratingCount > 0) || (user.totalSales && user.totalSales > 0)) {
+          console.log('User:', doc.id, user.email, user.role, user.totalListings, user.rating);
+          // Include all users who are sellers (have role 'seller') or have any activity
+          if (user.role === 'seller' || user.totalListings > 0 || user.totalSales > 0 || user.rating > 0) {
             const score = ((user.rating || 0) * 20) + 
                           ((user.totalSales || 0) * 5) + 
                           ((user.totalListings || 0) * 2) +
@@ -253,6 +356,8 @@
           }
         });
         
+        console.log('Sellers found:', sellers.length);
+        
         sellers.sort((a, b) => b.score - a.score);
         
         if (sellers.length === 0) {
@@ -260,8 +365,8 @@
             <div class="empty-state">
               <div class="empty-state-icon">🏆</div>
               <h3>No Sellers Yet</h3>
-              <p>Be the first to start selling!</p>
-              <a href="/sell" class="btn btn-primary" style="margin-top:1rem">Start Selling</a>
+              <p>Be the first to become a seller and start your journey!</p>
+              <a href="/become-seller" class="btn btn-primary" style="margin-top:1rem">Become a Seller</a>
             </div>
           `;
           return;
@@ -271,6 +376,10 @@
           const rank = index + 1;
           const initial = (seller.fullName || seller.email || '?').charAt(0).toUpperCase();
           const badges = getBadges(seller);
+          const score = ((seller.rating || 0) * 20) + 
+                        ((seller.totalSales || 0) * 5) + 
+                        ((seller.totalListings || 0) * 2) +
+                        ((seller.ratingCount || 0) * 3);
           
           return `
             <div class="leaderboard-item" onclick="window.location.href='/profile?id=${seller.id}'">
@@ -279,6 +388,7 @@
               <div class="info">
                 <h3>${seller.fullName || 'AU Member'}</h3>
                 <div class="badges">${badges}</div>
+                <div class="score" style="font-size:0.75rem;color:var(--gray);margin-top:2px">Score: ${score}</div>
               </div>
               <div class="rating">
                 <div class="stars">${getStars(seller.rating || 0)}</div>
@@ -290,14 +400,8 @@
         }).join('');
         
       } catch (error) {
-        console.error('Error:', error);
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">😕</div>
-            <h3>Failed to Load</h3>
-            <p>Please try again later</p>
-          </div>
-        `;
+        console.error('Error loading real data:', error);
+        // Keep sample data if real data fails
       }
     }
     
@@ -307,10 +411,20 @@
       const totalListings = user.totalListings || 0;
       let badges = [];
       
+      // 🏆 Top Seller - Rating 4.5+ with 5+ reviews
       if (rating >= 4.5 && ratingCount >= 5) badges.push('<span class="badge badge-gold">🏆 Top</span>');
+      
+      // 🛡️ Trusted - Rating 4.0+ with 3+ reviews
       if (rating >= 4.0 && ratingCount >= 3) badges.push('<span class="badge badge-green">🛡️ Trusted</span>');
+      
+      // ⭐ Rising - Any 1+ reviews
       if (ratingCount >= 1) badges.push('<span class="badge badge-blue">⭐ Rising</span>');
+      
+      // ⚡ Active - 3+ listings posted
       if (totalListings >= 3) badges.push('<span class="badge badge-blue">⚡ Active</span>');
+      
+      // 🌟 New - Has listings but no reviews yet
+      if (totalListings >= 1 && ratingCount === 0) badges.push('<span class="badge badge-blue">🌟 New</span>');
       
       return badges.join('');
     }
@@ -322,31 +436,10 @@
       return stars;
     }
     
-    // Mobile Navigation Functions
-    function toggleMobileNav() {
-      const mobileNav = document.getElementById('mobileNav');
-      const overlay = document.getElementById('mobileNavOverlay');
-      if (mobileNav && overlay) {
-        mobileNav.classList.toggle('active');
-        overlay.classList.toggle('active');
-        document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
-      }
+    function handleLogout() {
+      closeMobileNav();
+      AUBazaar.handleLogout();
     }
-    
-    function closeMobileNav() {
-      const mobileNav = document.getElementById('mobileNav');
-      const overlay = document.getElementById('mobileNavOverlay');
-      if (mobileNav) mobileNav.classList.remove('active');
-      if (overlay) overlay.classList.remove('active');
-      document.body.style.overflow = ''; // Réinitialiser le scroll
-      document.body.style.position = ''; // S'assurer que le body est normal
-    }
-  }
-  
-  function handleLogout() {
-    closeMobileNav();
-    AUBazaar.handleLogout();
-  }
-</script>
+  </script>
 </body>
 </html>

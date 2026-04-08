@@ -707,6 +707,29 @@
       navAdminLink.style.display = 'flex';
       navAdminLink.style.alignItems = 'center';
     }
+    
+    // Real-time message badge update
+    const uid = localStorage.getItem('uid');
+    if (uid) {
+      AUBazaar.db.collection('conversations')
+        .where('participants', 'array-contains', uid)
+        .onSnapshot((snapshot) => {
+          let totalUnread = 0;
+          snapshot.forEach(doc => {
+            const conv = doc.data();
+            totalUnread += conv.unreadCount || 0;
+          });
+          const badge = document.getElementById('msg-badge');
+          if (badge) {
+            if (totalUnread > 0) {
+              badge.textContent = totalUnread;
+              badge.style.display = 'inline-flex';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+    }
   }
   
   // Start initialization

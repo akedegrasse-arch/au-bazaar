@@ -15,6 +15,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+
+    // Allow authenticated users to manage their own notifications subcollection
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
     
     // Allowed users - authenticated users can read/add emails (for university validation)
     match /allowed_users/{userId} {
@@ -48,6 +53,14 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if true;
       allow write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to manage their own alerts
+    match /userAlerts/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
     // Allow authenticated users to manage reports

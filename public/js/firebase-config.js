@@ -25,6 +25,12 @@ auth.onAuthStateChanged(async (user) => {
     const userRef = db.collection('users').doc(user.uid);
     let doc = await userRef.get();
 
+    // Get user data safely
+    let userData = {};
+    if (doc.exists) {
+      userData = doc.data();
+    }
+
     if (!doc.exists) {
       // Preserve existing fullName and studentId if they exist
       await userRef.set({
@@ -46,11 +52,6 @@ auth.onAuthStateChanged(async (user) => {
 
       // Re-fetch after creation
       doc = await userRef.get();
-    }
-
-    // Get user data safely
-    let userData = {};
-    if (doc.exists) {
       userData = doc.data();
     }
 
