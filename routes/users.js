@@ -193,3 +193,37 @@ router.post('/:id/rate', async (req, res) => {
 });
 
 module.exports = router;
+
+// POST /api/users/backfill-createdAt - Backfill createdAt for existing users
+router.post('/backfill-createdAt', async (req, res) => {
+  try {
+    const db = getDatabase();
+    
+    const usersSnapshot = await db.collection('users').get();
+    let count = 0;
+    
+    for (const doc of usersSnapshot.docs) {
+      const userData = doc.data();
+      
+      if (!userData.createdAt) {
+        await doc.ref.set({
+          createdAt: new Date()
+        }, { merge: true });
+        
+        count++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Updated ${count} users`
+    });
+    
+  } catch (error) {
+    console.error('BACKFILL ERROR:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
