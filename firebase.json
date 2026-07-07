@@ -12,6 +12,13 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/listing/**",
+        "destination": "/listing-detail.html"
+      }
     ]
   }
 }
