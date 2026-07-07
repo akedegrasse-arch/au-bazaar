@@ -191,15 +191,14 @@
       <!-- Legend -->
       <div class="leaderboard-card" style="margin-top:1.5rem;padding:1.5rem">
         <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--dark)">📊 How Ranking Works</h3>
-        <p style="font-size:0.9rem;color:var(--gray);margin-bottom:1rem">Score = (Rating × 20) + (Sales × 5) + (Listings × 2) + (Reviews × 3)</p>
+        <p style="font-size:0.9rem;color:var(--gray);margin-bottom:1rem">Score = (Rating × 10) + (Items Sold × 2)</p>
         
         <h4 style="font-size:0.9rem;margin-bottom:0.75rem;color:var(--dark)">🏅 Badges:</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;font-size:0.85rem">
           <div><span class="badge badge-gold">🏆 Top</span> - Rating 4.5+ with 5+ reviews</div>
           <div><span class="badge badge-green">🛡️ Trusted</span> - Rating 4.0+ with 3+ reviews</div>
           <div><span class="badge badge-blue">⭐ Rising</span> - Any 1+ reviews</div>
-          <div><span class="badge badge-blue">⚡ Active</span> - 3+ listings posted</div>
-          <div><span class="badge badge-blue">🌟 New</span> - Has listings, no reviews yet</div>
+          <div><span class="badge badge-blue">⚡ Active</span> - 5+ items sold</div>
         </div>
       </div>
     </div>
@@ -346,12 +345,10 @@
         usersSnap.forEach(doc => {
           const user = doc.data();
           console.log('User:', doc.id, user.email, user.role, user.totalListings, user.rating);
-          // Include all users who are sellers (have role 'seller') or have any activity
-          if (user.role === 'seller' || user.totalListings > 0 || user.totalSales > 0 || user.rating > 0) {
-            const score = ((user.rating || 0) * 20) + 
-                          ((user.totalSales || 0) * 5) + 
-                          ((user.totalListings || 0) * 2) +
-                          ((user.ratingCount || 0) * 3);
+          // Only include users who have sales OR a rating
+          if (user.totalSales > 0 || user.rating > 0) {
+            const score = ((user.rating || 0) * 10) + 
+                          ((user.totalSales || 0) * 2);
             sellers.push({ id: doc.id, ...user, score });
           }
         });

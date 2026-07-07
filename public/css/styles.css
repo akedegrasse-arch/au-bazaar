@@ -2572,7 +2572,8 @@ textarea.form-control {
 
 .mobile-nav-overlay.active {
   display: block;
-  pointer-events: none;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 /* Mobile Navigation Menu */
@@ -2871,22 +2872,16 @@ textarea.form-control {
   .mobile-nav {
     display: block;
   }
-}
 
-@media (max-width: 768px) {
-  /* Hide floating blobs on mobile - they clutter the screen */
-  .blobs,
-  .blob {
-    display: none;
-  }
-  
+  /* Hide the desktop nav links the hamburger replaces - must match the
+     breakpoint above, otherwise both render at once (e.g. iPad portrait) */
   .navbar-search,
   .navbar-nav,
   .navbar-menu,
   .profile-menu {
     display: none !important;
   }
-  
+
   /* Hide navbar-right contents but keep hamburger accessible */
   .navbar-right {
     display: flex !important;
@@ -2897,13 +2892,13 @@ textarea.form-control {
     z-index: 1001 !important;
     pointer-events: auto !important;
   }
-  
+
   .navbar-right > .navbar-nav,
   .navbar-right > .profile-menu,
   .navbar-right > .navbar-menu {
     display: none !important;
   }
-  
+
   .hamburger {
     display: flex !important;
     position: relative !important;
@@ -2917,17 +2912,25 @@ textarea.form-control {
     border: none !important;
     padding: 10px !important;
   }
-  
+
   /* Ensure navbar has proper overflow */
   .navbar {
     position: relative !important;
     overflow: visible !important;
   }
-  
+
   .navbar-container {
     overflow: visible !important;
   }
-  
+}
+
+@media (max-width: 768px) {
+  /* Hide floating blobs on mobile - they clutter the screen */
+  .blobs,
+  .blob {
+    display: none;
+  }
+
   /* Make grids responsive - keep 2 columns on tablet */
   .grid-2 {
     grid-template-columns: repeat(2, 1fr);
@@ -3092,12 +3095,14 @@ textarea.form-control {
   /* ===== GLOBAL MOBILE FIXES ===== */
   /* Prevent horizontal scroll */
   html, body {
-    overflow-x: hidden;
     max-width: 100vw;
   }
   
-  /* Ensure all elements respect viewport */
-  * {
+  /* Keep media from escaping the viewport without constraining every UI element */
+  img,
+  video,
+  canvas,
+  svg {
     max-width: 100%;
   }
   
@@ -3164,10 +3169,6 @@ textarea.form-control {
   }
   
   /* Make mobile nav work properly */
-  .mobile-nav-overlay {
-    display: block;
-  }
-  
   .mobile-nav {
     display: block;
   }
@@ -3219,7 +3220,13 @@ textarea.form-control {
     font-size: 16px;
   }
   
-  button {
+  .hero-search button,
+  .form-group button,
+  .message-input-container button,
+  .modal-footer button,
+  .auth-card button,
+  .sell-container .btn,
+  .filter-actions button {
     width: 100%;
     padding: 12px;
     font-size: 16px;
@@ -3796,9 +3803,9 @@ textarea.form-control {
   .modal-footer {
     flex-direction: column;
   }
-  
-  .btn-primary,
-  .btn-secondary {
+
+  .modal-footer .btn-primary,
+  .modal-footer .btn-secondary {
     width: 100%;
   }
 }

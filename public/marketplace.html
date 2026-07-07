@@ -201,6 +201,48 @@
         display: block !important;
       }
     }
+    @media (max-width: 600px) {
+      .marketplace-layout {
+        padding: 1rem 0;
+      }
+      .marketplace-header {
+        align-items: stretch;
+      }
+      .marketplace-header > div:last-child {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .search-bar-marketplace {
+        flex-direction: column;
+      }
+      .search-bar-marketplace .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .list-view.products-container .product-card {
+        grid-template-columns: 1fr;
+      }
+      .list-view.products-container .product-card-image {
+        height: 190px;
+      }
+      .mobile-filter-btn {
+        left: 1rem;
+        right: 4.5rem;
+        transform: none;
+        width: auto;
+        justify-content: center;
+      }
+      /* Shrink the floating SELL button to an icon so it stops overlapping the Filters bar */
+      .fab {
+        bottom: 20px;
+        right: 1rem;
+        padding: 14px;
+        border-radius: 50%;
+      }
+      .fab span {
+        display: none;
+      }
+    }
     .filter-close-btn {
       display: none;
       position: absolute;
