@@ -21,6 +21,19 @@ auth.onAuthStateChanged(async (user) => {
   // Small delay to ensure page is fully loaded
   await new Promise(resolve => setTimeout(resolve, 100));
 
+  // Email/password accounts must verify their email before a session is
+  // allowed to stand - Google accounts are already verified by Google.
+  // Skipped while register/login pages are mid-flow (window.__authFlowInProgress)
+  // so this doesn't race ahead and sign the user out before those flows finish
+  // their own (freshly-authenticated) Firestore/Auth calls.
+  if (user && !user.emailVerified && !window.__authFlowInProgress &&
+      user.providerData.some(p => p.providerId === 'password')) {
+    await auth.signOut();
+    window.currentUser = null;
+    updateNavbarForGuest();
+    return;
+  }
+
   if (user) {
     const userRef = db.collection('users').doc(user.uid);
     let doc = await userRef.get();
@@ -94,19 +107,6 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
 
-// Function to resend verification email
-async function resendVerificationEmail() {
-  const user = firebase.auth().currentUser;
-  if (user) {
-    try {
-      await user.sendEmailVerification();
-      alert('Verification email sent! Please check your inbox.');
-    } catch (error) {
-      alert('Error sending email: ' + error.message);
-    }
-  }
-}
-
 // Updated: accepts userData to avoid second Firestore read
 function updateNavbarForUser(user, userData) {
   const guestNav = document.getElementById('guest-nav');
@@ -171,12 +171,15 @@ function updateNavbarForGuest() {
   if (mobileUserNav) mobileUserNav.style.display = 'none';
 }
 
-// Utility: Require authentication
+// Utility: Require authentication (email/password accounts must be verified)
 function requireAuth(redirectUrl = '/login') {
   return new Promise((resolve, reject) => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       unsubscribe();
-      if (user) {
+      const isUnverifiedPasswordAccount = user &&
+        !user.emailVerified &&
+        user.providerData.some(p => p.providerId === 'password');
+      if (user && !isUnverifiedPasswordAccount) {
         resolve(user);
       } else {
         window.location.href = redirectUrl;
@@ -258,100 +261,14 @@ function createToastContainer() {
   return container;
 }
 
-// University Database (local fallback)
-const universityDatabase = [
-  'admin@africau.edu',
-  'principal@africau.edu',
-  'dean@africau.edu',
-  'registrar@africau.edu',
-  'finance@africau.edu',
-  'student1@africau.edu',
-  'student2@africau.edu',
-  'student3@africau.edu',
-  'student4@africau.edu',
-  'student5@africau.edu',
-  'akek@africau.edu',
-  'mjmatongo@africau.edu',
-  'gnagnej@africau.edu',
-  'magrimussat@africau.edu',
-  'ndlovu@africau.edu',
-  'allaj@africau.edu',
-  'allk@africau.edu',
-  'zulu@africau.edu',
-  'sibanda@africau.edu',
-  'josuek@africau.edu',
-  'sessk@africau.edu',
-  'mutandwa@africau.edu',
-  'gumede@africau.edu'
-];
-
-// Check if user is allowed via Firestore
-async function isAllowedUserInFirestore(email) {
+// Validate Africa University email domain. Domain membership alone no longer
+// grants access - the real gate is proving ownership of the mailbox via
+// Firebase Auth's email verification link (see the onAuthStateChanged guard
+// above and the register/login flows).
+function isValidAUEmail(email) {
   if (!email) return false;
   const normalizedEmail = email.toLowerCase();
-
-  try {
-    const snapshot = await db.collection('allowed_users')
-      .where('email', '==', normalizedEmail)
-      .get();
-
-    const isAllowed = !snapshot.empty;
-    return isAllowed;
-  } catch (error) {
-    console.error('Error checking allowed users in Firestore:', error);
-    return universityDatabase.includes(normalizedEmail);
-  }
-}
-
-// Add user to allowed_users collection
-async function addAllowedUser(email) {
-  if (!email) return false;
-  const normalizedEmail = email.toLowerCase();
-
-  try {
-    const snapshot = await db.collection('allowed_users')
-      .where('email', '==', normalizedEmail)
-      .get();
-
-    if (!snapshot.empty) return true;
-
-    await db.collection('allowed_users').add({
-      email: normalizedEmail,
-      addedAt: Date.now(),
-      addedBy: 'system'
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Error adding allowed user:', error);
-    return false;
-  }
-}
-
-// Validate Africa University email
-async function isValidAUEmail(email) {
-  if (!email) return false;
-  const normalizedEmail = email.toLowerCase();
-
-  const hasValidDomain = normalizedEmail.endsWith('@africau.edu') || normalizedEmail.endsWith('@students.africau.edu');
-  if (!hasValidDomain) return false;
-
-  try {
-    const isAllowed = await isAllowedUserInFirestore(normalizedEmail);
-    if (isAllowed) return true;
-  } catch (error) {
-    console.error('Firestore check failed, using fallback:', error);
-  }
-
-  return universityDatabase.includes(normalizedEmail);
-}
-
-// Sync wrapper for backward compatibility
-function isValidAUEmailSync(email) {
-  if (!email) return false;
-  const normalizedEmail = email.toLowerCase();
-  const hasValidDomain = normalizedEmail.endsWith('@africau.edu') || normalizedEmail.endsWith('@students.africau.edu');
-  return hasValidDomain && universityDatabase.includes(normalizedEmail);
+  return normalizedEmail.endsWith('@africau.edu') || normalizedEmail.endsWith('@students.africau.edu');
 }
 
 // Utility: Get condition label
@@ -393,8 +310,6 @@ window.AUBazaar = {
   isValidAUEmail,
   getConditionLabel,
   getCategoryIcon,
-  isAllowedUserInFirestore,
-  addAllowedUser,
   handleLogout: async function() {
     const result = await Swal.fire({
       title: '<span style="color:#d32f2f;font-weight:bold;">Logout?</span>',
@@ -450,15 +365,6 @@ window.AUBazaar = {
         }
       });
     }
-  },
-  addToUniversityDatabase: function(email) {
-    if (!email) return false;
-    const normalizedEmail = email.toLowerCase();
-    if (!universityDatabase.includes(normalizedEmail)) {
-      universityDatabase.push(normalizedEmail);
-      return true;
-    }
-    return false;
   },
   // Notification functions
   requestNotificationPermission: async function() {

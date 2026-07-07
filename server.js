@@ -84,14 +84,6 @@ app.get('/become-seller', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'become-seller.html'));
 });
 
-app.get('/setup-allowed-users', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'setup-allowed-users.html'));
-});
-
-app.get('/setup-allowed-users', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'setup-allowed-users.html'));
-});
-
 app.get('/top-sellers', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'top-sellers.html'));
 });

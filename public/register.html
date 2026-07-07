@@ -167,9 +167,15 @@
 <script>
   let selectedRole = 'student';
 
-  // Redirect if already logged in
+  // Redirect if already logged in (but not mid-registration with an
+  // unverified password account - that gets signed out by handleRegister)
   AUBazaar.auth.onAuthStateChanged((user) => {
-    if (user) window.location.href = '/marketplace';
+    const isUnverifiedPasswordAccount = user &&
+      !user.emailVerified &&
+      user.providerData.some(p => p.providerId === 'password');
+    if (user && !isUnverifiedPasswordAccount) {
+      window.location.href = '/marketplace';
+    }
   });
 
   function selectRole(role, el) {
@@ -200,11 +206,10 @@
       return;
     }
     
-    // Now isValidAUEmail is async - wait for result
-    const isValid = await AUBazaar.isValidAUEmail(email);
-    
+    const isValid = AUBazaar.isValidAUEmail(email);
+
     if (!isValid) {
-      errorEl.textContent = 'This email is not registered in the university system';
+      errorEl.textContent = 'Must be a valid @africau.edu or @students.africau.edu email';
       errorEl.classList.remove('hidden');
       document.getElementById('email').classList.add('error');
     } else {
@@ -277,10 +282,10 @@
       return;
     }
     
-    // Validate university email first (async function - must await!)
-    const isValidEmail = await AUBazaar.isValidAUEmail(email);
+    // Validate university email domain
+    const isValidEmail = AUBazaar.isValidAUEmail(email);
     if (!isValidEmail) {
-      showFieldError('email-error', 'This email is not registered in the university system');
+      showFieldError('email-error', 'Must be a valid @africau.edu or @students.africau.edu email');
       return;
     }
     
@@ -310,16 +315,20 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
     btn.disabled = true;
     
+    // Keep the global unverified-account guard from racing ahead and signing
+    // this brand-new (necessarily unverified) account out mid-registration
+    window.__authFlowInProgress = true;
+
     try {
       // Create Firebase Auth user
       const userCredential = await AUBazaar.auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
-      
+
       // Update display name from full name field
-      await user.updateProfile({ 
-        displayName: fullName 
+      await user.updateProfile({
+        displayName: fullName
       });
-      
+
       // Create user document in Firestore with fullName and studentId
       console.log('Saving user with role:', selectedRole);
       await AUBazaar.db.collection('users').doc(user.uid).set({
@@ -336,23 +345,22 @@
         createdAt: Date.now(),
         lastLogin: Date.now()
       });
-      
-      // Add email to allowed_users collection (for future lookups)
-      await AUBazaar.addAllowedUser(email);
-      
-      // Reset localStorage for new user (clear any previous seller data)
-      localStorage.setItem('role', selectedRole || 'student');
-      localStorage.setItem('sellerStatus', 'none');
-      localStorage.removeItem('paymentRef');
-      
-      console.log('Registration complete. Role saved:', selectedRole);
-      
-      showAlert('🎉 Account created successfully! Redirecting...', 'success');
-      
+
+      // Send a real verification email and require it before granting a session
+      await user.sendEmailVerification();
+      await AUBazaar.auth.signOut();
+
+      console.log('Registration complete. Verification email sent to', email);
+
+      showAlert(`🎉 Account created! We've sent a verification link to <strong>${email}</strong>. Please check your inbox (and spam folder), click the link, then sign in.`, 'success');
+
+      document.getElementById('register-form').reset();
+      btn.innerHTML = '<i class="fas fa-envelope"></i> Check Your Email';
+
       setTimeout(() => {
-        window.location.href = '/marketplace';
-      }, 1500);
-      
+        window.location.href = '/login';
+      }, 4000);
+
     } catch (error) {
       console.error('Registration error:', error);
       btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
@@ -376,6 +384,8 @@
           message = 'Registration failed: ' + error.message;
       }
       showAlert(message, 'danger');
+    } finally {
+      window.__authFlowInProgress = false;
     }
   }
 
@@ -387,10 +397,10 @@
       const result = await AUBazaar.auth.signInWithPopup(provider);
       const user = result.user;
       
-      const isValid = await AUBazaar.isValidAUEmail(user.email);
+      const isValid = AUBazaar.isValidAUEmail(user.email);
       if (!isValid) {
         await AUBazaar.auth.signOut();
-        showAlert('This email is not registered in the university system. Contact admin to get access.', 'danger');
+        showAlert('Must sign up with a valid @africau.edu or @students.africau.edu Google account.', 'danger');
         return;
       }
       
@@ -431,9 +441,6 @@
           createdAt: Date.now(),
           lastLogin: Date.now()
         }, { merge: true });
-        
-        // Add email to allowed_users collection
-        await AUBazaar.addAllowedUser(user.email);
       }
       
       showAlert('Account created successfully!', 'success');

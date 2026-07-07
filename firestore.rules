@@ -21,12 +21,6 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allowed users - authenticated users can read/add emails (for university validation)
-    match /allowed_users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-    }
-    
     // Allow authenticated users to manage their own favorites
     match /favorites/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
