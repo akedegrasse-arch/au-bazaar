@@ -185,7 +185,7 @@
       const existingDoc = await userRef.get();
 
       if (existingDoc.exists) {
-        await userRef.set({ lastLogin: Date.now() }, { merge: true });
+        await userRef.set({ lastLogin: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
       } else {
         await userRef.set({
           fullName: fullName,
@@ -199,8 +199,8 @@
           totalListings: 0,
           totalSales: 0,
           favorites: [],
-          createdAt: Date.now(),
-          lastLogin: Date.now()
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
 

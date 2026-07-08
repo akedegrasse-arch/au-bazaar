@@ -761,18 +761,27 @@
         
         const docRef = await AUBazaar.db.collection('listings').add(listingData);
         
-        // Update user's listing count - use set with merge to avoid errors if doc doesn't exist
+        // Update user's listing count. Only seed baseline fields the first
+        // time the doc is created - an unconditional set() here would
+        // silently overwrite an existing user's real role/createdAt every
+        // time they post a listing (merge only protects fields NOT listed).
         const userRef = AUBazaar.db.collection('users').doc(user.uid);
-        await userRef.set({
-          totalListings: firebase.firestore.FieldValue.increment(1),
-          email: user.email,
-          fullName: user.displayName || '',
-          role: 'student',
-          rating: 0,
-          ratingCount: 0,
-          totalSales: 0,
-          createdAt: Date.now()
-        }, { merge: true });
+        if (userDoc.exists) {
+          await userRef.update({
+            totalListings: firebase.firestore.FieldValue.increment(1)
+          });
+        } else {
+          await userRef.set({
+            totalListings: 1,
+            email: user.email,
+            fullName: user.displayName || '',
+            role: 'student',
+            rating: 0,
+            ratingCount: 0,
+            totalSales: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
         
         AUBazaar.showToast('Listing posted successfully!', 'success');
         setTimeout(() => window.location.href = `/listing/${docRef.id}`, 1500);

@@ -534,7 +534,7 @@
               db.collection('users').doc(auth.currentUser.uid).set({
                 sellerStatus: 'approved',
                 role: 'seller',
-                sellerSince: Date.now(),
+                sellerSince: firebase.firestore.FieldValue.serverTimestamp(),
                 paymentRef: txnId,
                 ecocashNumber: number
               }, { merge: true }).then(() => {

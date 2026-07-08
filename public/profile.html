@@ -439,7 +439,7 @@
             ratingCount: 0,
             totalListings: 0,
             totalSales: 0,
-            createdAt: Date.now()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           
           // Reload the document
