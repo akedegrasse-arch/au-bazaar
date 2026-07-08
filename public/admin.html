@@ -1067,9 +1067,15 @@
         </td>
         <td>
           <div style="display:flex;gap:0.3rem">
-            <a class="btn btn-sm btn-outline" href="mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || '')}" title="Reply by email">
-              <i class="fas fa-reply"></i>
-            </a>
+            ${msg.senderId ? `
+              <button class="btn btn-sm btn-outline" onclick="replyInApp('${msg.senderId}')" title="Reply in AUBazaar Messages">
+                <i class="fas fa-comment-dots"></i>
+              </button>
+            ` : `
+              <a class="btn btn-sm btn-outline" href="mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || '')}" title="This person wasn't logged in when they wrote in, so there's no account to message in-app - reply by email instead">
+                <i class="fas fa-envelope"></i>
+              </a>
+            `}
             ${msg.status === 'unread' ? `
               <button class="btn btn-sm btn-success" onclick="markMessageRead('${msg.id}')" title="Mark as Read">
                 <i class="fas fa-check"></i>
@@ -1079,6 +1085,25 @@
         </td>
       </tr>
     `).join('');
+  }
+
+  async function replyInApp(senderId) {
+    try {
+      const adminUid = currentAdmin.uid;
+      const conversationId = [adminUid, senderId].sort().join('_') + '_contact';
+      // No need to check existence first - merge:true is a no-op on fields
+      // that are already correct if the conversation already exists, and
+      // a fresh .get() here would fail the read rule anyway (it requires
+      // being an existing participant, which is impossible to satisfy for
+      // a conversation that doesn't exist yet).
+      await AUBazaar.db.collection('conversations').doc(conversationId).set({
+        participants: [adminUid, senderId],
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      window.location.href = '/messages';
+    } catch (error) {
+      AUBazaar.showToast('Failed to open conversation: ' + error.message, 'error');
+    }
   }
 
   async function markMessageRead(messageId) {

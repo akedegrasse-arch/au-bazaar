@@ -335,10 +335,12 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
     
     try {
+      const currentUser = firebase.auth().currentUser;
       await firebase.firestore().collection('contact_messages').add({
         email,
         subject,
         message,
+        senderId: currentUser ? currentUser.uid : null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'unread'
       });
