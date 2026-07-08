@@ -476,13 +476,22 @@
         <h1>⚙️ Platform Settings</h1>
       </div>
 
-      <div class="card">
+      <div class="card mb-3">
         <div class="card-header">Data Export</div>
         <div class="card-body">
-          <p style="color:var(--gray);font-size:0.85rem;margin-bottom:0.8rem">Downloads all user profiles and listings as a JSON file for backup or offline review.</p>
+          <p style="color:var(--gray);font-size:0.85rem;margin-bottom:0.8rem">Downloads all user profiles and listings as a JSON file for backup or offline review. Every export is logged below.</p>
           <button class="btn btn-danger" onclick="exportData(event)">
             <i class="fas fa-download"></i> Export Data
           </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Export History</div>
+        <div class="card-body">
+          <div id="export-logs-list">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -541,6 +550,7 @@
     // above) - re-render now that everything is guaranteed loaded.
     renderReportsTable(allReports);
     renderGrowthChart();
+    loadExportLogs();
   }
 
   let growthChartInstance = null;
@@ -1368,6 +1378,15 @@
       link.click();
       URL.revokeObjectURL(url);
 
+      await AUBazaar.db.collection('export_logs').add({
+        exportedBy: currentAdmin.uid,
+        exportedByEmail: currentAdmin.email,
+        userCount: users.length,
+        listingCount: listings.length,
+        exportedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await loadExportLogs();
+
       Swal.fire({
         icon: 'success',
         title: 'Export Complete!',
@@ -1385,6 +1404,33 @@
 
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-download"></i> Export Data';
+  }
+
+  async function loadExportLogs() {
+    const container = document.getElementById('export-logs-list');
+    if (!container) return;
+    try {
+      const snapshot = await AUBazaar.db.collection('export_logs').orderBy('exportedAt', 'desc').limit(20).get();
+      if (snapshot.empty) {
+        container.innerHTML = '<p style="color:var(--gray);font-size:0.85rem">No exports yet.</p>';
+        return;
+      }
+      container.innerHTML = snapshot.docs.map(doc => {
+        const log = doc.data();
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--gray-light);font-size:0.85rem">
+            <div>
+              <div style="font-weight:600">${log.exportedByEmail || 'Unknown admin'}</div>
+              <div style="color:var(--gray)">${log.userCount} users, ${log.listingCount} listings</div>
+            </div>
+            <div style="color:var(--gray)">${AUBazaar.formatDate(log.exportedAt)}</div>
+          </div>
+        `;
+      }).join('');
+    } catch (error) {
+      console.error('Error loading export logs:', error);
+      container.innerHTML = '<p style="color:var(--gray);font-size:0.85rem">Failed to load export history.</p>';
+    }
   }
 
   async function handleLogout() {

@@ -60,5 +60,14 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+
+    // Audit trail for the admin data export feature - only admins can
+    // create an entry (i.e. only by actually running an export) or read
+    // the log of past exports. No update/delete - it's an audit trail,
+    // not editable data.
+    match /export_logs/{logId} {
+      allow read, create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
   }
 }
