@@ -76,29 +76,24 @@
         return;
       }
 
-      // Create/update user in Firestore - get existing data first
+      // Login only works for accounts that already registered - silently
+      // creating one here would skip the role choice (Student/Faculty/
+      // Staff) and Terms agreement that /register requires.
       const userRef = AUBazaar.db.collection('users').doc(user.uid);
       const existingDoc = await userRef.get();
-      const existingData = existingDoc.exists ? existingDoc.data() : {};
 
-      // If user document doesn't exist or is missing studentId, prompt for it
-      let studentId = existingData.studentId;
-      if (!studentId) {
-        studentId = prompt('Please enter your Student/Staff ID (e.g., AU2024001):');
-        if (!studentId) {
-          await AUBazaar.auth.signOut();
-          showAlert('Student ID is required to complete registration.', 'danger');
-          return;
-        }
+      if (!existingDoc.exists) {
+        await AUBazaar.auth.signOut();
+        showAlert('No account found for this email. Please <a href="/register">register</a> first.', 'warning');
+        return;
       }
 
+      const existingData = existingDoc.data();
+
+      // Only record that a login happened - don't re-write profile fields
+      // like fullName/photoURL, which would silently overwrite anything
+      // the user customized in Edit Profile with their raw Google values.
       await userRef.set({
-        fullName: user.displayName,
-        email: user.email,
-        studentId: studentId,
-        photoURL: user.photoURL,
-        role: existingData.role || 'student', // Keep existing role
-        sellerStatus: existingData.sellerStatus || 'none', // Keep existing status
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
