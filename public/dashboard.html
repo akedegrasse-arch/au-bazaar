@@ -1211,13 +1211,22 @@
       
       AUBazaar.showToast('Deleting your account...', 'info');
       
-      // Delete all user's listings - get all and filter (to avoid index)
+      // Delete all user's listings, except sold ones - those stay as an
+      // anonymized historical record so admin can still see past
+      // transactions after the account is gone (get all and filter to
+      // avoid needing a composite index).
       const allListingsSnap = await AUBazaar.db.collection('listings').get();
       const userListings = allListingsSnap.docs.filter(doc => doc.data().sellerId === userId);
-      
-      if (userListings.length > 0) {
+      const soldListings = userListings.filter(doc => doc.data().status === 'sold');
+      const otherListings = userListings.filter(doc => doc.data().status !== 'sold');
+
+      if (otherListings.length > 0 || soldListings.length > 0) {
         const batch = AUBazaar.db.batch();
-        userListings.forEach(doc => batch.delete(doc.ref));
+        otherListings.forEach(doc => batch.delete(doc.ref));
+        soldListings.forEach(doc => batch.update(doc.ref, {
+          sellerName: 'Deleted User',
+          sellerEmail: null
+        }));
         await batch.commit();
       }
       
