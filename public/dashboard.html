@@ -509,7 +509,9 @@
         document.getElementById('sidebar-avatar').textContent = initials;
         document.getElementById('nav-user-avatar').textContent = initials;
       }
-      
+
+      document.getElementById('sidebar-role').textContent = userData.role || 'Student';
+
       // Update dropdown menu
       document.getElementById('dropdown-name').textContent = name;
       document.getElementById('dropdown-email').textContent = currentUser.email;
