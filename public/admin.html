@@ -545,7 +545,9 @@
       today.setHours(0, 0, 0, 0);
       const newUsers = usersSnap.docs.filter(d => {
         const created = d.data().createdAt;
-        return created && created.toDate() >= today;
+        if (!created) return false;
+        const createdDate = created.toDate ? created.toDate() : new Date(created);
+        return createdDate >= today;
       }).length;
       document.getElementById('admin-new-users').textContent = newUsers;
       
