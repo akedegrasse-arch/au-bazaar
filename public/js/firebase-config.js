@@ -115,8 +115,12 @@ function updateNavbarForUser(user, userData) {
   }
 
   if (userAvatarEl) {
-    const initials = (user.displayName || user.email).charAt(0).toUpperCase();
-    userAvatarEl.textContent = initials;
+    if (userData?.profilePicture) {
+      userAvatarEl.innerHTML = `<img src="${userData.profilePicture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    } else {
+      const initials = (user.displayName || user.email).charAt(0).toUpperCase();
+      userAvatarEl.textContent = initials;
+    }
   }
 }
 
