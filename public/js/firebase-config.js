@@ -16,44 +16,20 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// Auth state observer with automatic user document creation
+// Auth state observer - reads the user doc for UI display. Account creation
+// itself happens in register.html/login.html's own Google sign-in handlers
+// (which have the real form data), not here - a second "create if missing"
+// writer here previously raced those and could win with blank fields
+// (e.g. an empty studentId) since neither writer would overwrite an
+// already-existing doc.
 auth.onAuthStateChanged(async (user) => {
   // Small delay to ensure page is fully loaded
   await new Promise(resolve => setTimeout(resolve, 100));
 
   if (user) {
     const userRef = db.collection('users').doc(user.uid);
-    let doc = await userRef.get();
-
-    // Get user data safely
-    let userData = {};
-    if (doc.exists) {
-      userData = doc.data();
-    }
-
-    if (!doc.exists) {
-      // Preserve existing fullName and studentId if they exist
-      await userRef.set({
-        fullName: user.displayName || userData.fullName || "",
-        email: user.email,
-        role: userData.role || 'student',
-        status: userData.status || "active",
-        createdAt: userData.createdAt || Date.now(),
-        rating: userData.rating || 0,
-        ratingCount: userData.ratingCount || 0,
-        totalListings: userData.totalListings || 0,
-        totalSales: userData.totalSales || 0,
-        studentId: userData.studentId || '',
-        phone: userData.phone || '',
-        department: userData.department || '',
-        bio: userData.bio || '',
-        preferredLocation: userData.preferredLocation || ''
-      }, { merge: true });
-
-      // Re-fetch after creation
-      doc = await userRef.get();
-      userData = doc.data();
-    }
+    const doc = await userRef.get();
+    const userData = doc.exists ? doc.data() : {};
 
     // Sync localStorage with Firestore
     localStorage.setItem('uid', user.uid);
