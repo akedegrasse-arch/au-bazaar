@@ -60,7 +60,10 @@
     // Always show Google's account chooser instead of silently reusing
     // whatever account is already active on this device - important on a
     // borrowed/shared phone where someone else's Google session is live.
-    provider.setCustomParameters({ hd: 'africau.edu', prompt: 'select_account' });
+    // 'consent select_account' is a stronger signal than 'select_account'
+    // alone - Google can otherwise skip the picker when only one account
+    // is active, treating it as an unambiguous "selection".
+    provider.setCustomParameters({ hd: 'africau.edu', prompt: 'consent select_account' });
 
     try {
       const result = await AUBazaar.auth.signInWithPopup(provider);
