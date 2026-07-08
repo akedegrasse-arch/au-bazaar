@@ -57,7 +57,10 @@
 
   async function handleGoogleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ hd: 'africau.edu' });
+    // Always show Google's account chooser instead of silently reusing
+    // whatever account is already active on this device - important on a
+    // borrowed/shared phone where someone else's Google session is live.
+    provider.setCustomParameters({ hd: 'africau.edu', prompt: 'select_account' });
 
     try {
       const result = await AUBazaar.auth.signInWithPopup(provider);

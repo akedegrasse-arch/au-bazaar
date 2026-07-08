@@ -167,7 +167,9 @@
     }
 
     const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ hd: 'africau.edu' });
+    // Always show Google's account chooser instead of silently reusing
+    // whatever account is already active on this device.
+    provider.setCustomParameters({ hd: 'africau.edu', prompt: 'select_account' });
 
     try {
       const result = await AUBazaar.auth.signInWithPopup(provider);
