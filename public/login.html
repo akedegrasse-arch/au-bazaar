@@ -47,9 +47,14 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
-  // Redirect if already logged in
+  // Redirect if already logged in - but not while handleGoogleLogin() is
+  // actively deciding whether to accept this sign-in. Without this guard,
+  // the moment signInWithPopup() resolves (before handleGoogleLogin's own
+  // registration check even runs), this listener sees "a user is signed
+  // in" and redirects immediately - completely bypassing the check below,
+  // since it doesn't know or care whether a Firestore account exists.
   AUBazaar.auth.onAuthStateChanged((user) => {
-    if (user) {
+    if (user && !window.__authFlowInProgress) {
       const redirect = new URLSearchParams(window.location.search).get('redirect') || '/marketplace';
       window.location.href = redirect;
     }
@@ -64,6 +69,8 @@
     // alone - Google can otherwise skip the picker when only one account
     // is active, treating it as an unambiguous "selection".
     provider.setCustomParameters({ hd: 'africau.edu', prompt: 'consent select_account' });
+
+    window.__authFlowInProgress = true;
 
     try {
       const result = await AUBazaar.auth.signInWithPopup(provider);
@@ -113,6 +120,8 @@
       if (error.code !== 'auth/popup-closed-by-user') {
         showAlert('Google login failed. Please try again.', 'danger');
       }
+    } finally {
+      window.__authFlowInProgress = false;
     }
   }
 

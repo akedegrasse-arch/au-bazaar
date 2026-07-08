@@ -128,9 +128,12 @@
 <script>
   let selectedRole = 'student';
 
-  // Redirect if already logged in
+  // Redirect if already logged in - but not while handleGoogleRegister() is
+  // still deciding whether to accept this sign-in (e.g. rejecting a wrong
+  // email domain). Without this guard, the redirect fires the instant
+  // Google sign-in resolves, racing ahead of that rejection check.
   AUBazaar.auth.onAuthStateChanged((user) => {
-    if (user) window.location.href = '/marketplace';
+    if (user && !window.__authFlowInProgress) window.location.href = '/marketplace';
   });
 
   function selectRole(role, el) {
@@ -170,6 +173,8 @@
     // Always show Google's account chooser instead of silently reusing
     // whatever account is already active on this device.
     provider.setCustomParameters({ hd: 'africau.edu', prompt: 'consent select_account' });
+
+    window.__authFlowInProgress = true;
 
     try {
       const result = await AUBazaar.auth.signInWithPopup(provider);
@@ -213,6 +218,8 @@
       if (error.code !== 'auth/popup-closed-by-user') {
         showAlert('Google sign-up failed. Please try again.', 'danger');
       }
+    } finally {
+      window.__authFlowInProgress = false;
     }
   }
 

@@ -19,6 +19,17 @@
         "source": "/listing/**",
         "destination": "/listing-detail.html"
       }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      }
     ]
   }
 }
