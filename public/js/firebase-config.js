@@ -21,19 +21,6 @@ auth.onAuthStateChanged(async (user) => {
   // Small delay to ensure page is fully loaded
   await new Promise(resolve => setTimeout(resolve, 100));
 
-  // Email/password accounts must verify their email before a session is
-  // allowed to stand - Google accounts are already verified by Google.
-  // Skipped while register/login pages are mid-flow (window.__authFlowInProgress)
-  // so this doesn't race ahead and sign the user out before those flows finish
-  // their own (freshly-authenticated) Firestore/Auth calls.
-  if (user && !user.emailVerified && !window.__authFlowInProgress &&
-      user.providerData.some(p => p.providerId === 'password')) {
-    await auth.signOut();
-    window.currentUser = null;
-    updateNavbarForGuest();
-    return;
-  }
-
   if (user) {
     const userRef = db.collection('users').doc(user.uid);
     let doc = await userRef.get();
@@ -171,15 +158,12 @@ function updateNavbarForGuest() {
   if (mobileUserNav) mobileUserNav.style.display = 'none';
 }
 
-// Utility: Require authentication (email/password accounts must be verified)
+// Utility: Require authentication
 function requireAuth(redirectUrl = '/login') {
   return new Promise((resolve, reject) => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       unsubscribe();
-      const isUnverifiedPasswordAccount = user &&
-        !user.emailVerified &&
-        user.providerData.some(p => p.providerId === 'password');
-      if (user && !isUnverifiedPasswordAccount) {
+      if (user) {
         resolve(user);
       } else {
         window.location.href = redirectUrl;

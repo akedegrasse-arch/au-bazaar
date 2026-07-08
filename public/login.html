@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - AUBazaar</title>
-  
+
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
@@ -19,59 +19,21 @@
       <h1>AU<span>Bazaar</span></h1>
       <p>Africa University Campus Marketplace</p>
     </div>
-    
+
     <h2 class="auth-title">Welcome Back!</h2>
     <p class="auth-subtitle">Sign in to your AUBazaar account</p>
-    
+
     <div id="alert-container"></div>
-    
-    <form id="login-form" onsubmit="handleLogin(event)">
-      <div class="form-group">
-        <label class="form-label"><i class="fas fa-envelope"></i> University Email</label>
-        <input 
-          type="email" 
-          class="form-control" 
-          id="email" 
-          placeholder="yourname@africau.edu"
-          required
-          autocomplete="email"
-        >
-        <div class="form-hint">Must be a registered university email</div>
-        <div class="form-error hidden" id="email-error"></div>
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
-        <div style="position:relative">
-          <input 
-            type="password" 
-            class="form-control" 
-            id="password" 
-            placeholder="Enter your password"
-            required
-            autocomplete="current-password"
-          >
-          <i class="fas fa-eye" id="password-eye" onclick="togglePassword('password')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--gray)"></i>
-        </div>
-        <div class="form-error hidden" id="password-error"></div>
-      </div>
-      
-      <button type="submit" class="btn btn-primary btn-block btn-lg" id="login-btn">
-        <i class="fas fa-sign-in-alt"></i> Sign In
-      </button>
-    </form>
-    
-    <div class="auth-divider"><span>or</span></div>
-    
-    <button class="btn btn-outline btn-block" onclick="handleGoogleLogin()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+
+    <button class="btn btn-primary btn-block btn-lg" onclick="handleGoogleLogin()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google" style="vertical-align:middle;margin-right:8px">
       Continue with Google
     </button>
-    
+
     <div class="auth-footer">
       Don't have an account? <a href="/register">Create one</a>
     </div>
-    
+
     <div style="margin-top:1rem;padding:1rem;background:#eaf4fb;border-radius:8px;font-size:0.82rem;color:var(--primary)">
       <i class="fas fa-university"></i> <strong>AU Students Only:</strong> You must have a valid @africau.edu Google account to use this app.
     </div>
@@ -85,116 +47,34 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
-  // Redirect if already logged in (but not while an unverified password
-  // account is mid-flow here - handleLogin/resendVerificationEmail manage that)
+  // Redirect if already logged in
   AUBazaar.auth.onAuthStateChanged((user) => {
-    const isUnverifiedPasswordAccount = user &&
-      !user.emailVerified &&
-      user.providerData.some(p => p.providerId === 'password');
-    if (user && !isUnverifiedPasswordAccount) {
+    if (user) {
       const redirect = new URLSearchParams(window.location.search).get('redirect') || '/marketplace';
       window.location.href = redirect;
     }
   });
 
-  // Email/password login removed - using Google only now
-
-  // Handle email/password login
-  async function handleLogin(e) {
-    e.preventDefault();
-    
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const btn = document.getElementById('login-btn');
-    
-    // Clear errors
-    clearErrors();
-    
-    // Validate university email domain
-    const isValid = AUBazaar.isValidAUEmail(email);
-    if (!isValid) {
-      showFieldError('email-error', 'Must be a valid @africau.edu or @students.africau.edu email');
-      return;
-    }
-
-    // Show loading
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
-    btn.disabled = true;
-
-    try {
-      const userCredential = await AUBazaar.auth.signInWithEmailAndPassword(email, password);
-
-      if (!userCredential.user.emailVerified) {
-        await AUBazaar.auth.signOut();
-        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-        btn.disabled = false;
-        showAlert('Please verify your email before signing in. Check your inbox for the link, or <a href="#" onclick="resendVerificationEmail(event)">resend it</a>.', 'warning');
-        return;
-      }
-
-      // Update last login in Firestore (create if doesn't exist)
-      await AUBazaar.db.collection('users').doc(userCredential.user.uid).set({
-        lastLogin: Date.now()
-      }, { merge: true });
-
-      showAlert('Login successful! Redirecting...', 'success');
-
-      setTimeout(() => {
-        window.location.href = '/marketplace';
-      }, 1000);
-
-    } catch (error) {
-      console.error('Login error:', error);
-      btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-      btn.disabled = false;
-      
-      let message = 'Login failed. Please try again.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-          message = 'No account found with this email. Please register first.';
-          break;
-        case 'auth/wrong-password':
-          message = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Invalid email address format.';
-          break;
-        case 'auth/user-disabled':
-          message = 'This account has been disabled. Contact support.';
-          break;
-        case 'auth/too-many-requests':
-          message = 'Too many failed attempts. Please try again later.';
-          break;
-        case 'auth/invalid-credential':
-          message = 'Invalid email or password. Please check your credentials.';
-          break;
-        default:
-          message = 'Login failed: ' + error.message;
-      }
-      showAlert(message, 'danger');
-    }
-  }
-
   async function handleGoogleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ hd: 'africau.edu' });
-    
+
     try {
       const result = await AUBazaar.auth.signInWithPopup(provider);
       const user = result.user;
-      
+
       // Verify AU email domain
       if (!AUBazaar.isValidAUEmail(user.email)) {
         await AUBazaar.auth.signOut();
         showAlert('Must sign in with a valid @africau.edu or @students.africau.edu Google account.', 'danger');
         return;
       }
-      
+
       // Create/update user in Firestore - get existing data first
       const userRef = AUBazaar.db.collection('users').doc(user.uid);
       const existingDoc = await userRef.get();
       const existingData = existingDoc.exists ? existingDoc.data() : {};
-      
+
       // If user document doesn't exist or is missing studentId, prompt for it
       let studentId = existingData.studentId;
       if (!studentId) {
@@ -205,7 +85,7 @@
           return;
         }
       }
-      
+
       await userRef.set({
         fullName: user.displayName,
         email: user.email,
@@ -216,18 +96,18 @@
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
-      
-      // Sync localStorage with Firestore user data (now properly captured)
+
+      // Sync localStorage with Firestore user data
       localStorage.setItem('uid', user.uid);
       localStorage.setItem('role', existingData.role || 'student');
       localStorage.setItem('sellerStatus', existingData.sellerStatus || 'none');
       localStorage.setItem('paymentRef', existingData.paymentRef || '');
-      
+
       showAlert('Login successful!', 'success');
       setTimeout(() => {
         window.location.href = '/marketplace';
       }, 1000);
-      
+
     } catch (error) {
       if (error.code !== 'auth/popup-closed-by-user') {
         showAlert('Google login failed. Please try again.', 'danger');
@@ -235,88 +115,10 @@
     }
   }
 
-  // Briefly re-authenticates (the account is real, just unverified) to get a
-  // live user reference to resend the verification email to, then signs back out.
-  async function resendVerificationEmail(event) {
-    if (event) event.preventDefault();
-
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-      showAlert('Enter your email and password above, then click resend.', 'warning');
-      return;
-    }
-
-    // Keep the global unverified-account guard from signing this out before
-    // sendEmailVerification() gets a chance to fire
-    window.__authFlowInProgress = true;
-
-    try {
-      const userCredential = await AUBazaar.auth.signInWithEmailAndPassword(email, password);
-      await userCredential.user.sendEmailVerification();
-      await AUBazaar.auth.signOut();
-      showAlert(`Verification email resent to <strong>${email}</strong>. Please check your inbox.`, 'success');
-    } catch (error) {
-      showAlert('Could not resend verification email: ' + error.message, 'danger');
-    } finally {
-      window.__authFlowInProgress = false;
-    }
-  }
-
-  function togglePassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    const eye = document.getElementById(fieldId + '-eye');
-    if (field.type === 'password') {
-      field.type = 'text';
-      eye.className = 'fas fa-eye-slash';
-    } else {
-      field.type = 'password';
-      eye.className = 'fas fa-eye';
-    }
-  }
-
-  async function resetPassword() {
-    const email = document.getElementById('email').value.trim();
-    
-    if (!email) {
-      showAlert('Please enter your email address first', 'warning');
-      return;
-    }
-    
-    // Validate university email domain
-    const isValid = AUBazaar.isValidAUEmail(email);
-    if (!isValid) {
-      showAlert('Must be a valid @africau.edu or @students.africau.edu email', 'warning');
-      return;
-    }
-    
-    try {
-      await AUBazaar.auth.sendPasswordResetEmail(email);
-      showAlert('Password reset email sent! Check your inbox.', 'success');
-    } catch (error) {
-      showAlert('Error: ' + error.message, 'danger');
-    }
-  }
-
   function showAlert(message, type) {
     const container = document.getElementById('alert-container');
     container.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}</div>`;
   }
-
-  function showFieldError(id, message) {
-    const el = document.getElementById(id);
-    el.textContent = message;
-    el.classList.remove('hidden');
-  }
-
-  function clearErrors() {
-    document.getElementById('alert-container').innerHTML = '';
-    document.querySelectorAll('.form-error').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.form-control').forEach(el => el.classList.remove('error'));
-  }
 </script>
 </body>
 </html>
-
-
