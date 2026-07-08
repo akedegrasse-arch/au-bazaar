@@ -476,17 +476,6 @@
         <h1>⚙️ Platform Settings</h1>
       </div>
 
-      <div class="card mb-3">
-        <div class="card-header">Admin Access</div>
-        <div class="card-body">
-          <p style="color:var(--gray);font-size:0.85rem;margin-bottom:0.8rem">Search for a user to grant or remove admin access.</p>
-          <div class="form-group">
-            <input type="text" class="form-control" id="admin-access-search" placeholder="Search by name or email..." oninput="renderAdminAccessResults()">
-          </div>
-          <div id="admin-access-results"></div>
-        </div>
-      </div>
-
       <div class="card">
         <div class="card-header">Data Export</div>
         <div class="card-body">
@@ -710,7 +699,12 @@
               <button class="btn btn-sm btn-primary" onclick="makeAdmin('${user.id}')" title="Make Admin">
                 <i class="fas fa-crown"></i>
               </button>
-            ` : '<span class="badge badge-warning">Admin</span>'}
+            ` : `
+              <span class="badge badge-warning">Admin</span>
+              <button class="btn btn-sm btn-danger" onclick="removeAdmin('${user.id}')" title="Remove Admin" ${user.id === currentAdmin.uid ? 'disabled' : ''}>
+                <i class="fas fa-user-minus"></i>
+              </button>
+            `}
           </div>
         </td>
       </tr>
@@ -1026,6 +1020,31 @@
     }
   }
 
+  async function removeAdmin(userId) {
+    if (userId === currentAdmin.uid) return;
+
+    const result = await Swal.fire({
+      title: 'Remove Admin Privileges?',
+      text: 'This user will lose access to the admin panel.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Remove Admin',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await AUBazaar.db.collection('users').doc(userId).update({ role: 'student' });
+      AUBazaar.showToast('Admin privileges removed', 'success');
+      await loadUsers();
+    } catch (error) {
+      console.error('Error removing admin:', error);
+      AUBazaar.showToast('Failed to update user role: ' + error.message, 'error');
+    }
+  }
+
   async function adminDeleteListing(listingId) {
     const result = await Swal.fire({
       title: 'Delete Listing?',
@@ -1310,65 +1329,6 @@
   function refreshStats() {
     loadAdminData();
     AUBazaar.showToast('Data refreshed', 'success');
-  }
-
-  function renderAdminAccessResults() {
-    const query = document.getElementById('admin-access-search').value.trim().toLowerCase();
-    const container = document.getElementById('admin-access-results');
-
-    if (!query) {
-      container.innerHTML = '';
-      return;
-    }
-
-    const matches = allUsers.filter(u =>
-      (u.fullName || '').toLowerCase().includes(query) || (u.email || '').toLowerCase().includes(query)
-    ).slice(0, 10);
-
-    if (matches.length === 0) {
-      container.innerHTML = '<p style="color:var(--gray);padding:0.5rem 0">No users found</p>';
-      return;
-    }
-
-    container.innerHTML = matches.map(u => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--gray-light)">
-        <div>
-          <div style="font-weight:600;font-size:0.9rem">${u.fullName || 'No name'}</div>
-          <div style="font-size:0.8rem;color:var(--gray)">${u.email || ''} · ${u.role || 'student'}</div>
-        </div>
-        ${u.role === 'admin' ? `
-          <button class="btn btn-sm btn-danger" onclick="toggleAdminRole('${u.id}', 'student')" ${u.id === currentAdmin.uid ? 'disabled title="You can\'t remove your own admin access"' : ''}>
-            Remove Admin
-          </button>
-        ` : `
-          <button class="btn btn-sm btn-success" onclick="toggleAdminRole('${u.id}', 'admin')">
-            Make Admin
-          </button>
-        `}
-      </div>
-    `).join('');
-  }
-
-  async function toggleAdminRole(userId, newRole) {
-    const confirmResult = await Swal.fire({
-      title: newRole === 'admin' ? 'Grant admin access?' : 'Remove admin access?',
-      text: newRole === 'admin' ? 'This user will be able to access the full admin panel.' : 'This user will lose access to the admin panel.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, confirm',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#dc3545'
-    });
-    if (!confirmResult.isConfirmed) return;
-
-    try {
-      await AUBazaar.db.collection('users').doc(userId).update({ role: newRole });
-      AUBazaar.showToast(newRole === 'admin' ? 'Admin access granted' : 'Admin access removed', 'success');
-      await loadUsers();
-      renderAdminAccessResults();
-    } catch (error) {
-      AUBazaar.showToast('Failed to update role', 'error');
-    }
   }
 
   async function exportData(event) {
