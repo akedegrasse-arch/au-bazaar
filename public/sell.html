@@ -243,7 +243,7 @@
                 <div class="user-email" id="dropdown-email">-</div>
               </div>
               <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
-              <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+              <a href="/dashboard"><i class="fas fa-box"></i> Dashboard</a>
               <a href="/messages"><i class="fas fa-envelope"></i> Messages <span class="notification-badge" id="msg-badge" style="display:none">0</span></a>
               <div class="dropdown-divider"></div>
               <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -271,7 +271,7 @@
   </ul>
   <ul id="mobile-user-nav" style="display:none">
     <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
-    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> Dashboard</a></li>
     <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
     <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
     <li><div class="mobile-nav-divider"></div></li>
@@ -462,6 +462,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
   let selectedImages = [];
@@ -501,7 +502,6 @@
             <i class="fas fa-store-slash" style="font-size:4rem;color:var(--gray);margin-bottom:1rem"></i>
             <h2>Seller Access Required</h2>
             <p style="color:var(--gray);margin:1rem 0">You need to become a seller before posting items.</p>
-            <p style="color:var(--accent);margin:0.5rem 0">Debug: role=${role}, status=${sellerStatus}</p>
             <button class="btn btn-primary" onclick="window.location.href='/become-seller'">
               <i class="fas fa-user-plus"></i> Become a Seller
             </button>

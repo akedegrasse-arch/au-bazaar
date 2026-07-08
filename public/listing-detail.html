@@ -167,7 +167,7 @@
                 <div class="user-email" id="dropdown-email">-</div>
               </div>
               <a href="/profile"><i class="fas fa-user"></i> My Profile</a>
-              <a href="/dashboard"><i class="fas fa-box"></i> My Listings</a>
+              <a href="/dashboard"><i class="fas fa-box"></i> Dashboard</a>
               <a href="/messages"><i class="fas fa-envelope"></i> Messages</a>
               <div class="dropdown-divider"></div>
               <a href="#" onclick="AUBazaar.handleLogout()" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -196,7 +196,7 @@
   </ul>
   <ul id="mobile-user-nav" style="display:none">
     <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Browse</a></li>
-    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> My Listings</a></li>
+    <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-th"></i> Dashboard</a></li>
     <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
     <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
     <li><div class="mobile-nav-divider"></div></li>
@@ -204,7 +204,7 @@
     <li><a href="#" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Settings</a></li>
     <li id="mobile-admin-link" style="display:none"><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-shield-alt"></i> Admin Panel</a></li>
     <li><div class="mobile-nav-divider"></div></li>
-    <li><a href="#" onclick="handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+    <li><a href="#" onclick="AUBazaar.handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
   </ul>
 </div>
 
