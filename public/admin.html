@@ -813,10 +813,35 @@
                 <i class="fas fa-ban"></i>
               </button>
             ` : ''}
+            <button class="btn btn-sm btn-danger" onclick="deleteReport('${report.id}')" title="Delete Report">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
         </td>
       </tr>
     `).join('');
+  }
+
+  async function deleteReport(reportId) {
+    const confirmResult = await Swal.fire({
+      title: 'Delete this report?',
+      text: 'This only removes the report entry itself - it will not affect the listing it was about.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      await AUBazaar.db.collection('reports').doc(reportId).delete();
+      AUBazaar.showToast('Report deleted', 'success');
+      await loadReports();
+      await loadStats();
+    } catch (error) {
+      AUBazaar.showToast('Failed to delete report', 'error');
+    }
   }
 
   function renderCategoryStats() {
