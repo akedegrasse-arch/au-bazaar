@@ -30,14 +30,12 @@ const listingRoutes = require('./routes/listings');
 const userRoutes = require('./routes/users');
 const messageRoutes = require('./routes/messages');
 const adminRoutes = require('./routes/admin');
-const alertRoutes = require('./routes/alerts');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/alerts', alertRoutes);
 
 // Serve HTML pages
 app.get('/', (req, res) => {

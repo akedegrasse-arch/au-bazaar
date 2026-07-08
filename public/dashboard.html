@@ -466,34 +466,11 @@
       </div>
       
       <div class="card mb-3">
-        <div class="card-header"><i class="fas fa-robot"></i> AI Product Alerts</div>
+        <div class="card-header"><i class="fas fa-user-cog"></i> Account</div>
         <div class="card-body">
           <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">
-            Get notified when items matching your preferences become available. Our AI learns your interests and alerts you instantly!
+            Permanently delete your account and all your listings. This cannot be undone.
           </p>
-          
-          <div id="alerts-list" style="margin-bottom:1rem">
-            <!-- User alerts will be loaded here -->
-            <div style="text-align:center;color:var(--gray);padding:2rem">
-              <i class="fas fa-bell-slash" style="font-size:2rem;margin-bottom:0.5rem"></i>
-              <p>No alerts set up yet</p>
-              <p style="font-size:0.85rem">Create your first alert to get notified about items you're interested in</p>
-            </div>
-          </div>
-          
-          <button class="btn btn-primary" onclick="createNewAlert()">
-            <i class="fas fa-plus"></i> Create New Alert
-          </button>
-        </div>
-      </div>
-      
-      <div class="card mb-3">
-        <div class="card-header"><i class="fas fa-lock"></i> Security</div>
-        <div class="card-body">
-          <button class="btn btn-outline mb-2" onclick="changePassword()">
-            <i class="fas fa-key"></i> Change Password
-          </button>
-          <br>
           <button class="btn btn-danger" onclick="deleteAccount()">
             <i class="fas fa-trash"></i> Delete Account
           </button>
@@ -502,51 +479,6 @@
     </div>
     
   </main>
-</div>
-
-<!-- Alert Modal -->
-<div id="alert-modal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Create Product Alert</h3>
-      <span class="close" onclick="closeAlertModal()">&times;</span>
-    </div>
-    <div class="modal-body">
-      <form id="alert-form">
-        <div class="form-group">
-          <label for="alert-name">Alert Name *</label>
-          <input type="text" id="alert-name" placeholder="e.g., Electronics under $50" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="alert-categories">Categories (comma-separated)</label>
-          <input type="text" id="alert-categories" placeholder="e.g., Electronics, Books, Clothing">
-          <small>Leave empty to match all categories</small>
-        </div>
-        
-        <div class="form-group">
-          <label for="alert-keywords">Keywords (comma-separated)</label>
-          <input type="text" id="alert-keywords" placeholder="e.g., laptop, gaming, wireless">
-          <small>Items containing any of these keywords will trigger the alert</small>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="alert-min-price">Min Price ($)</label>
-            <input type="number" id="alert-min-price" placeholder="0" min="0" step="0.01">
-          </div>
-          <div class="form-group">
-            <label for="alert-max-price">Max Price ($)</label>
-            <input type="number" id="alert-max-price" placeholder="1000" min="0" step="0.01">
-          </div>
-        </div>
-      </form>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-secondary" onclick="closeAlertModal()">Cancel</button>
-      <button type="button" class="btn-primary" onclick="saveAlert()">Create Alert</button>
-    </div>
-  </div>
 </div>
 
 <!-- Firebase SDKs -->
@@ -713,7 +645,6 @@
   async function loadDashboardData() {
     await loadMyListings();
     await loadFavorites();
-    await loadUserAlerts();
     await loadNotifications();
     updateStats();
     await updateSellerStatusUI();
@@ -1362,62 +1293,6 @@ function resetUserForDemo() {
     window.location.href = '/';
   }
 
-  function changePassword() {
-    if (!currentUser || !currentUser.email) {
-      AUBazaar.showToast('Unable to get your email. Please log out and log in again.', 'error');
-      return;
-    }
-    
-    const email = currentUser.email;
-    
-    AUBazaar.auth.sendPasswordResetEmail(email)
-      .then(() => {
-        AUBazaar.showToast(`Password reset email sent to ${email}. Check your inbox!`, 'success');
-      })
-      .catch((error) => {
-        AUBazaar.showToast('Failed to send reset email: ' + error.message, 'error');
-      });
-  }
-
-  // Check seller status before going to sell page
-  function checkAndGoToSell(event) {
-    event.preventDefault();
-    
-    const status = localStorage.getItem('sellerStatus');
-    
-    if (status === 'approved') {
-      window.location.href = '/sell';
-    } else if (status === 'pending') {
-      Swal.fire({
-        icon: 'info',
-        title: 'Pending Approval',
-        text: 'Your seller account is waiting for admin approval.',
-        confirmButtonText: 'View Status'
-      }).then(() => {
-        showTab('settings', document.querySelector('.sidebar-nav a:nth-child(5)'));
-      });
-    } else {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Become a Seller',
-        text: 'You need to become a seller before posting items.',
-        showCancelButton: true,
-        confirmButtonText: 'Become a Seller',
-        cancelButtonText: 'Later'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.location.href = '/become-seller';
-        }
-      });
-    }
-  }
-
-  // Profile dropdown menu
-  function toggleProfileMenu() {
-    const dropdown = document.getElementById('profile-dropdown');
-    dropdown.classList.toggle('show');
-  }
-
   // Close dropdown when clicking outside
   window.addEventListener('click', function(e) {
     const dropdown = document.getElementById('profile-dropdown');
@@ -1533,163 +1408,6 @@ function resetUserForDemo() {
     }
     
     await AUBazaar.handleLogout();
-  };
-
-  // AI Product Alerts functionality
-  let userAlerts = [];
-  let alertsUnsubscribe = null;
-
-  // Load and display user alerts from Firestore
-  async function loadUserAlerts() {
-    const user = firebase.auth().currentUser;
-    console.log('loadUserAlerts called, user:', user);
-    if (!user) {
-      console.log('No user logged in, skipping alert loading');
-      return;
-    }
-
-    try {
-      const doc = await AUBazaar.db.collection('userAlerts').doc(user.uid).get();
-      const data = doc.exists ? doc.data() : {};
-      userAlerts = data.alerts || [];
-      console.log('User alerts loaded from Firestore:', userAlerts);
-      displayAlerts();
-    } catch (error) {
-      console.error('Error loading user alerts from Firestore:', error);
-      showToast('Error loading alerts: ' + error.message, 'error');
-    }
-  }
-
-  // Display alerts in the UI
-  function displayAlerts() {
-    const alertsContainer = document.getElementById('alerts-list');
-    if (!alertsContainer) return;
-
-    if (userAlerts.length === 0) {
-      alertsContainer.innerHTML = '<p class="no-alerts">No alerts set up yet. Create your first alert to get notified when items matching your preferences become available!</p>';
-      return;
-    }
-
-    alertsContainer.innerHTML = userAlerts.map((alert, index) => `
-      <div class="alert-item">
-        <div class="alert-header">
-          <h4>${alert.name}</h4>
-          <button class="delete-alert-btn" onclick="deleteAlert(${index})" title="Delete Alert">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-        <div class="alert-details">
-          ${alert.categories && alert.categories.length > 0 ? `<p><strong>Categories:</strong> ${alert.categories.join(', ')}</p>` : ''}
-          ${alert.keywords && alert.keywords.length > 0 ? `<p><strong>Keywords:</strong> ${alert.keywords.join(', ')}</p>` : ''}
-          ${alert.maxPrice ? `<p><strong>Max Price:</strong> $${alert.maxPrice}</p>` : ''}
-          ${alert.minPrice ? `<p><strong>Min Price:</strong> $${alert.minPrice}</p>` : ''}
-          <p><strong>Status:</strong> <span class="alert-status ${alert.active ? 'active' : 'inactive'}">${alert.active ? 'Active' : 'Inactive'}</span></p>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // Create new alert
-  window.createNewAlert = function() {
-    const modal = document.getElementById('alert-modal');
-    if (modal) {
-      modal.style.display = 'block';
-      document.body.style.overflow = 'hidden';
-    }
-  };
-
-  // Close alert modal
-  window.closeAlertModal = function() {
-    const modal = document.getElementById('alert-modal');
-    if (modal) {
-      modal.style.display = 'none';
-      document.body.style.overflow = 'auto';
-      // Reset form
-      document.getElementById('alert-form').reset();
-    }
-  };
-
-  // Save new alert
-  window.saveAlert = async function() {
-    console.log('saveAlert called');
-    const user = firebase.auth().currentUser;
-    console.log('Current user:', user);
-    if (!user) {
-      showToast('Please log in first', 'error');
-      return;
-    }
-
-    const alertName = document.getElementById('alert-name').value.trim();
-    const categories = document.getElementById('alert-categories').value.split(',').map(c => c.trim()).filter(c => c);
-    let keywords = document.getElementById('alert-keywords').value.split(',').map(k => k.trim()).filter(k => k);
-    const minPrice = parseFloat(document.getElementById('alert-min-price').value) || null;
-    const maxPrice = parseFloat(document.getElementById('alert-max-price').value) || null;
-
-    console.log('Alert data:', { alertName, categories, keywords, minPrice, maxPrice });
-
-    if (!alertName) {
-      showToast('Please enter an alert name', 'error');
-      return;
-    }
-
-    // Use alert name as keywords if the user didn't provide explicit categories or keywords.
-    if (categories.length === 0 && keywords.length === 0) {
-      keywords = alertName.split(/\W+/).map(k => k.trim()).filter(Boolean);
-      console.log('Derived keywords from alert name:', keywords);
-    }
-
-    const newAlert = {
-      name: alertName,
-      categories: categories,
-      keywords: keywords,
-      minPrice: minPrice,
-      maxPrice: maxPrice,
-      active: true,
-      createdAt: new Date().toISOString()
-    };
-
-    try {
-      console.log('Saving alert for user:', user.uid);
-      console.log('Alert data:', newAlert);
-
-      const alertsDocRef = AUBazaar.db.collection('userAlerts').doc(user.uid);
-      const updatedAlerts = [...userAlerts, newAlert];
-
-      await alertsDocRef.set({
-        alerts: updatedAlerts,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      userAlerts = updatedAlerts;
-      displayAlerts();
-      closeAlertModal();
-      showToast('Alert created successfully!', 'success');
-    } catch (error) {
-      console.error('Error saving alert to Firestore:', error);
-      showToast('Error saving alert: ' + error.message, 'error');
-    }
-  };
-
-  // Delete alert
-  window.deleteAlert = async function(index) {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-
-    if (!confirm('Are you sure you want to delete this alert?')) return;
-
-    try {
-      userAlerts.splice(index, 1);
-      await AUBazaar.db.collection('userAlerts').doc(user.uid).set({
-        alerts: userAlerts,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      displayAlerts();
-      showToast('Alert deleted successfully!', 'success');
-    } catch (error) {
-      console.error('Error deleting alert from Firestore:', error);
-      showToast('Error deleting alert: ' + error.message, 'error');
-    }
   };
 
   // Load and display user notifications
@@ -1872,22 +1590,6 @@ function resetUserForDemo() {
     }, 3000);
   }
 
-  // TEMPORARY: Skip Firebase auth for testing
-  // Initialize alerts when user is authenticated
-  // auth.onAuthStateChanged((user) => {
-  //   if (user) {
-  //     loadUserAlerts();
-  //     loadNotifications();
-  //   } else {
-  //     userAlerts = [];
-  //     // Clean up listeners
-  //     if (notificationsUnsubscribe) {
-  //       notificationsUnsubscribe();
-  //       notificationsUnsubscribe = null;
-  //     }
-  //   }
-  // });
-  
   // Real-time message badge update
   const uid = localStorage.getItem('uid');
   if (uid) {
