@@ -165,7 +165,7 @@
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
       <img src="/images/africa-university-logo.png" alt="AU Logo" class="logo-img">
-      <span>AU<span>Bazaar</span></span> <span style="font-size:0.8rem;background:var(--secondary);padding:2px 8px;border-radius:4px;margin-left:8px">ADMIN</span>
+      <span>AU<span>Bazaar</span></span> <span style="font-size:0.8rem;background:var(--secondary);color:white;padding:2px 8px;border-radius:4px;margin-left:8px">ADMIN</span>
     </a>
     <div class="navbar-right" style="display:flex;align-items:center;gap:0.5rem">
       <ul class="navbar-nav">
@@ -188,7 +188,14 @@
   <ul>
     <li><a href="/marketplace" onclick="closeMobileNav()"><i class="fas fa-store"></i> Marketplace</a></li>
     <li><a href="/dashboard" onclick="closeMobileNav()"><i class="fas fa-user"></i> My Account</a></li>
-    <li><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-cog"></i> Dashboard</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
+    <li><a href="#" onclick="showAdminTab('dashboard', null); closeMobileNav(); return false;"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+    <li><a href="#" onclick="showAdminTab('analytics', null); closeMobileNav(); return false;"><i class="fas fa-chart-bar"></i> Analytics</a></li>
+    <li><a href="#" onclick="showAdminTab('users', null); closeMobileNav(); return false;"><i class="fas fa-users"></i> Users</a></li>
+    <li><a href="#" onclick="showAdminTab('listings', null); closeMobileNav(); return false;"><i class="fas fa-list"></i> Listings</a></li>
+    <li><a href="#" onclick="showAdminTab('reports', null); closeMobileNav(); return false;"><i class="fas fa-flag"></i> Reports</a></li>
+    <li><a href="#" onclick="showAdminTab('settings', null); closeMobileNav(); return false;"><i class="fas fa-cog"></i> Settings</a></li>
+    <li><div class="mobile-nav-divider"></div></li>
     <li><a href="#" onclick="AUBazaar.handleLogout(); closeMobileNav(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
   </ul>
 </div>
