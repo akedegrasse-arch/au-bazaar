@@ -446,7 +446,14 @@
       <div class="admin-header">
         <h1>📈 Analytics</h1>
       </div>
-      
+
+      <div class="card mb-3">
+        <div class="card-header">Growth (Last 30 Days)</div>
+        <div class="card-body">
+          <canvas id="growth-chart" height="90"></canvas>
+        </div>
+      </div>
+
       <div class="grid grid-2">
         <div class="card">
           <div class="card-header">Listings by Category</div>
@@ -468,31 +475,22 @@
       <div class="admin-header">
         <h1>⚙️ Platform Settings</h1>
       </div>
-      
+
       <div class="card mb-3">
-        <div class="card-header">Platform Configuration</div>
+        <div class="card-header">Admin Access</div>
         <div class="card-body">
+          <p style="color:var(--gray);font-size:0.85rem;margin-bottom:0.8rem">Search for a user to grant or remove admin access.</p>
           <div class="form-group">
-            <label class="form-label">Max Images per Listing</label>
-            <input type="number" class="form-control" value="5" id="max-images">
+            <input type="text" class="form-control" id="admin-access-search" placeholder="Search by name or email..." oninput="renderAdminAccessResults()">
           </div>
-          <div class="form-group">
-            <label class="form-label">Max Listing Price (USD)</label>
-            <input type="number" class="form-control" value="10000" id="max-price">
-          </div>
-          <button class="btn btn-primary" onclick="saveSettings()">
-            <i class="fas fa-save"></i> Save Settings
-          </button>
+          <div id="admin-access-results"></div>
         </div>
       </div>
-      
+
       <div class="card">
-        <div class="card-header">Maintenance</div>
+        <div class="card-header">Data Export</div>
         <div class="card-body">
-          <button class="btn btn-warning mb-2" onclick="cleanupDeletedListings()">
-            <i class="fas fa-broom"></i> Cleanup Deleted Listings
-          </button>
-          <br>
+          <p style="color:var(--gray);font-size:0.85rem;margin-bottom:0.8rem">Downloads all user profiles and listings as a JSON file for backup or offline review.</p>
           <button class="btn btn-danger" onclick="exportData(event)">
             <i class="fas fa-download"></i> Export Data
           </button>
@@ -509,6 +507,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="/js/firebase-config.js"></script>
 <script>
   let allUsers = [];
@@ -552,6 +551,61 @@
     // been populated yet when loadReports finished (both run concurrently
     // above) - re-render now that everything is guaranteed loaded.
     renderReportsTable(allReports);
+    renderGrowthChart();
+  }
+
+  let growthChartInstance = null;
+
+  function renderGrowthChart() {
+    const canvas = document.getElementById('growth-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      days.push(d);
+    }
+    const dayKey = d => d.toISOString().split('T')[0];
+
+    const userCounts = {};
+    const listingCounts = {};
+    days.forEach(d => { userCounts[dayKey(d)] = 0; listingCounts[dayKey(d)] = 0; });
+
+    const toDate = ts => ts?.toDate ? ts.toDate() : new Date(ts);
+    const toDayKey = date => dayKey(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
+
+    allUsers.forEach(u => {
+      if (!u.createdAt) return;
+      const key = toDayKey(toDate(u.createdAt));
+      if (key in userCounts) userCounts[key]++;
+    });
+    allListings.forEach(l => {
+      if (!l.createdAt) return;
+      const key = toDayKey(toDate(l.createdAt));
+      if (key in listingCounts) listingCounts[key]++;
+    });
+
+    const labels = days.map(d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+    if (growthChartInstance) growthChartInstance.destroy();
+    growthChartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'New Users', data: days.map(d => userCounts[dayKey(d)]), borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', tension: 0.3, fill: true },
+          { label: 'New Listings', data: days.map(d => listingCounts[dayKey(d)]), borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.1)', tension: 0.3, fill: true }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
   }
 
   async function loadStats() {
@@ -1258,45 +1312,92 @@
     AUBazaar.showToast('Data refreshed', 'success');
   }
 
-  function saveSettings() {
-    AUBazaar.showToast('Settings saved successfully', 'success');
-  }
-   
-  function cleanupDeletedListings() {
-    AUBazaar.showToast('Cleanup initiated...', 'info');
+  function renderAdminAccessResults() {
+    const query = document.getElementById('admin-access-search').value.trim().toLowerCase();
+    const container = document.getElementById('admin-access-results');
+
+    if (!query) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const matches = allUsers.filter(u =>
+      (u.fullName || '').toLowerCase().includes(query) || (u.email || '').toLowerCase().includes(query)
+    ).slice(0, 10);
+
+    if (matches.length === 0) {
+      container.innerHTML = '<p style="color:var(--gray);padding:0.5rem 0">No users found</p>';
+      return;
+    }
+
+    container.innerHTML = matches.map(u => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--gray-light)">
+        <div>
+          <div style="font-weight:600;font-size:0.9rem">${u.fullName || 'No name'}</div>
+          <div style="font-size:0.8rem;color:var(--gray)">${u.email || ''} · ${u.role || 'student'}</div>
+        </div>
+        ${u.role === 'admin' ? `
+          <button class="btn btn-sm btn-danger" onclick="toggleAdminRole('${u.id}', 'student')" ${u.id === currentAdmin.uid ? 'disabled title="You can\'t remove your own admin access"' : ''}>
+            Remove Admin
+          </button>
+        ` : `
+          <button class="btn btn-sm btn-success" onclick="toggleAdminRole('${u.id}', 'admin')">
+            Make Admin
+          </button>
+        `}
+      </div>
+    `).join('');
   }
 
-  async function exportData() {
-    const btn = event.target;
+  async function toggleAdminRole(userId, newRole) {
+    const confirmResult = await Swal.fire({
+      title: newRole === 'admin' ? 'Grant admin access?' : 'Remove admin access?',
+      text: newRole === 'admin' ? 'This user will be able to access the full admin panel.' : 'This user will lose access to the admin panel.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, confirm',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      await AUBazaar.db.collection('users').doc(userId).update({ role: newRole });
+      AUBazaar.showToast(newRole === 'admin' ? 'Admin access granted' : 'Admin access removed', 'success');
+      await loadUsers();
+      renderAdminAccessResults();
+    } catch (error) {
+      AUBazaar.showToast('Failed to update role', 'error');
+    }
+  }
+
+  async function exportData(event) {
+    const btn = event.target.closest('button');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
-    
+
     try {
       // Get all users
       const usersSnap = await firebase.firestore().collection('users').get();
       const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       // Get all listings
       const listingsSnap = await firebase.firestore().collection('listings').get();
       const listings = listingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Get all conversations
-      const conversationsSnap = await firebase.firestore().collection('conversations').get();
-      const conversations = conversationsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Create export object
+
+      // Conversations are intentionally excluded - they're private DMs between
+      // users, and admins have no read access to conversations they're not a
+      // participant in (by design), so this export only covers profiles/listings.
       const exportData = {
         exportDate: new Date().toISOString(),
         stats: {
           totalUsers: users.length,
-          totalListings: listings.length,
-          totalConversations: conversations.length
+          totalListings: listings.length
         },
         users: users,
-        listings: listings,
-        conversations: conversations
+        listings: listings
       };
-      
+
       // Create and download JSON file
       const dataStr = JSON.stringify(exportData, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
@@ -1306,7 +1407,7 @@
       link.download = `aubazaar_export_${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Export Complete!',
@@ -1321,7 +1422,7 @@
         confirmButtonText: 'OK'
       });
     }
-    
+
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-download"></i> Export Data';
   }
