@@ -399,13 +399,14 @@
                 <th>Listing</th>
                 <th>Reporter</th>
                 <th>Reason</th>
+                <th>Details</th>
                 <th>Date</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="reports-table-body">
-              <tr><td colspan="6" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+              <tr><td colspan="7" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -547,6 +548,10 @@
       loadReports(),
       loadContactMessages()
     ]);
+    // Reports render reporter names from allUsers, which may not have
+    // been populated yet when loadReports finished (both run concurrently
+    // above) - re-render now that everything is guaranteed loaded.
+    renderReportsTable(allReports);
   }
 
   async function loadStats() {
@@ -766,14 +771,20 @@
     }
   }
 
+  function getReporterName(uid) {
+    const user = allUsers.find(u => u.id === uid);
+    if (user) return user.fullName || user.email;
+    return uid ? uid.substring(0, 8) + '...' : 'Unknown';
+  }
+
   function renderReportsTable(reports) {
     const tbody = document.getElementById('reports-table-body');
-    
+
     if (reports.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray)">No reports found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray)">No reports found</td></tr>';
       return;
     }
-    
+
     tbody.innerHTML = reports.map(report => `
       <tr>
         <td>
@@ -781,8 +792,11 @@
             View Listing <i class="fas fa-external-link-alt" style="font-size:0.75rem"></i>
           </a>
         </td>
-        <td style="font-size:0.85rem">${report.reporterId?.substring(0, 8)}...</td>
+        <td style="font-size:0.85rem">${getReporterName(report.reporterId)}</td>
         <td><span class="badge badge-warning">${report.reason}</span></td>
+        <td style="font-size:0.85rem;max-width:220px" title="${(report.details || '').replace(/"/g, '&quot;')}">
+          ${report.details ? (report.details.length > 50 ? report.details.slice(0, 50) + '…' : report.details) : '<span style="color:var(--gray)">—</span>'}
+        </td>
         <td style="font-size:0.82rem">${AUBazaar.formatDate(report.createdAt)}</td>
         <td>
           <span class="badge ${report.status === 'pending' ? 'badge-warning' : report.status === 'resolved' ? 'badge-success' : 'badge-gray'}">
@@ -792,10 +806,10 @@
         <td>
           <div style="display:flex;gap:0.3rem">
             ${report.status === 'pending' ? `
-              <button class="btn btn-sm btn-success" onclick="resolveReport('${report.id}', 'resolved')" title="Resolve">
+              <button class="btn btn-sm btn-success" onclick="resolveReport('${report.id}', 'resolved')" title="Resolve: dismiss report, listing stays up">
                 <i class="fas fa-check"></i>
               </button>
-              <button class="btn btn-sm btn-danger" onclick="resolveReport('${report.id}', 'action-taken')" title="Take Action">
+              <button class="btn btn-sm btn-danger" onclick="resolveReport('${report.id}', 'action-taken')" title="Take Action: remove the listing">
                 <i class="fas fa-ban"></i>
               </button>
             ` : ''}
@@ -1019,18 +1033,74 @@
   }
 
   async function resolveReport(reportId, resolution) {
+    const report = allReports.find(r => r.id === reportId);
+    if (!report) return;
+
+    if (resolution === 'action-taken') {
+      const confirmResult = await Swal.fire({
+        title: 'Remove this listing?',
+        text: 'This will hide the reported listing from the marketplace and notify the reporter that it was removed.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, remove listing',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545'
+      });
+      if (!confirmResult.isConfirmed) return;
+    }
+
     try {
+      if (resolution === 'action-taken' && report.listingId) {
+        await AUBazaar.db.collection('listings').doc(report.listingId).update({
+          status: 'deleted',
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deletedBy: 'admin-report'
+        });
+      }
+
       await AUBazaar.db.collection('reports').doc(reportId).update({
         status: resolution,
         resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
         resolvedBy: currentAdmin.uid
       });
-      AUBazaar.showToast('Report resolved', 'success');
+
+      if (report.reporterId) {
+        await notifyReporter(report.reporterId, resolution);
+      }
+
+      AUBazaar.showToast(resolution === 'action-taken' ? 'Listing removed and reporter notified' : 'Report resolved and reporter notified', 'success');
       await loadReports();
+      await loadAllListings();
       await loadStats();
     } catch (error) {
       AUBazaar.showToast('Failed to resolve report', 'error');
+      console.error(error);
     }
+  }
+
+  async function notifyReporter(reporterId, resolution) {
+    const adminUid = currentAdmin.uid;
+    const conversationId = [adminUid, reporterId].sort().join('_') + '_report';
+    const text = resolution === 'action-taken'
+      ? "Thanks for your report. We reviewed the listing and removed it for violating AUBazaar's policies."
+      : "Thanks for your report. We reviewed the listing and didn't find a violation, so it remains active.";
+
+    await AUBazaar.db.collection('conversations').doc(conversationId).set({
+      participants: [adminUid, reporterId],
+      lastMessage: text,
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await AUBazaar.db.collection('messages').add({
+      conversationId,
+      senderId: adminUid,
+      receiverId: reporterId,
+      listingId: null,
+      content: text,
+      read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
   }
 
   async function loadContactMessages() {
@@ -1081,10 +1151,35 @@
                 <i class="fas fa-check"></i>
               </button>
             ` : ''}
+            <button class="btn btn-sm btn-danger" onclick="deleteMessage('${msg.id}')" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
         </td>
       </tr>
     `).join('');
+  }
+
+  async function deleteMessage(messageId) {
+    const confirmResult = await Swal.fire({
+      title: 'Delete this message?',
+      text: 'This will permanently remove the message from your inbox.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      await AUBazaar.db.collection('contact_messages').doc(messageId).delete();
+      AUBazaar.showToast('Message deleted', 'success');
+      await loadContactMessages();
+      await loadStats();
+    } catch (error) {
+      AUBazaar.showToast('Failed to delete message', 'error');
+    }
   }
 
   async function replyInApp(senderId) {
