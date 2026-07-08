@@ -109,58 +109,6 @@
     @media (max-width: 600px) {
       .profile-edit-form { grid-template-columns: 1fr; }
     }
-    .notification-item {
-      display: flex;
-      gap: 1rem;
-      padding: 1rem;
-      border-bottom: 1px solid var(--gray-light);
-      align-items: flex-start;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .notification-item:hover { background: #f8f9fa; }
-    .notification-item.unread { background: #eaf4fb; }
-    .notification-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-      background: var(--gray-light);
-    }
-    .notification-content {
-      flex: 1;
-      min-width: 0;
-    }
-    .notification-title {
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 0.25rem;
-    }
-    .notification-message {
-      color: var(--gray);
-      font-size: 0.9rem;
-      margin-bottom: 0.25rem;
-      line-height: 1.4;
-    }
-    .notification-time {
-      font-size: 0.8rem;
-      color: var(--gray);
-    }
-    .notification-unread-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--primary);
-      flex-shrink: 0;
-      margin-top: 0.5rem;
-    }
-    .notif-message { background: #d6eaf8; color: var(--primary); }
-    .notif-sale { background: #d5f5e3; color: var(--accent); }
-    .notif-system { background: #fef9e7; color: #9a7d0a; }
   </style>
 </head>
 <body>
@@ -249,7 +197,6 @@
       <li><a href="#" onclick="showTab('listings', this); return false;"><i class="fas fa-list"></i> My Listings</a></li>
       <li><a href="#" onclick="showTab('favorites', this); return false;"><i class="fas fa-heart"></i> Favorites</a></li>
       <li><a href="/messages"><i class="fas fa-envelope"></i> Messages <span class="notification-badge" id="msg-count" style="display:none">0</span></a></li>
-      <li><a href="#" onclick="showTab('notifications', this); return false;"><i class="fas fa-bell"></i> Notifications <span class="notification-badge" id="notification-count" style="display:none">0</span></a></li>
       <li><a href="#" onclick="showTab('profile', this); return false;"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
       <li><a href="#" onclick="showTab('settings', this); return false;"><i class="fas fa-cog"></i> Settings</a></li>
       <li id="sidebar-admin-link" style="display:none;border-top:1px solid var(--gray-light);padding-top:1rem;margin-top:1rem">
@@ -353,42 +300,6 @@
         <h3>No saved items yet</h3>
         <p>Browse the marketplace and save items you're interested in.</p>
         <a href="/marketplace" class="btn btn-primary mt-2">Browse Marketplace</a>
-      </div>
-    </div>
-    
-    <!-- Notifications Tab -->
-    <div id="tab-notifications" class="tab-content">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-        <h2 style="font-weight:800;margin:0">Notifications</h2>
-        <div style="display:flex;gap:0.5rem">
-          <button class="btn btn-outline" onclick="createTestNotification()">
-            <i class="fas fa-plus"></i> Test Notification
-          </button>
-          <button class="btn btn-outline" onclick="markAllAsRead()">
-            <i class="fas fa-check-double"></i> Mark All Read
-          </button>
-        </div>
-      </div>
-      <div class="card">
-        <div id="notifications-container">
-          <div class="empty-state">
-            <div class="empty-state-icon">🔔</div>
-            <h3>No notifications yet</h3>
-            <p>You'll see updates about your listings, messages, and alerts here.</p>
-            <div style="margin-top:1rem;text-align:left;max-width:400px">
-              <h4 style="font-size:1rem;margin-bottom:0.5rem">How notifications work:</h4>
-              <ul style="font-size:0.9rem;color:var(--gray);line-height:1.4">
-                <li><strong>Product Alerts:</strong> Create alerts in the AI Product Alerts section to get notified when items matching your criteria are posted</li>
-                <li><strong>Messages:</strong> Get notified when someone sends you a message</li>
-                <li><strong>Browser Notifications:</strong> Allow browser notifications for real-time alerts</li>
-                <li><strong>Click notifications to mark as read</strong></li>
-              </ul>
-              <button class="btn btn-primary" onclick="createTestNotification()" style="margin-top:1rem">
-                <i class="fas fa-plus"></i> Create Test Notification
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
     
@@ -645,7 +556,6 @@
   async function loadDashboardData() {
     await loadMyListings();
     await loadFavorites();
-    await loadNotifications();
     updateStats();
     await updateSellerStatusUI();
 
@@ -1260,39 +1170,6 @@
     }
   }
   
-  // Direct click handler for Edit Profile (fallback)
-  function goToEditProfile() {
-    showTab('profile');
-  }
-
-function resetUserForDemo() {
-  // Clear localStorage and reload for demo purposes
-  localStorage.clear();
-  alert('New user session started! All seller data cleared.');
-  window.location.reload();
-}
-
-  async function handleLogout() {
-    const result = await Swal.fire({
-      title: 'Logout?',
-      text: 'Are you sure you want to logout?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Logout',
-      cancelButtonText: 'Cancel'
-    });
-    
-    if (!result.isConfirmed) return;
-    
-    // Clear localStorage for fresh start
-    localStorage.removeItem('role');
-    localStorage.removeItem('sellerStatus');
-    localStorage.removeItem('paymentRef');
-    
-    await AUBazaar.auth.signOut();
-    window.location.href = '/';
-  }
-
   // Close dropdown when clicking outside
   window.addEventListener('click', function(e) {
     const dropdown = document.getElementById('profile-dropdown');
@@ -1396,187 +1273,6 @@ function resetUserForDemo() {
     mobileGuestNav.style.display = 'block';
     mobileUserNav.style.display = 'none';
   }
-
-  // Handle logout
-  window.handleLogout = async function() {
-    closeMobileNav();
-    
-    // Clean up listeners
-    if (notificationsUnsubscribe) {
-      notificationsUnsubscribe();
-      notificationsUnsubscribe = null;
-    }
-    
-    await AUBazaar.handleLogout();
-  };
-
-  // Load and display user notifications
-  let notificationsUnsubscribe = null;
-  
-  async function loadNotifications() {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-
-    // Unsubscribe from previous listener
-    if (notificationsUnsubscribe) {
-      notificationsUnsubscribe();
-    }
-
-    try {
-      const notificationsRef = AUBazaar.db.collection('users').doc(user.uid).collection('notifications');
-      
-      // Set up real-time listener
-      notificationsUnsubscribe = notificationsRef.orderBy('timestamp', 'desc').limit(50).onSnapshot((snapshot) => {
-        const notifications = [];
-        snapshot.forEach(doc => {
-          notifications.push({ id: doc.id, ...doc.data() });
-        });
-
-        displayNotifications(notifications);
-        
-        // Update notification count badge
-        const unreadCount = notifications.filter(n => !n.read).length;
-        updateNotificationBadge(unreadCount);
-      }, (error) => {
-        console.error('Error listening to notifications:', error);
-      });
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    }
-  }
-
-  // Display notifications in the UI
-  function displayNotifications(notifications) {
-    const container = document.getElementById('notifications-container');
-    if (!container) return;
-
-    if (notifications.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">🔔</div>
-          <h3>No notifications yet</h3>
-          <p>You'll see updates about your listings, messages, and alerts here.</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = notifications.map(notification => {
-      const isRead = notification.read;
-      const timestamp = notification.timestamp ? AUBazaar.formatDate(notification.timestamp) : '';
-      const icon = getNotificationIcon(notification.type);
-
-      return `
-        <div class="notification-item ${!isRead ? 'unread' : ''}" onclick="markAsRead('${notification.id}')">
-          <div class="notification-icon">${icon}</div>
-          <div class="notification-content">
-            <div class="notification-title">${notification.title || 'Notification'}</div>
-            <div class="notification-message">${notification.message || ''}</div>
-            <div class="notification-time">${timestamp}</div>
-          </div>
-          ${!isRead ? '<div class="notification-unread-dot"></div>' : ''}
-        </div>
-      `;
-    }).join('');
-  }
-
-  // Get notification icon based on type
-  function getNotificationIcon(type) {
-    const icons = {
-      'alert': '🔍',
-      'message': '💬',
-      'listing': '📦',
-      'system': 'ℹ️'
-    };
-    return icons[type] || '🔔';
-  }
-
-  // Update notification count badge
-  function updateNotificationBadge(count) {
-    const badge = document.getElementById('notification-count');
-    if (badge) {
-      if (count > 0) {
-        badge.textContent = count > 99 ? '99+' : count;
-        badge.style.display = 'inline';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-  }
-
-  // Mark notification as read
-  window.markAsRead = async function(notificationId) {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-
-    try {
-      await AUBazaar.db.collection('users').doc(user.uid).collection('notifications').doc(notificationId).update({
-        read: true
-      });
-
-      // Reload notifications to update UI
-      await loadNotifications();
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-
-  // Mark all notifications as read
-  window.markAllAsRead = async function() {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-
-    try {
-      const batch = AUBazaar.db.batch();
-      const notificationsRef = AUBazaar.db.collection('users').doc(user.uid).collection('notifications');
-      const snapshot = await notificationsRef.where('read', '==', false).get();
-
-      snapshot.forEach(doc => {
-        batch.update(doc.ref, { read: true });
-      });
-
-      await batch.commit();
-      await loadNotifications();
-      showToast('All notifications marked as read!', 'success');
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-      showToast('Error updating notifications', 'error');
-    }
-  };
-
-  // Test function to create a sample notification (for testing)
-  window.createTestNotification = async function() {
-    const user = firebase.auth().currentUser;
-    if (!user) {
-      showToast('Please log in first', 'error');
-      return;
-    }
-
-    try {
-      console.log('Creating test notification for user:', user.uid);
-      
-      const notificationData = {
-        type: 'system',
-        title: 'Test Notification',
-        message: 'This is a test notification to verify the system is working.',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        read: false
-      };
-      
-      console.log('Notification data:', notificationData);
-      
-      const result = await AUBazaar.db.collection('users').doc(user.uid).collection('notifications').add(notificationData);
-      console.log('Notification created with ID:', result.id);
-
-      await loadNotifications();
-      showToast('Test notification created!', 'success');
-    } catch (error) {
-      console.error('Error creating test notification:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      showToast('Error: ' + error.message, 'error');
-    }
-  };
 
   // Toast notification function
   function showToast(message, type = 'info') {
