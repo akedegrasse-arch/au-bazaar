@@ -16,6 +16,38 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// PWA installability - injected here rather than added to every page's
+// <head> individually. Needs both a manifest link and a registered
+// service worker present to qualify for the browser's install prompt.
+if (!document.querySelector('link[rel="manifest"]')) {
+  const manifestLink = document.createElement('link');
+  manifestLink.rel = 'manifest';
+  manifestLink.href = '/manifest.json';
+  document.head.appendChild(manifestLink);
+
+  const themeColor = document.createElement('meta');
+  themeColor.name = 'theme-color';
+  themeColor.content = '#d32f2f';
+  document.head.appendChild(themeColor);
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(() => {});
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  // The browser decides install-eligibility asynchronously after page
+  // load, so a UI checking canInstallApp() on first render can miss it -
+  // this lets that UI re-check once it's actually available.
+  window.dispatchEvent(new Event('aubazaar:installavailable'));
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+});
+
 // Push notifications (real, work even with the app closed - via a Cloud
 // Function that fires on every new `messages` doc). Loaded dynamically
 // here rather than added to every page's <script> tags individually.
@@ -603,6 +635,28 @@ window.AUBazaar = {
   },
   isPushNotificationEnabled: function() {
     return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  },
+  // Whether the browser is currently offering to install AUBazaar as an
+  // app - false if already installed, or if the browser hasn't decided
+  // the install criteria are met yet (this fires asynchronously after
+  // page load, so check again a moment after the page opens rather than
+  // immediately).
+  canInstallApp: function() {
+    return !!deferredInstallPrompt;
+  },
+  installApp: async function() {
+    if (!deferredInstallPrompt) {
+      showToast("Install isn't available right now - your browser may not support it, or AUBazaar may already be installed", 'warning');
+      return false;
+    }
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    if (choice.outcome === 'accepted') {
+      showToast('AUBazaar installed!', 'success');
+      return true;
+    }
+    return false;
   },
   // Notification functions
   requestNotificationPermission: async function() {

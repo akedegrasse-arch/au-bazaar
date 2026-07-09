@@ -26,6 +26,12 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(title, options);
 });
 
+// A pass-through fetch handler - required by some browsers' PWA
+// installability checks, and a minimal foundation for offline support
+// later. Doesn't cache or intercept anything yet, just lets requests
+// through normally.
+self.addEventListener('fetch', () => {});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/messages';

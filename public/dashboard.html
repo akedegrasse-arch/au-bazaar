@@ -385,6 +385,13 @@
       </div>
 
       <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-mobile-alt"></i> Install App</div>
+        <div class="card-body" id="install-app-section">
+          <!-- Install button loaded here -->
+        </div>
+      </div>
+
+      <div class="card mb-3">
         <div class="card-header"><i class="fas fa-user-cog"></i> Account</div>
         <div class="card-body">
           <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">
@@ -675,6 +682,27 @@
     }
     updatePushNotificationUI();
   }
+
+  function updateInstallAppUI() {
+    const container = document.getElementById('install-app-section');
+    if (!container) return;
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isStandalone) {
+      container.innerHTML = '<p style="color:var(--gray);font-size:0.9rem"><i class="fas fa-check-circle" style="color:#28a745"></i> AUBazaar is already installed.</p>';
+      return;
+    }
+
+    if (AUBazaar.canInstallApp()) {
+      container.innerHTML = `
+        <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">Add AUBazaar to your home screen or desktop for quicker access, like a real app.</p>
+        <button class="btn btn-primary" onclick="AUBazaar.installApp().then(updateInstallAppUI)"><i class="fas fa-download"></i> Install AUBazaar</button>
+      `;
+    } else {
+      container.innerHTML = '<p style="color:var(--gray);font-size:0.9rem">Not available yet in this browser - try reloading the page, or use your browser\'s own "Install app" / "Add to Home Screen" option from its menu.</p>';
+    }
+  }
+  window.addEventListener('aubazaar:installavailable', updateInstallAppUI);
 
   async function loadMyListings() {
     try {
@@ -1233,6 +1261,7 @@
       if (tabName === 'settings') {
         await updateSellerStatusUI();
         updatePushNotificationUI();
+        updateInstallAppUI();
       }
     } else {
       console.error('Tab NOT found:', `tab-${tabName}`);
