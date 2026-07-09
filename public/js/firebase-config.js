@@ -31,6 +31,15 @@ auth.onAuthStateChanged(async (user) => {
     const doc = await userRef.get();
     const userData = doc.exists ? doc.data() : {};
 
+    // Suspension takes effect immediately, even for a session that was
+    // already logged in when an admin suspended them - not just future
+    // login attempts.
+    if (userData.status === 'suspended') {
+      await auth.signOut();
+      window.location.href = '/login?suspended=1';
+      return;
+    }
+
     // Sync localStorage with Firestore
     localStorage.setItem('uid', user.uid);
     localStorage.setItem('role', userData.role || 'student');

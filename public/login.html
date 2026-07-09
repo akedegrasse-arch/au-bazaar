@@ -60,6 +60,10 @@
     }
   });
 
+  if (new URLSearchParams(window.location.search).get('suspended') === '1') {
+    showAlert('Your account has been suspended. If you believe this is a mistake, please <a href="/contact">contact us</a>.', 'danger');
+  }
+
   async function handleGoogleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
     // Always show Google's account chooser instead of silently reusing
@@ -96,6 +100,12 @@
       }
 
       const existingData = existingDoc.data();
+
+      if (existingData.status === 'suspended') {
+        await AUBazaar.auth.signOut();
+        showAlert('Your account has been suspended. If you believe this is a mistake, please <a href="/contact">contact us</a>.', 'danger');
+        return;
+      }
 
       // Only record that a login happened - don't re-write profile fields
       // like fullName/photoURL, which would silently overwrite anything
