@@ -507,23 +507,24 @@
       if (unlimitedUntil > new Date()) return true;
     }
 
-    // Count listings this user has posted so far this calendar month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // Count listings this user has posted in the last 30 days - a rolling
+    // window rather than "since the 1st of this calendar month" so someone
+    // can't post 3 on the last day of the month and 3 more the next day.
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - 30);
 
     const listingsSnap = await AUBazaar.db.collection('listings').where('sellerId', '==', user.uid).get();
-    const thisMonthCount = listingsSnap.docs.filter(doc => {
+    const recentCount = listingsSnap.docs.filter(doc => {
       const created = doc.data().createdAt;
       if (!created) return false;
       const createdDate = created.toDate ? created.toDate() : new Date(created);
-      return createdDate >= startOfMonth;
+      return createdDate >= windowStart;
     }).length;
 
     const FREE_CAP = 3;
-    if (thisMonthCount < FREE_CAP) return true;
+    if (recentCount < FREE_CAP) return true;
 
-    // Over the free cap this month - let them choose pay-per-listing vs upgrade
+    // Over the free cap for the last 30 days - let them choose pay-per-listing vs upgrade
     return await showQuotaPaywall(user);
   }
 

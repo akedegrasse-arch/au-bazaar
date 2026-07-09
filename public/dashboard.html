@@ -604,29 +604,29 @@
         return;
       }
 
-      // Count listings this user has posted so far this calendar month -
-      // this IS the free-tier cap, no separate "seller approval" concept
-      // anymore. Queried live rather than a stored counter so it can't
-      // drift out of sync and never needs a monthly reset job.
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+      // Count listings this user has posted in the last 30 days - a
+      // rolling window rather than "since the 1st of this calendar month"
+      // so someone can't post 3 on the last day of the month and 3 more
+      // the next day. Queried live rather than a stored counter so it
+      // can't drift out of sync and never needs a reset job.
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() - 30);
 
       const listingsSnap = await AUBazaar.db.collection('listings').where('sellerId', '==', currentUser.uid).get();
-      const thisMonthCount = listingsSnap.docs.filter(doc => {
+      const recentCount = listingsSnap.docs.filter(doc => {
         const created = doc.data().createdAt;
         if (!created) return false;
         const createdDate = created.toDate ? created.toDate() : new Date(created);
-        return createdDate >= startOfMonth;
+        return createdDate >= windowStart;
       }).length;
 
       const FREE_CAP = 3;
-      const remaining = Math.max(0, FREE_CAP - thisMonthCount);
+      const remaining = Math.max(0, FREE_CAP - recentCount);
 
       container.innerHTML = `
         <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;text-align:center">
           <i class="fas fa-store" style="color:#6c757d;font-size:2rem;margin-bottom:0.5rem"></i>
-          <h3 style="color:#333;margin:0">${remaining} of ${FREE_CAP} free listings left this month</h3>
+          <h3 style="color:#333;margin:0">${remaining} of ${FREE_CAP} free listings left</h3>
           <p style="color:#666;margin:0.5rem 0 1rem 0">${remaining > 0 ? 'Post for free, no payment needed.' : "You'll be asked to pay $0.50 for one more, or upgrade to Unlimited, next time you post."}</p>
           <button class="btn btn-primary" onclick="window.location.href='/become-seller'">
             <i class="fas fa-infinity"></i> Get Unlimited Listings
