@@ -16,6 +16,67 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// Push notifications (real, work even with the app closed - via a Cloud
+// Function that fires on every new `messages` doc). Loaded dynamically
+// here rather than added to every page's <script> tags individually.
+// PASTE THE REAL KEY FROM Firebase Console -> Project Settings ->
+// Cloud Messaging -> Web configuration -> Web Push certificates.
+// Push notifications will silently no-op until this is a real key.
+const FCM_VAPID_KEY = 'PASTE_VAPID_KEY_HERE';
+
+let messaging = null;
+let messagingScriptLoading = null;
+
+function loadMessagingScript() {
+  if (messagingScriptLoading) return messagingScriptLoading;
+  messagingScriptLoading = new Promise((resolve, reject) => {
+    if (typeof firebase.messaging === 'function') {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Firebase Messaging SDK'));
+    document.head.appendChild(script);
+  });
+  return messagingScriptLoading;
+}
+
+async function getMessagingInstance() {
+  if (messaging) return messaging;
+  await loadMessagingScript();
+  messaging = firebase.messaging();
+  return messaging;
+}
+
+// If notification permission was already granted in a previous visit,
+// quietly re-establish the foreground listener on every page load - no
+// need to click "Enable" again each time.
+if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+  getMessagingInstance().then(setupForegroundMessageListener).catch(() => {});
+}
+
+function setupForegroundMessageListener(msg) {
+  // Fires when a push arrives while a tab IS open and focused. messages.html
+  // already has its own more precise per-conversation notification logic
+  // (it knows which conversation you're actively looking at) - defer to
+  // that instead of duplicating/conflicting with it here.
+  msg.onMessage((payload) => {
+    if (window.location.pathname === '/messages') return;
+
+    const title = (payload.notification && payload.notification.title) || 'AUBazaar';
+    const body = (payload.notification && payload.notification.body) || '';
+    const link = (payload.fcmOptions && payload.fcmOptions.link) || '/messages';
+
+    const notification = new Notification(title, { body, icon: '/favicon.png' });
+    notification.onclick = () => {
+      window.focus();
+      window.location.href = link;
+    };
+  });
+}
+
 // Auth state observer - reads the user doc for UI display. Account creation
 // itself happens in register.html/login.html's own Google sign-in handlers
 // (which have the real form data), not here - a second "create if missing"
@@ -445,6 +506,62 @@ window.AUBazaar = {
         }, 1800);
       }, 1500);
     }
+  },
+  // Real push notifications - work even with the app fully closed, via a
+  // Cloud Function that sends through FCM whenever a new message is
+  // created. Call this from a real user click (e.g. a Settings toggle),
+  // not automatically on page load - browsers suppress permission
+  // prompts that aren't tied to a genuine user gesture.
+  enablePushNotifications: async function() {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      showToast('Push notifications are not supported in this browser', 'warning');
+      return false;
+    }
+    if (FCM_VAPID_KEY === 'PASTE_VAPID_KEY_HERE') {
+      showToast('Push notifications are not fully configured yet', 'error');
+      console.error('FCM_VAPID_KEY has not been set in firebase-config.js');
+      return false;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        showToast('Notification permission denied', 'warning');
+        return false;
+      }
+
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const msg = await getMessagingInstance();
+      const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
+
+      if (!token) {
+        showToast('Could not get a notification token', 'error');
+        return false;
+      }
+
+      if (auth.currentUser) {
+        await db.collection('users').doc(auth.currentUser.uid).set({ fcmToken: token }, { merge: true });
+      }
+
+      setupForegroundMessageListener(msg);
+      showToast('Push notifications enabled!', 'success');
+      return true;
+    } catch (error) {
+      console.error('Failed to enable push notifications:', error);
+      showToast('Failed to enable push notifications', 'error');
+      return false;
+    }
+  },
+  disablePushNotifications: async function() {
+    if (auth.currentUser) {
+      await db.collection('users').doc(auth.currentUser.uid).update({
+        fcmToken: firebase.firestore.FieldValue.delete()
+      }).catch(() => {});
+    }
+    showToast('Push notifications disabled', 'success');
+  },
+  isPushNotificationEnabled: function() {
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
   },
   // Notification functions
   requestNotificationPermission: async function() {

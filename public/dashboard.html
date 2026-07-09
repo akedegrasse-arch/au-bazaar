@@ -378,6 +378,13 @@
       </div>
       
       <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-bell"></i> Push Notifications</div>
+        <div class="card-body" id="push-notification-section">
+          <!-- Push notification status/toggle loaded here -->
+        </div>
+      </div>
+
+      <div class="card mb-3">
         <div class="card-header"><i class="fas fa-user-cog"></i> Account</div>
         <div class="card-body">
           <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">
@@ -637,6 +644,36 @@
       console.error('Error loading seller status:', error);
       container.innerHTML = '<p style="color:var(--gray)">Unable to load seller status</p>';
     }
+  }
+
+  function updatePushNotificationUI() {
+    const container = document.getElementById('push-notification-section');
+    if (!container) return;
+
+    if (!('Notification' in window)) {
+      container.innerHTML = '<p style="color:var(--gray);font-size:0.9rem">Push notifications aren\'t supported in this browser.</p>';
+      return;
+    }
+
+    const enabled = AUBazaar.isPushNotificationEnabled();
+    container.innerHTML = `
+      <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">
+        Get a real notification - even with AUBazaar closed - the moment a message arrives.
+      </p>
+      ${enabled
+        ? `<button class="btn btn-outline" onclick="togglePushNotifications(false)"><i class="fas fa-bell-slash"></i> Turn Off</button>`
+        : `<button class="btn btn-primary" onclick="togglePushNotifications(true)"><i class="fas fa-bell"></i> Enable Push Notifications</button>`
+      }
+    `;
+  }
+
+  async function togglePushNotifications(enable) {
+    if (enable) {
+      await AUBazaar.enablePushNotifications();
+    } else {
+      await AUBazaar.disablePushNotifications();
+    }
+    updatePushNotificationUI();
   }
 
   async function loadMyListings() {
@@ -1195,6 +1232,7 @@
       // Update seller status when settings tab is shown
       if (tabName === 'settings') {
         await updateSellerStatusUI();
+        updatePushNotificationUI();
       }
     } else {
       console.error('Tab NOT found:', `tab-${tabName}`);

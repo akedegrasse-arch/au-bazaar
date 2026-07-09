@@ -1,3 +1,4 @@
 .env
 .firebase/
 .kilo/
+functions/node_modules/
