@@ -282,81 +282,31 @@
     }
 
     async function loadTopSellers() {
-      console.log('loadTopSellers called');
       const container = document.getElementById('leaderboard');
-      
-      // Show sample data immediately to test the UI
-      console.log('Showing sample data for testing...');
-      container.innerHTML = `
-        <div class="leaderboard-item">
-          <div class="rank rank-1">1</div>
-          <div class="avatar">A</div>
-          <div class="info">
-            <h3>Sample Seller</h3>
-            <div class="badges">
-              <span class="badge badge-gold">🏆 Top</span>
-              <span class="badge badge-green">🛡️ Trusted</span>
-            </div>
-          </div>
-          <div class="rating">
-            <div class="stars">★★★★★</div>
-            <div class="count">5.0 (10)</div>
-          </div>
-          <div class="sales">5 sales</div>
-        </div>
-        <div class="leaderboard-item">
-          <div class="rank rank-2">2</div>
-          <div class="avatar">B</div>
-          <div class="info">
-            <h3>Another Seller</h3>
-            <div class="badges">
-              <span class="badge badge-green">🛡️ Trusted</span>
-              <span class="badge badge-blue">⭐ Rising</span>
-            </div>
-          </div>
-          <div class="rating">
-            <div class="stars">★★★★☆</div>
-            <div class="count">4.5 (8)</div>
-          </div>
-          <div class="sales">3 sales</div>
-        </div>
-        <div class="empty-state" style="margin-top:2rem;">
-          <div class="empty-state-icon">👥</div>
-          <h3>Sample Data</h3>
-          <p>This is sample data for testing. Real seller data will appear once users register and start selling!</p>
-          <a href="/register" class="btn btn-primary" style="margin-top:1rem">Join AUBazaar</a>
-        </div>
-      `;
-      
+      container.innerHTML = '<div class="loading-spinner" style="padding:3rem 0;text-align:center"><div class="spinner"></div></div>';
+
       // Try to load real data in the background
       try {
-        console.log('Attempting to get users from Firestore...');
-        console.log('AUBazaar.db:', AUBazaar.db);
-        
-        // Add timeout to the query
+        // Add timeout to the query - generous, since this needs to hold up
+        // on a slow mobile connection rather than give up too early.
         const queryPromise = AUBazaar.db.collection('users').get();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Query timeout')), 10000)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Query timeout')), 20000)
         );
         
         const usersSnap = await Promise.race([queryPromise, timeoutPromise]);
-        console.log('Users collection query successful');
-        console.log('Total users found:', usersSnap.size);
-        
+
         const sellers = [];
         usersSnap.forEach(doc => {
           const user = doc.data();
-          console.log('User:', doc.id, user.email, user.role, user.totalListings, user.rating);
           // Only include users who have sales OR a rating
           if (user.totalSales > 0 || user.rating > 0) {
-            const score = ((user.rating || 0) * 10) + 
+            const score = ((user.rating || 0) * 10) +
                           ((user.totalSales || 0) * 2);
             sellers.push({ id: doc.id, ...user, score });
           }
         });
-        
-        console.log('Sellers found:', sellers.length);
-        
+
         sellers.sort((a, b) => b.score - a.score);
         
         if (sellers.length === 0) {
@@ -399,8 +349,15 @@
         }).join('');
         
       } catch (error) {
-        console.error('Error loading real data:', error);
-        // Keep sample data if real data fails
+        console.error('Error loading top sellers:', error);
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <h3>Couldn't load top sellers</h3>
+            <p>${error.message === 'Query timeout' ? 'This is taking longer than expected - check your connection.' : 'Something went wrong.'}</p>
+            <button class="btn btn-primary" style="margin-top:1rem" onclick="loadTopSellers()">Try Again</button>
+          </div>
+        `;
       }
     }
     

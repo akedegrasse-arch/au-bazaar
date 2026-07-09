@@ -486,6 +486,7 @@
   let filteredListings = [];
   let currentPage = 1;
   const itemsPerPage = 12;
+  let userFavorites = [];
 
   // Parse URL params on load
   function parseUrlParams() {
@@ -646,8 +647,8 @@
     return `
       <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
         <div class="product-card-image">${image}${badge}</div>
-        <button class="product-card-favorite" onclick="event.stopPropagation(); toggleFavorite('${listing.id}', this)">
-          <i class="far fa-heart"></i>
+        <button class="product-card-favorite${userFavorites.includes(listing.id) ? ' active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${listing.id}', this)">
+          <i class="${userFavorites.includes(listing.id) ? 'fas' : 'far'} fa-heart"></i>
         </button>
         <div class="product-card-body">
           <div class="product-card-title">${listing.title}</div>
@@ -777,15 +778,56 @@
     renderListings();
   }
 
-  function toggleFavorite(listingId, btn) {
-    if (!AUBazaar.auth.currentUser) {
+  async function toggleFavorite(listingId, btn) {
+    const user = AUBazaar.auth.currentUser;
+    if (!user) {
       window.location.href = '/login?redirect=/marketplace';
       return;
     }
-    btn.classList.toggle('active');
-    btn.innerHTML = btn.classList.contains('active') 
-      ? '<i class="fas fa-heart"></i>' 
-      : '<i class="far fa-heart"></i>';
+
+    const isFav = userFavorites.includes(listingId);
+    const userRef = AUBazaar.db.collection('users').doc(user.uid);
+
+    // Update optimistically so the tap feels instant, then persist -
+    // revert on failure instead of leaving the heart lying about the
+    // actual saved state.
+    if (isFav) {
+      userFavorites = userFavorites.filter(id => id !== listingId);
+    } else {
+      userFavorites.push(listingId);
+    }
+    btn.classList.toggle('active', !isFav);
+    btn.innerHTML = !isFav ? '<i class="fas fa-heart"></i>' : '<i class="far fa-heart"></i>';
+
+    try {
+      await userRef.set({
+        favorites: isFav
+          ? firebase.firestore.FieldValue.arrayRemove(listingId)
+          : firebase.firestore.FieldValue.arrayUnion(listingId)
+      }, { merge: true });
+      AUBazaar.showToast(isFav ? 'Removed from favorites' : 'Added to favorites!', isFav ? 'info' : 'success');
+    } catch (error) {
+      // Revert the optimistic update
+      if (isFav) {
+        userFavorites.push(listingId);
+      } else {
+        userFavorites = userFavorites.filter(id => id !== listingId);
+      }
+      btn.classList.toggle('active', isFav);
+      btn.innerHTML = isFav ? '<i class="fas fa-heart"></i>' : '<i class="far fa-heart"></i>';
+      AUBazaar.showToast('Failed to update favorites', 'error');
+    }
+  }
+
+  async function loadUserFavorites() {
+    const user = AUBazaar.auth.currentUser;
+    if (!user) { userFavorites = []; return; }
+    try {
+      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      userFavorites = (userDoc.exists && userDoc.data().favorites) || [];
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
   }
 
   function openFilters() {
@@ -802,7 +844,15 @@
   document.addEventListener('DOMContentLoaded', () => {
     parseUrlParams();
     loadListings();
-    
+
+    // Load which listings the signed-in user has favorited, then
+    // re-render so hearts reflect the real saved state instead of always
+    // starting empty.
+    AUBazaar.auth.onAuthStateChanged(async () => {
+      await loadUserFavorites();
+      renderListings();
+    });
+
     // Update mobile nav based on auth state
     const isLoggedIn = localStorage.getItem('uid');
     const mobileGuestNav = document.getElementById('mobile-guest-nav');
