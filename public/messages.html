@@ -812,9 +812,26 @@
         return;
       }
 
+      if (msg.type === 'sale_claim') {
+        const isReceiver = msg.receiverId === currentUser.uid;
+        const disputed = msg.saleClaim && msg.saleClaim.disputed;
+        html += `
+          <div class="message-group" style="max-width:85%;margin:0 auto 1rem auto">
+            <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:12px;padding:14px;text-align:center">
+              <div style="font-size:1.5rem;margin-bottom:6px">🏷️</div>
+              <div style="font-size:0.9rem;color:#856404">${escapeHtml(msg.content)}</div>
+              ${disputed
+                ? '<div style="margin-top:10px;font-weight:600;color:#721c24"><i class="fas fa-exclamation-triangle"></i> Disputed</div>'
+                : (isReceiver ? `<button onclick="disputeSaleClaim('${msg.id}')" style="margin-top:10px;padding:8px 16px;background:#dc3545;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem">This wasn't me</button>` : '')}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       const isSent = msg.senderId === currentUser.uid;
       const time = msg.createdAt ? AUBazaar.formatDate(msg.createdAt) : '';
-      
+
       html += `
         <div class="message-group ${isSent ? 'sent' : 'received'}" style="position:relative">
           <div class="message-bubble ${isSent ? 'sent' : 'received'}" data-message-id="${msg.id}" oncontextmenu="${isSent ? `showMessageMenu(event, '${msg.id}')` : ''}" title="${isSent ? 'Right-click to delete' : ''}">
@@ -1243,6 +1260,40 @@
       AUBazaar.showToast('Failed to delete message', 'error');
     }
     hideMessageMenu();
+  }
+
+  async function disputeSaleClaim(messageId) {
+    const result = await Swal.fire({
+      title: "Dispute this claim?",
+      text: "This flags the sale for admin review as a false claim - use this if you weren't actually the buyer.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: "Yes, this wasn't me",
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const msgDoc = await AUBazaar.db.collection('messages').doc(messageId).get();
+      const msgData = msgDoc.data();
+
+      await AUBazaar.db.collection('messages').doc(messageId).update({
+        'saleClaim.disputed': true,
+        'saleClaim.disputedAt': firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      if (msgData && msgData.saleClaim && msgData.saleClaim.listingId) {
+        await AUBazaar.db.collection('listings').doc(msgData.saleClaim.listingId).update({
+          saleDisputed: true
+        });
+      }
+
+      AUBazaar.showToast('Dispute recorded', 'success');
+    } catch (error) {
+      console.error('Error disputing sale claim:', error);
+      AUBazaar.showToast('Failed to record dispute', 'error');
+    }
   }
 
   // Clear all messages - delete all conversations and messages for current user

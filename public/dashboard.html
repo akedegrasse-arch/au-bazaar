@@ -804,34 +804,117 @@
   }
 
   async function markAsSold(listingId) {
-    const result = await Swal.fire({
-      title: 'Mark as Sold?',
-      text: 'This will mark the item as sold.',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Mark as Sold',
-      cancelButtonText: 'Cancel'
-    });
-    
-    if (!result.isConfirmed) return;
-    
+    const listing = myListings.find(l => l.id === listingId);
+    if (!listing) return;
+
+    const buyer = await pickBuyerModal();
+    if (!buyer) return;
+
     try {
       await AUBazaar.db.collection('listings').doc(listingId).update({
         status: 'sold',
-        soldAt: firebase.firestore.FieldValue.serverTimestamp()
+        soldAt: firebase.firestore.FieldValue.serverTimestamp(),
+        soldToUserId: buyer.id,
+        soldToName: buyer.fullName || buyer.email
       });
-      
+
       // Update user stats
       await AUBazaar.db.collection('users').doc(currentUser.uid).set({
         totalSales: firebase.firestore.FieldValue.increment(1)
       }, { merge: true }).catch(() => {});
-      
+
+      await sendSaleClaimMessage(listingId, listing.title, buyer.id);
+
       AUBazaar.showToast('Item marked as sold!', 'success');
       await loadMyListings();
       updateStats();
     } catch (error) {
+      console.error('Error marking as sold:', error);
       AUBazaar.showToast('Failed to update listing', 'error');
     }
+  }
+
+  function pickBuyerModal() {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.id = 'buyer-picker-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+      overlay.innerHTML = `
+        <div style="background:white;border-radius:16px;max-width:440px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
+          <h2 style="margin:0 0 6px 0">Who bought this?</h2>
+          <p style="color:var(--gray);font-size:0.85rem;margin-bottom:14px">Search for the AU student or staff member who bought this item - even if you arranged it outside the app.</p>
+          <input type="text" id="buyer-search-input" class="form-control" placeholder="Search by name or email..." style="margin-bottom:12px">
+          <div id="buyer-search-results" style="max-height:280px;overflow-y:auto"></div>
+          <button id="buyer-picker-cancel" style="width:100%;padding:10px;margin-top:12px;background:none;border:none;color:var(--gray);cursor:pointer">Cancel</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const cleanup = () => overlay.remove();
+      overlay.querySelector('#buyer-picker-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
+
+      let allUsersCache = null;
+      const searchInput = overlay.querySelector('#buyer-search-input');
+      const resultsDiv = overlay.querySelector('#buyer-search-results');
+
+      searchInput.addEventListener('input', async () => {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) { resultsDiv.innerHTML = ''; return; }
+
+        if (!allUsersCache) {
+          const snap = await AUBazaar.db.collection('users').get();
+          allUsersCache = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(u => u.status !== 'deleted' && u.id !== currentUser.uid);
+        }
+
+        const matches = allUsersCache.filter(u =>
+          (u.fullName || '').toLowerCase().includes(query) || (u.email || '').toLowerCase().includes(query)
+        ).slice(0, 8);
+
+        resultsDiv.innerHTML = matches.map(u => `
+          <div class="buyer-result" data-uid="${u.id}" style="padding:10px;border-bottom:1px solid var(--gray-light);cursor:pointer">
+            <div style="font-weight:600;font-size:0.9rem">${u.fullName || 'No name'}</div>
+            <div style="font-size:0.8rem;color:var(--gray)">${u.email || ''}</div>
+          </div>
+        `).join('') || '<p style="color:var(--gray);padding:10px 0">No matches</p>';
+
+        resultsDiv.querySelectorAll('.buyer-result').forEach(el => {
+          el.addEventListener('click', () => {
+            const buyer = allUsersCache.find(u => u.id === el.dataset.uid);
+            cleanup();
+            resolve(buyer);
+          });
+        });
+      });
+
+      searchInput.focus();
+    });
+  }
+
+  async function sendSaleClaimMessage(listingId, listingTitle, buyerId) {
+    const sellerUid = currentUser.uid;
+    const conversationId = [sellerUid, buyerId].sort().join('_') + '_sale_' + listingId;
+    const text = `Marked you as the buyer of "${listingTitle}". If this wasn't you, please dispute it below.`;
+
+    await AUBazaar.db.collection('conversations').doc(conversationId).set({
+      participants: [sellerUid, buyerId],
+      lastMessage: text,
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await AUBazaar.db.collection('messages').add({
+      conversationId,
+      senderId: sellerUid,
+      receiverId: buyerId,
+      listingId,
+      type: 'sale_claim',
+      content: text,
+      saleClaim: { listingId, listingTitle, disputed: false },
+      read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
   }
 
   async function deleteListing(listingId) {

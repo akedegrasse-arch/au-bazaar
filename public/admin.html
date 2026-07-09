@@ -788,6 +788,8 @@
           <span class="badge ${listing.status === 'active' ? 'badge-success' : listing.status === 'sold' ? 'badge-primary' : 'badge-danger'}">
             ${listing.status}
           </span>
+          ${listing.status === 'sold' && listing.soldToName ? `<div style="font-size:0.75rem;color:var(--gray);margin-top:2px">to ${listing.soldToName}</div>` : ''}
+          ${listing.saleDisputed ? '<div style="margin-top:4px"><span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Disputed</span></div>' : ''}
         </td>
         <td>
           <div style="display:flex;gap:0.3rem">
