@@ -571,119 +571,72 @@
   }
 
   async function updateSellerStatusUI() {
-    // First check localStorage for immediate response
-    const localStatus = localStorage.getItem('sellerStatus');
-    const localRole = localStorage.getItem('role');
-    
-    // Debug logging
-    console.log('updateSellerStatusUI called with localStorage:', {
-      sellerStatus: localStatus,
-      role: localRole,
-      sellerSince: localStorage.getItem('sellerSince'),
-      paymentRef: localStorage.getItem('paymentRef')
-    });
-    
-    // If localStorage indicates seller status, show it immediately
-    const isSeller = localStatus === 'approved' || localRole === 'seller' || localStatus === 'active';
-    console.log('Is seller check:', { localStatus, localRole, isSeller });
-    
-    if (isSeller) {
-      const sellerSince = localStorage.getItem('sellerSince');
-      const date = sellerSince ? new Date(parseInt(sellerSince)).toLocaleDateString() : 'N/A';
-      
-      const container = document.getElementById('seller-status-section');
-      console.log('Container found:', !!container);
-      if (container) {
+    const container = document.getElementById('seller-status-section');
+    if (!container || !currentUser) return;
+
+    try {
+      const userDoc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+
+      if (userData.role === 'admin') {
         container.innerHTML = `
           <div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;padding:1rem;text-align:center">
-            <i class="fas fa-check-circle" style="color:#28a745;font-size:2rem;margin-bottom:0.5rem"></i>
-            <h3 style="color:#28a745;margin:0">✅ Seller Account Active</h3>
-            <p style="color:#666;margin:0.5rem 0 0 0">Member since: ${date}</p>
+            <i class="fas fa-crown" style="color:#28a745;font-size:2rem;margin-bottom:0.5rem"></i>
+            <h3 style="color:#28a745;margin:0">Admin Account</h3>
+            <p style="color:#666;margin:0.5rem 0 0 0">Unlimited listings, no restrictions</p>
           </div>
         `;
-        console.log('Seller status UI updated');
+        return;
       }
-      console.log('Showing seller status from localStorage');
-      return;
-    }
-    
-    // Then sync from Firestore for accuracy (don't overwrite if already seller)
-    if (currentUser) {
-      try {
-        const doc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
-        if (doc.exists) {
-          const userData = doc.data();
-          
-          // Only update localStorage if not already a seller
-          const currentRole = localStorage.getItem('role');
-          const currentSellerStatus = localStorage.getItem('sellerStatus');
-          
-          if (!(currentRole === 'seller' || currentSellerStatus === 'approved' || currentSellerStatus === 'active')) {
-            localStorage.setItem('role', userData.role || 'buyer');
-            localStorage.setItem('sellerStatus', userData.sellerStatus || 'none');
-            localStorage.setItem('paymentRef', userData.paymentRef || '');
-            localStorage.setItem('sellerSince', userData.sellerSince || '');
-          }
-        }
-      } catch (error) {
-        console.error('Error syncing seller status from Firestore:', error);
+
+      const unlimitedUntilRaw = userData.unlimitedSellerUntil;
+      const unlimitedUntil = unlimitedUntilRaw ? (unlimitedUntilRaw.toDate ? unlimitedUntilRaw.toDate() : new Date(unlimitedUntilRaw)) : null;
+      const hasUnlimited = unlimitedUntil && unlimitedUntil > new Date();
+
+      if (hasUnlimited) {
+        container.innerHTML = `
+          <div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;padding:1rem;text-align:center">
+            <i class="fas fa-infinity" style="color:#28a745;font-size:2rem;margin-bottom:0.5rem"></i>
+            <h3 style="color:#28a745;margin:0">Unlimited Listings Active</h3>
+            <p style="color:#666;margin:0.5rem 0 0 0">Active until: ${unlimitedUntil.toLocaleDateString()}</p>
+          </div>
+        `;
+        return;
       }
-    }
-    
-    const status = localStorage.getItem('sellerStatus');
-    const role = localStorage.getItem('role');
-    const container = document.getElementById('seller-status-section');
-    
-    if (!container) return;
-    
-    // Debug logging
-    console.log('Seller status check:', { status, role, sellerSince: localStorage.getItem('sellerSince') });
-    
-    let html = '';
-    
-    // Check if approved OR has seller role - be more permissive
-    if (status === 'approved' || role === 'seller' || status === 'active' || (status && status !== 'none' && status !== 'rejected')) {
-      const sellerSince = localStorage.getItem('sellerSince');
-      const date = sellerSince ? new Date(parseInt(sellerSince)).toLocaleDateString() : 'N/A';
-      
-      html = `
-        <div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;padding:1rem;text-align:center">
-          <i class="fas fa-check-circle" style="color:#28a745;font-size:2rem;margin-bottom:0.5rem"></i>
-          <h3 style="color:#28a745;margin:0">✅ Seller Account Active</h3>
-          <p style="color:#666;margin:0.5rem 0 0 0">Member since: ${date}</p>
-        </div>
-      `;
-    } else if (status === 'pending') {
-      const paymentRef = localStorage.getItem('paymentRef') || 'N/A';
-      const paymentDate = localStorage.getItem('paymentDate');
-      const date = paymentDate ? new Date(parseInt(paymentDate)).toLocaleDateString() : 'N/A';
-      
-      html = `
-        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:1rem;text-align:center">
-          <i class="fas fa-clock" style="color:#ffc107;font-size:2rem;margin-bottom:0.5rem"></i>
-          <h3 style="color:#856404;margin:0">⏳ Pending Approval</h3>
-          <p style="color:#666;margin:0.5rem 0 0 0">Payment Ref: <strong>${paymentRef}</strong></p>
-          <p style="color:#666;margin:0">Submitted: ${date}</p>
-          <p style="color:#999;font-size:0.85rem;margin-top:0.5rem">Waiting for admin approval</p>
-        </div>
-      `;
-    } else {
-      html = `
+
+      // Count listings this user has posted so far this calendar month -
+      // this IS the free-tier cap, no separate "seller approval" concept
+      // anymore. Queried live rather than a stored counter so it can't
+      // drift out of sync and never needs a monthly reset job.
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const listingsSnap = await AUBazaar.db.collection('listings').where('sellerId', '==', currentUser.uid).get();
+      const thisMonthCount = listingsSnap.docs.filter(doc => {
+        const created = doc.data().createdAt;
+        if (!created) return false;
+        const createdDate = created.toDate ? created.toDate() : new Date(created);
+        return createdDate >= startOfMonth;
+      }).length;
+
+      const FREE_CAP = 3;
+      const remaining = Math.max(0, FREE_CAP - thisMonthCount);
+
+      container.innerHTML = `
         <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;text-align:center">
-          <i class="fas fa-shopping-bag" style="color:#6c757d;font-size:2rem;margin-bottom:0.5rem"></i>
-          <h3 style="color:#333;margin:0">Buyer Account</h3>
-          <p style="color:#666;margin:0.5rem 0 1rem 0">Want to start selling?</p>
+          <i class="fas fa-store" style="color:#6c757d;font-size:2rem;margin-bottom:0.5rem"></i>
+          <h3 style="color:#333;margin:0">${remaining} of ${FREE_CAP} free listings left this month</h3>
+          <p style="color:#666;margin:0.5rem 0 1rem 0">${remaining > 0 ? 'Post for free, no payment needed.' : "You'll be asked to pay $0.50 for one more, or upgrade to Unlimited, next time you post."}</p>
           <button class="btn btn-primary" onclick="window.location.href='/become-seller'">
-            <i class="fas fa-store"></i> Become a Seller
-          </button>
-          <button class="btn btn-outline" onclick="resetUserForDemo()" style="margin-top:0.5rem">
-            <i class="fas fa-user-plus"></i> New User (Demo)
+            <i class="fas fa-infinity"></i> Get Unlimited Listings
           </button>
         </div>
       `;
+    } catch (error) {
+      console.error('Error loading seller status:', error);
+      container.innerHTML = '<p style="color:var(--gray)">Unable to load seller status</p>';
     }
-    
-    container.innerHTML = html;
   }
 
   async function loadMyListings() {

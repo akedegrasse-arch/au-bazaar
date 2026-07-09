@@ -300,34 +300,141 @@ window.AUBazaar = {
     }
   },
   checkAndGoToSell: function(event) {
+    // Everyone gets 3 free listings/month with no wall at the door -
+    // sell.html itself handles the pay-per-extra/unlimited prompt if
+    // someone is already over their free cap for the month.
     if (event) event.preventDefault();
+    window.location.href = '/sell';
+  },
+  // Reusable fake payment modal - EcoCash / OneMoney / Card. Simulated
+  // only (no real charge/gateway), same as the rest of AUBazaar's payment
+  // flow, but shared here instead of duplicated per page. Calls
+  // onSuccess(txnId) once the fake processing animation completes.
+  showPaymentModal: function({ amount, description, onSuccess }) {
+    const existing = document.getElementById('aub-payment-modal-overlay');
+    if (existing) existing.remove();
 
-    const status = localStorage.getItem('sellerStatus');
+    const overlay = document.createElement('div');
+    overlay.id = 'aub-payment-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:16px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
+        <div style="background:linear-gradient(135deg,#d32f2f,#8e0000);color:white;padding:24px;border-radius:16px 16px 0 0;text-align:center">
+          <div style="font-size:1.8rem;font-weight:800">$${amount.toFixed(2)}</div>
+          <div style="opacity:0.9;font-size:0.9rem;margin-top:4px">${description}</div>
+        </div>
+        <div style="padding:24px">
+          <div id="aub-payment-methods">
+            <div class="aub-pay-option" data-method="ecocash" style="display:flex;align-items:center;gap:14px;padding:16px;border:2px solid #ddd;border-radius:12px;margin-bottom:12px;cursor:pointer">
+              <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#27ae60,#1e8449);display:flex;align-items:center;justify-content:center;font-size:1.3rem">📱</div>
+              <div><div style="font-weight:600">EcoCash</div><div style="font-size:0.82rem;color:#777">Mobile money</div></div>
+            </div>
+            <div class="aub-pay-option" data-method="onemoney" style="display:flex;align-items:center;gap:14px;padding:16px;border:2px solid #ddd;border-radius:12px;margin-bottom:12px;cursor:pointer">
+              <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#d68910);display:flex;align-items:center;justify-content:center;font-size:1.3rem">💰</div>
+              <div><div style="font-weight:600">OneMoney</div><div style="font-size:0.82rem;color:#777">Mobile money</div></div>
+            </div>
+            <div class="aub-pay-option" data-method="card" style="display:flex;align-items:center;gap:14px;padding:16px;border:2px solid #ddd;border-radius:12px;margin-bottom:12px;cursor:pointer">
+              <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#3498db,#2980b9);display:flex;align-items:center;justify-content:center;font-size:1.3rem">💳</div>
+              <div><div style="font-weight:600">Credit / Debit Card</div><div style="font-size:0.82rem;color:#777">Visa, Mastercard</div></div>
+            </div>
+          </div>
+          <div id="aub-payment-form" style="display:none;margin-top:16px"></div>
+          <div id="aub-payment-status" style="display:none;margin-top:16px;padding:14px;border-radius:10px;text-align:center"></div>
+          <button id="aub-payment-cancel" style="margin-top:16px;width:100%;padding:12px;background:#e0e0e0;border:none;border-radius:8px;font-weight:600;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
 
-    if (status === 'approved') {
-      window.location.href = '/sell';
-    } else if (status === 'pending') {
-      Swal.fire({
-        icon: 'info',
-        title: 'Pending Approval',
-        text: 'Your seller account is waiting for admin approval.',
-        confirmButtonText: 'View Dashboard'
-      }).then(() => {
-        window.location.href = '/dashboard';
+    const closeModal = () => overlay.remove();
+    overlay.querySelector('#aub-payment-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+    const methodsDiv = overlay.querySelector('#aub-payment-methods');
+    const formDiv = overlay.querySelector('#aub-payment-form');
+    const statusDiv = overlay.querySelector('#aub-payment-status');
+
+    methodsDiv.querySelectorAll('.aub-pay-option').forEach(opt => {
+      opt.addEventListener('mouseenter', () => opt.style.borderColor = '#d32f2f');
+      opt.addEventListener('mouseleave', () => opt.style.borderColor = '#ddd');
+      opt.addEventListener('click', () => {
+        methodsDiv.style.display = 'none';
+        renderPaymentForm(opt.dataset.method);
       });
-    } else {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Become a Seller',
-        text: 'You need to become a seller before posting items.',
-        showCancelButton: true,
-        confirmButtonText: 'Become a Seller',
-        cancelButtonText: 'Later'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.location.href = '/become-seller';
-        }
-      });
+    });
+
+    function renderPaymentForm(method) {
+      formDiv.style.display = 'block';
+      if (method === 'ecocash' || method === 'onemoney') {
+        const providerName = method === 'ecocash' ? 'EcoCash' : 'OneMoney';
+        const color = method === 'ecocash' ? '#27ae60' : '#f39c12';
+        formDiv.innerHTML = `
+          <h4 style="margin:0 0 10px 0;color:${color}">${providerName} Payment</h4>
+          <p style="color:#666;font-size:0.85rem;margin-bottom:10px">Enter your ${providerName} number</p>
+          <input type="tel" id="aub-mobile-number" placeholder="e.g. 0771234567" maxlength="10" style="width:100%;padding:14px;font-size:1.1rem;border:2px solid ${color};border-radius:10px;box-sizing:border-box;text-align:center;letter-spacing:1px;margin-bottom:12px">
+          <button id="aub-mobile-pay-btn" style="width:100%;padding:14px;background:${color};color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer">Pay $${amount.toFixed(2)}</button>
+          <button id="aub-back-btn" style="width:100%;padding:10px;background:none;border:none;color:#888;margin-top:8px;cursor:pointer">&larr; Choose a different method</button>
+        `;
+        formDiv.querySelector('#aub-back-btn').addEventListener('click', () => {
+          formDiv.style.display = 'none';
+          methodsDiv.style.display = 'block';
+        });
+        formDiv.querySelector('#aub-mobile-pay-btn').addEventListener('click', () => {
+          const number = formDiv.querySelector('#aub-mobile-number').value.replace(/[^0-9]/g, '');
+          if (!/^0\d{9}$/.test(number)) {
+            showToast('Enter a valid 10-digit phone number', 'warning');
+            return;
+          }
+          runFakeProcessing(providerName, color);
+        });
+      } else if (method === 'card') {
+        formDiv.innerHTML = `
+          <h4 style="margin:0 0 10px 0;color:#2980b9">Card Payment</h4>
+          <input type="text" id="aub-card-number" placeholder="Card number" maxlength="19" style="width:100%;padding:12px;border:2px solid #3498db;border-radius:10px;box-sizing:border-box;margin-bottom:10px">
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <input type="text" id="aub-card-expiry" placeholder="MM/YY" maxlength="5" style="flex:1;padding:12px;border:2px solid #3498db;border-radius:10px;box-sizing:border-box">
+            <input type="text" id="aub-card-cvv" placeholder="CVV" maxlength="3" style="width:80px;padding:12px;border:2px solid #3498db;border-radius:10px;box-sizing:border-box">
+          </div>
+          <button id="aub-card-pay-btn" style="width:100%;padding:14px;background:#2980b9;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer">Pay $${amount.toFixed(2)}</button>
+          <button id="aub-back-btn" style="width:100%;padding:10px;background:none;border:none;color:#888;margin-top:8px;cursor:pointer">&larr; Choose a different method</button>
+        `;
+        formDiv.querySelector('#aub-back-btn').addEventListener('click', () => {
+          formDiv.style.display = 'none';
+          methodsDiv.style.display = 'block';
+        });
+        formDiv.querySelector('#aub-card-pay-btn').addEventListener('click', () => {
+          const num = formDiv.querySelector('#aub-card-number').value.replace(/\s/g, '');
+          const exp = formDiv.querySelector('#aub-card-expiry').value;
+          const cvv = formDiv.querySelector('#aub-card-cvv').value;
+          if (!/^\d{13,19}$/.test(num) || !/^\d{2}\/\d{2}$/.test(exp) || !/^\d{3}$/.test(cvv)) {
+            showToast('Enter valid card details', 'warning');
+            return;
+          }
+          runFakeProcessing('Card', '#2980b9');
+        });
+      }
+    }
+
+    function runFakeProcessing(providerName, color) {
+      formDiv.style.display = 'none';
+      statusDiv.style.display = 'block';
+      statusDiv.style.background = '#fff3cd';
+      statusDiv.style.color = '#856404';
+      statusDiv.innerHTML = `<div style="font-size:1.5rem;margin-bottom:8px">💳</div>Processing payment via ${providerName}...`;
+
+      setTimeout(() => {
+        statusDiv.innerHTML = `<div style="font-size:1.5rem;margin-bottom:8px">⏳</div>Confirming with ${providerName}...`;
+        setTimeout(() => {
+          const txnId = providerName.slice(0, 2).toUpperCase() + Math.floor(Math.random() * 10000000) + 'Z';
+          statusDiv.style.background = '#d4edda';
+          statusDiv.style.color = '#155724';
+          statusDiv.innerHTML = `<div style="font-size:1.7rem;margin-bottom:8px">✅</div><strong>Payment Successful!</strong><br>Reference: ${txnId}`;
+          setTimeout(() => {
+            closeModal();
+            onSuccess(txnId);
+          }, 1200);
+        }, 1800);
+      }, 1500);
     }
   },
   // Notification functions

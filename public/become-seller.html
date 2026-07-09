@@ -328,39 +328,28 @@
 
     <div id="paymentForm">
       <div class="price-tag-new">
-        <div class="amount">$2.00</div>
-        <div class="period">One-time payment, lifetime access</div>
+        <div class="amount">$3.00</div>
+        <div class="period">per month, unlimited listings</div>
       </div>
 
       <div class="benefits-new">
-        <h3><i class="fas fa-star" style="color: #d32f2f"></i> Why Become a Seller?</h3>
+        <h3><i class="fas fa-star" style="color: #d32f2f"></i> Why Go Unlimited?</h3>
         <ul>
           <li><i class="fas fa-check"></i> Unlimited product listings</li>
+          <li><i class="fas fa-check"></i> Everyone gets 3 free listings/month - this is only for posting more</li>
           <li><i class="fas fa-check"></i> Reach thousands of AU students</li>
-          <li><i class="fas fa-check"></i> Secure payment tracking</li>
-          <li><i class="fas fa-check"></i> 24/7 seller support</li>
           <li><i class="fas fa-check"></i> Build your reputation</li>
         </ul>
       </div>
 
       <h3 style="margin: 0 0 15px 0; color: #333;">Select Payment Method:</h3>
 
-      <div class="payment-option ecocash" onclick="openEcoCash()">
-        <div class="payment-icon-new">📱</div>
+      <div class="payment-option ecocash" onclick="startPayment()">
+        <div class="payment-icon-new">💳</div>
         <div>
-          <h4>EcoCash</h4>
-          <p>Instant payment, instant access</p>
+          <h4>Pay Now</h4>
+          <p>EcoCash, OneMoney, or Card</p>
         </div>
-      </div>
-
-      <div id="ecoSection" class="eco-section" style="display: none; margin-top: 20px; padding: 20px; background: #f8fff8; border-radius: 12px; border: 2px solid #27ae60;">
-        <h3 style="color: #27ae60; margin-bottom: 15px;">📱 EcoCash Payment</h3>
-        <p style="color: #666; margin-bottom: 15px;">Pay <strong>$2.00</strong> to become a seller</p>
-        <p style="color: #666; font-size: 13px; margin-bottom: 10px;">Enter your EcoCash number registered with your phone</p>
-        <input type="tel" id="ecoNumber" placeholder="Enter EcoCash number (0771234567)" maxlength="10" style="padding: 14px; width: 100%; font-size: 18px; border: 2px solid #27ae60; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; text-align: center; letter-spacing: 1px;">
-        <p style="color: #666; font-size: 12px; margin-bottom: 15px;">Valid prefixes: 077, 078, 071, 073</p>
-        <button id="ecoPayBtn" onclick="confirmEcoCash()" style="padding: 14px 24px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; font-weight: 600;">Confirm Payment</button>
-        <p id="ecoStatus" style="margin-top: 15px; font-weight: 500;"></p>
       </div>
     </div>
 
@@ -372,195 +361,56 @@
 
 <script>
   // Firebase is already initialized in /js/firebase-config.js
-  // auth and db are globally available
+  // auth and db are globally available; AUBazaar is the shared helper object
 
-  // Check auth state
+  let currentUserRef = null;
+
   auth.onAuthStateChanged(function(user) {
     if (!user) {
       window.location.href = '/login';
       return;
     }
-    loadSellerStatus(user);
+    currentUserRef = user;
+    loadUnlimitedStatus(user);
   });
 
-  function loadSellerStatus(user) {
-    // Check localStorage first
-    var status = localStorage.getItem('sellerStatus');
-    var role = localStorage.getItem('role');
-    
-    // Try to get from Firestore if available
-    if (typeof db !== 'undefined' && user) {
-      db.collection('users').doc(user.uid).get().then(function(doc) {
-        if (doc.exists) {
-          const userData = doc.data();
-          // Sync Firestore data to localStorage
-          if (userData.sellerStatus) {
-            status = userData.sellerStatus;
-            localStorage.setItem('sellerStatus', status);
-          }
-          if (userData.role) {
-            role = userData.role;
-            localStorage.setItem('role', role);
-          }
-        }
-        updateStatusDisplay(status, role);
-      }).catch(function(e) {
-        console.log('Firestore read skipped:', e);
-        updateStatusDisplay(status, role);
-      });
-    } else {
-      updateStatusDisplay(status, role);
-    }
-  }
+  function loadUnlimitedStatus(user) {
+    db.collection('users').doc(user.uid).get().then(function(doc) {
+      const userData = doc.exists ? doc.data() : {};
+      const untilRaw = userData.unlimitedSellerUntil;
+      const until = untilRaw ? (untilRaw.toDate ? untilRaw.toDate() : new Date(untilRaw)) : null;
 
-  function updateStatusDisplay(status, role) {
-    var statusDiv = document.getElementById('statusMessage');
-    var formDiv = document.getElementById('paymentForm');
+      const statusDiv = document.getElementById('statusMessage');
+      const formDiv = document.getElementById('paymentForm');
 
-    // Check both sellerStatus and role
-    if (status === 'approved' || role === 'seller') {
-      statusDiv.innerHTML = '<div class="status-box approved"><i class="fas fa-check-circle"></i> <strong>You are already a seller!</strong></div>';
-      formDiv.style.display = 'none';
-    } else if (status === 'pending') {
-      statusDiv.innerHTML = '<div class="status-box pending"><i class="fas fa-clock"></i> <strong>Pending Approval</strong><br>Your request is being reviewed.</div>';
-      formDiv.style.display = 'none';
-    }
-  }
-
-  function openEcoCash() {
-    document.getElementById('ecoSection').style.display = 'block';
-  }
-
-  function confirmEcoCash() {
-    const input = document.getElementById('ecoNumber');
-    const number = input.value.replace(/[^0-9]/g, '');
-    const status = document.getElementById('ecoStatus');
-
-    // Zimbabwe EcoCash number validation (077/078/071/073 + 7 digits = 10 total)
-    const zimRegex = /^(077|078|071|073)\d{7}$/;
-
-    if (!zimRegex.test(number)) {
-      status.style.display = 'block';
-      status.style.padding = '15px';
-      status.style.borderRadius = '10px';
-      status.style.textAlign = 'center';
-      status.style.fontSize = '15px';
-      status.style.lineHeight = '1.6';
-      status.style.background = '#f8d7da';
-      status.style.color = '#721c24';
-      status.style.border = '1px solid #f5c6cb';
-      if (number.length !== 10) {
-        status.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:10px;display:block;"></i><strong>Invalid Number</strong><br>EcoCash number must be 10 digits (e.g., 0771234567)';
-      } else if (!number.match(/^(077|078|071|073)/)) {
-        status.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:10px;display:block;"></i><strong>Invalid Prefix</strong><br>Valid prefixes: 077, 078, 071, or 073';
-      } else {
-        status.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:10px;display:block;"></i><strong>Invalid EcoCash Number</strong><br>Please enter a valid number (e.g., 0771234567)';
+      if (until && until > new Date()) {
+        statusDiv.innerHTML = '<div class="status-box approved"><i class="fas fa-check-circle"></i> <strong>Unlimited listings active</strong><br>Until ' + until.toLocaleDateString() + '</div>';
+        formDiv.style.display = 'none';
       }
-      input.disabled = false;
-      const errBtn = document.getElementById('ecoPayBtn');
-      errBtn.disabled = false;
-      errBtn.innerText = 'Confirm Payment';
-      return;
-    }
-
-    // Disable input and button during processing
-    input.disabled = true;
-    const btn = document.getElementById('ecoPayBtn');
-    btn.disabled = true;
-    btn.innerText = 'Processing...';
-
-    // Style the status area
-    status.style.display = 'block';
-    status.style.padding = '15px';
-    status.style.borderRadius = '10px';
-    status.style.textAlign = 'center';
-    status.style.fontSize = '15px';
-    status.style.lineHeight = '1.6';
-
-    // Step 1: Sending request to EcoCash
-    status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">📡</div>Initiating EcoCash payment...<br><small style="color:#666">Please wait...</small>';
-    status.style.background = '#fff3cd';
-    status.style.color = '#856404';
-    status.style.border = '1px solid #ffeeba';
-
-    setTimeout(() => {
-      // Step 2: Check phone for PIN
-      status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">📲</div>Check your EcoCash app!<br><strong>Enter your PIN</strong> to authorize payment<br><small style="color:#0d47a1;">You have received a payment notification on your phone</small>';
-      status.style.background = '#e3f2fd';
-      status.style.color = '#0d47a1';
-      status.style.border = '1px solid #bbdefb';
-
-      setTimeout(() => {
-        // Step 3: Waiting for confirmation
-        status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">⏳</div>Verifying payment with EcoCash...<br><small style="color:#856404;">Please do not close this page</small>';
-
-        setTimeout(() => {
-          // Step 4: Processing transaction
-          status.innerHTML = '<div style="margin-bottom:10px;font-size:24px;">💳</div>Processing payment of $2.00...<br><small style="color:#856404;">Connecting to EcoCash network...</small>';
-
-          setTimeout(() => {
-            // Step 5: SUCCESS
-            const txnId = "EC" + Math.floor(Math.random() * 10000000) + "Z";
-
-            status.innerHTML = '<div style="margin-bottom:10px;font-size:28px;">✅</div><strong>Payment Successful!</strong><br><br>Amount: <strong>$2.00 USD</strong><br>Reference: <strong>' + txnId + '</strong><br><br><small style="color:#155724;">📱 EcoCash confirmation sent to your phone</small>';
-            status.style.background = '#d4edda';
-            status.style.color = '#155724';
-            status.style.border = '1px solid #c3e6cb';
-
-            // Save seller status to localStorage
-            localStorage.setItem('role', 'seller');
-            localStorage.setItem('sellerStatus', 'approved');
-            localStorage.setItem('paymentRef', txnId);
-            localStorage.setItem('sellerSince', Date.now());
-            
-            // Debug: Log what was saved
-            console.log('Payment successful! Saved to localStorage:', {
-              role: localStorage.getItem('role'),
-              sellerStatus: localStorage.getItem('sellerStatus'),
-              paymentRef: localStorage.getItem('paymentRef'),
-              sellerSince: localStorage.getItem('sellerSince')
-            });
-            
-            // Verify localStorage values
-            setTimeout(() => {
-              console.log('After timeout, localStorage values:', {
-                role: localStorage.getItem('role'),
-                sellerStatus: localStorage.getItem('sellerStatus')
-              });
-            }, 100);
-
-            // Save to Firestore only if auth is available
-            if (typeof auth !== 'undefined' && auth.currentUser) {
-              db.collection('users').doc(auth.currentUser.uid).set({
-                sellerStatus: 'approved',
-                role: 'seller',
-                sellerSince: firebase.firestore.FieldValue.serverTimestamp(),
-                paymentRef: txnId,
-                ecocashNumber: number
-              }, { merge: true }).then(() => {
-                console.log('Seller status saved to Firestore');
-              }).catch(function(e) {
-                console.log('Firestore save skipped:', e);
-              });
-            }
-
-            // Show success and redirect
-            setTimeout(() => {
-              window.location.href = '/dashboard';
-            }, 2000);
-
-          }, 2000);
-
-        }, 2500);
-
-      }, 2500);
-
-    }, 2000);
+    }).catch(function(e) {
+      console.log('Firestore read skipped:', e);
+    });
   }
 
-  function processPayment() {
-    // Legacy function - redirect to new confirmEcoCash
-    confirmEcoCash();
+  function startPayment() {
+    if (!currentUserRef) return;
+    AUBazaar.showPaymentModal({
+      amount: 3.00,
+      description: 'Unlimited listings this month',
+      onSuccess: function(txnId) {
+        const untilDate = new Date();
+        untilDate.setMonth(untilDate.getMonth() + 1);
+        db.collection('users').doc(currentUserRef.uid).set({
+          unlimitedSellerUntil: untilDate,
+          unlimitedSellerPaymentRef: txnId
+        }, { merge: true }).then(function() {
+          AUBazaar.showToast('Unlimited plan activated!', 'success');
+          setTimeout(function() { window.location.href = '/dashboard'; }, 1500);
+        }).catch(function(e) {
+          AUBazaar.showToast('Failed to activate plan: ' + e.message, 'error');
+        });
+      }
+    });
   }
 </script>
 
