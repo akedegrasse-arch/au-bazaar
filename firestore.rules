@@ -44,8 +44,14 @@ service cloud.firestore {
     // Allow authenticated users to read messages only in conversations they participate in
     // Messages have a conversationId field - check if user is in that conversation's participants
     match /messages/{messageId} {
-      allow read: if request.auth != null && 
-        request.auth.uid in get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participants;
+      allow read: if request.auth != null && (
+        // Direct participant check via receiverId/senderId - needed for
+        // the unread-count badge, which queries by receiverId + read
+        // directly rather than by a specific conversationId.
+        request.auth.uid == resource.data.receiverId ||
+        request.auth.uid == resource.data.senderId ||
+        request.auth.uid in get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participants
+      );
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && 
         (request.auth.uid == resource.data.senderId || request.auth.uid in get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participants);

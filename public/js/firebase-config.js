@@ -22,7 +22,7 @@ const storage = firebase.storage();
 // PASTE THE REAL KEY FROM Firebase Console -> Project Settings ->
 // Cloud Messaging -> Web configuration -> Web Push certificates.
 // Push notifications will silently no-op until this is a real key.
-const FCM_VAPID_KEY = 'PASTE_VAPID_KEY_HERE';
+const FCM_VAPID_KEY = 'BA3nv6n-j381RpQ1R9dgEWBguDJJQwhhyEFCy-51GCA-d2pXF5FU3mfzKXS6T9RPBY7wSk65WdU5xhz2bDSqOzs';
 
 let messaging = null;
 let messagingScriptLoading = null;
@@ -134,11 +134,52 @@ auth.onAuthStateChanged(async (user) => {
 
     window.currentUser = user;
     updateNavbarForUser(user, userData);
+    watchUnreadMessagesBadge(user.uid);
   } else {
     window.currentUser = null;
     updateNavbarForGuest();
   }
 });
+
+let unreadBadgeUnsubscribe = null;
+
+// Live count of unread messages, badged onto the navbar envelope icon -
+// covers chat, and everything else built on the messages collection this
+// session (report outcomes, sale-claim notices, listing-removal notices,
+// contact replies), since they're all real documents in the same
+// collection. receiverId + read are both equality filters, so this
+// doesn't need a composite index.
+function watchUnreadMessagesBadge(uid) {
+  if (unreadBadgeUnsubscribe) unreadBadgeUnsubscribe();
+  unreadBadgeUnsubscribe = db.collection('messages')
+    .where('receiverId', '==', uid)
+    .where('read', '==', false)
+    .onSnapshot((snap) => {
+      renderUnreadMessagesBadge(snap.size);
+    }, () => {});
+}
+
+function renderUnreadMessagesBadge(count) {
+  document.querySelectorAll('a[href="/messages"]').forEach((link) => {
+    if (link.closest('#profile-dropdown')) return; // badge the main icon only, not the dropdown item
+
+    let badge = link.querySelector('.aub-unread-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'aub-unread-badge';
+      badge.style.cssText = 'background:#dc3545;color:white;border-radius:50%;min-width:16px;height:16px;font-size:0.65rem;align-items:center;justify-content:center;position:absolute;top:-4px;right:-6px;padding:0 3px;font-weight:700;line-height:1;display:none';
+      link.style.position = 'relative';
+      link.appendChild(badge);
+    }
+
+    if (count > 0) {
+      badge.textContent = count > 9 ? '9+' : String(count);
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
+}
 
 // Updated: accepts userData to avoid second Firestore read
 function updateNavbarForUser(user, userData) {
