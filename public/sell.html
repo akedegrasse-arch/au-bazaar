@@ -491,8 +491,56 @@
     if (editListingId) {
       isEditMode = true;
       loadListingForEdit(editListingId);
+    } else {
+      // First time posting - show a quick explainer of how the free
+      // cap/pricing works before they start filling out the form.
+      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+      if (!userData.sellIntroShown) {
+        showSellIntro(user);
+      }
     }
   });
+
+  function showSellIntro(user) {
+    const overlay = document.createElement('div');
+    overlay.id = 'sell-intro-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:16px;max-width:460px;width:100%;padding:28px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
+        <div style="text-align:center;margin-bottom:20px">
+          <i class="fas fa-store" style="font-size:2.5rem;color:var(--primary)"></i>
+          <h2 style="margin:10px 0 6px 0">Welcome to Selling on AUBazaar!</h2>
+        </div>
+        <div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+            <i class="fas fa-gift" style="color:#28a745;margin-top:3px"></i>
+            <div><strong>3 free listings</strong>, always, in any rolling 30-day period - plenty for selling off a few things, no payment ever needed.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+            <i class="fas fa-tag" style="color:#d32f2f;margin-top:3px"></i>
+            <div>Need to post more? Pay <strong>$0.50</strong> for just one extra listing, whenever you need it.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <i class="fas fa-infinity" style="color:#3498db;margin-top:3px"></i>
+            <div>Selling a lot? Get <strong>Unlimited listings for $3/month</strong> instead.</div>
+          </div>
+        </div>
+        <p style="color:var(--gray);font-size:0.85rem;text-align:center;margin-bottom:16px">You'll only ever see a payment option if you go over your 3 free listings.</p>
+        <button id="sell-intro-dismiss-btn" style="width:100%;padding:14px;background:var(--primary);color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer">Got it, let's sell!</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#sell-intro-dismiss-btn').addEventListener('click', async () => {
+      overlay.remove();
+      try {
+        await AUBazaar.db.collection('users').doc(user.uid).set({ sellIntroShown: true }, { merge: true });
+      } catch (e) {
+        console.error('Failed to save intro-seen flag:', e);
+      }
+    });
+  }
 
   async function checkListingQuota(user) {
     const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
@@ -537,7 +585,7 @@
         <div style="background:white;border-radius:16px;max-width:440px;width:100%;padding:28px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
           <div style="text-align:center;margin-bottom:20px">
             <i class="fas fa-store" style="font-size:2.5rem;color:var(--primary)"></i>
-            <h2 style="margin:10px 0 6px 0">You've used your 3 free listings this month</h2>
+            <h2 style="margin:10px 0 6px 0">You've used your 3 free listings for the last 30 days</h2>
             <p style="color:var(--gray);font-size:0.9rem">Choose how you'd like to continue:</p>
           </div>
           <button id="quota-pay-once-btn" style="width:100%;padding:16px;margin-bottom:12px;border:2px solid var(--primary);background:white;color:var(--primary);border-radius:12px;font-weight:600;cursor:pointer;text-align:left">
