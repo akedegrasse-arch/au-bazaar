@@ -119,20 +119,6 @@ body.auth-body {
   --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* ===== Page Fade Animation ===== */
-body {
-  animation: pageFade 0.5s ease;
-  background: linear-gradient(-45deg, #c62828, #8e0000, #1a1a1a, #2d2d2d);
-  background-size: 400% 400%;
-  animation: gradientMove 15s ease infinite;
-}
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 /* ===== Floating Background Icons ===== */
 .floating-elements {
   position: fixed;
@@ -176,17 +162,6 @@ body {
   from {
     opacity: 0;
     transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pageFade {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;

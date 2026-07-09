@@ -533,14 +533,14 @@
     AUBazaar.auth.onAuthStateChanged((currentUser) => {
       const actionsEl = document.getElementById('profile-actions');
       
-      if (currentUser && currentUser.uid !== userId) {
+      if (currentUser && currentUser.uid !== user.id) {
         actionsEl.innerHTML = `
           <button class="btn btn-primary" onclick="messageUser()">
             <i class="fas fa-envelope"></i> Message
           </button>
         `;
         document.getElementById('rate-btn').style.display = 'inline-flex';
-      } else if (currentUser && currentUser.uid === userId) {
+      } else if (currentUser && currentUser.uid === user.id) {
         actionsEl.innerHTML = `
           <a href="/dashboard" class="btn btn-outline">
             <i class="fas fa-edit"></i> Edit Profile
@@ -689,7 +689,7 @@
       // rating the same seller at nearly the same moment could both read
       // the same starting average, and the slower write would silently
       // overwrite the faster one's contribution.
-      const revieweeRef = AUBazaar.db.collection('users').doc(userId);
+      const revieweeRef = AUBazaar.db.collection('users').doc(profileUser.id);
       const newReviewRef = AUBazaar.db.collection('reviews').doc();
 
       await AUBazaar.db.runTransaction(async (transaction) => {
@@ -705,7 +705,7 @@
         const newCount = currentCount + 1;
 
         transaction.set(newReviewRef, {
-          revieweeId: userId,
+          revieweeId: profileUser.id,
           reviewerId: currentUser.uid,
           reviewerName,
           rating: selectedRating,
@@ -722,7 +722,7 @@
 
       closeRateModal();
       AUBazaar.showToast('Review submitted successfully!', 'success');
-      loadReviews(userId);
+      loadReviews(profileUser.id);
 
     } catch (error) {
       console.error('Error submitting review:', error);
