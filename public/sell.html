@@ -902,18 +902,44 @@
     btn.disabled = true;
 
     try {
-      // Upload images to Firebase Storage (if any)
+      // The whole submission (images + Firestore writes) is capped with an
+      // overall timeout too, as a safety net on top of the per-image one
+      // below - so no matter what stalls on a bad connection, the button
+      // resets and the user sees an error instead of "Posting..." forever.
+      await Promise.race([
+        submitListing(user, title, description, price, serialNumber),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Posting timed out - check your connection and try again')), 45000))
+      ]);
+    } catch (error) {
+      console.error('Error posting listing:', error);
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Listing';
+      btn.disabled = false;
+      AUBazaar.showToast(error.message === 'Posting timed out - check your connection and try again' ? error.message : 'Failed to post listing. Please try again.', 'error');
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  async function submitListing(user, title, description, price, serialNumber) {
+      // Upload images to Firebase Storage (if any). Each upload is capped
+      // with a timeout - on an unstable mobile connection, a Storage
+      // upload can stall without ever resolving OR rejecting, which would
+      // otherwise leave the submit button spinning forever with no error
+      // and no listing ever created.
       const imageUrls = [];
       if (selectedImages && selectedImages.length > 0) {
         for (const img of selectedImages) {
           try {
             const storageRef = AUBazaar.storage.ref(`listings/${user.uid}/${Date.now()}_${img.file.name}`);
-            const snapshot = await storageRef.put(img.file);
-            const url = await snapshot.ref.getDownloadURL();
+            const uploadWithTimeout = Promise.race([
+              storageRef.put(img.file).then(snapshot => snapshot.ref.getDownloadURL()),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Image upload timed out')), 30000))
+            ]);
+            const url = await uploadWithTimeout;
             imageUrls.push(url);
           } catch (imgError) {
             console.error('Error uploading image:', imgError);
-            // Continue with other images even if one fails
+            // Continue with other images even if one fails or times out
           }
         }
       }
@@ -979,15 +1005,6 @@
         AUBazaar.showToast('Listing posted successfully!', 'success');
         setTimeout(() => window.location.href = `/listing/${docRef.id}`, 1500);
       }
-      
-    } catch (error) {
-      console.error('Error posting listing:', error);
-      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Listing';
-      btn.disabled = false;
-      AUBazaar.showToast('Failed to post listing. Please try again.', 'error');
-    } finally {
-      isSubmitting = false;
-    }
   }
 
   function saveDraft() {
