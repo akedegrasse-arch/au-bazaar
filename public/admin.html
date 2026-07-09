@@ -314,10 +314,15 @@
             <option value="deleted">Deleted</option>
           </select>
         </div>
+        <div id="users-bulk-bar" style="display:none;padding:0.6rem 1rem;background:#fff3cd;border-bottom:1px solid #ffc107;align-items:center;gap:12px">
+          <span id="users-selected-count">0 selected</span>
+          <button class="btn btn-sm btn-danger" onclick="bulkDeleteUsers()"><i class="fas fa-trash"></i> Delete Selected</button>
+        </div>
         <div style="overflow-x:auto">
           <table class="table">
             <thead>
               <tr>
+                <th style="width:36px"><input type="checkbox" id="users-select-all" onchange="toggleSelectAllUsers(this.checked)"></th>
                 <th>User</th>
                 <th>Email</th>
                 <th>Role</th>
@@ -328,7 +333,7 @@
               </tr>
             </thead>
             <tbody id="users-table-body">
-              <tr><td colspan="7" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -363,10 +368,15 @@
             <option value="deleted">Deleted</option>
           </select>
         </div>
+        <div id="listings-bulk-bar" style="display:none;padding:0.6rem 1rem;background:#fff3cd;border-bottom:1px solid #ffc107;align-items:center;gap:12px">
+          <span id="listings-selected-count">0 selected</span>
+          <button class="btn btn-sm btn-danger" onclick="bulkDeleteListings()"><i class="fas fa-trash"></i> Delete Selected</button>
+        </div>
         <div style="overflow-x:auto">
           <table class="table">
             <thead>
               <tr>
+                <th style="width:36px"><input type="checkbox" id="listings-select-all" onchange="toggleSelectAllListings(this.checked)"></th>
                 <th>Item</th>
                 <th>Seller</th>
                 <th>Category</th>
@@ -378,7 +388,7 @@
               </tr>
             </thead>
             <tbody id="listings-table-body">
-              <tr><td colspan="8" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+              <tr><td colspan="9" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -393,10 +403,18 @@
       </div>
       
       <div class="data-table-container">
+        <div class="table-toolbar">
+          <input type="text" placeholder="Search reports..." id="report-search" oninput="filterReports()">
+        </div>
+        <div id="reports-bulk-bar" style="display:none;padding:0.6rem 1rem;background:#fff3cd;border-bottom:1px solid #ffc107;align-items:center;gap:12px">
+          <span id="reports-selected-count">0 selected</span>
+          <button class="btn btn-sm btn-danger" onclick="bulkDeleteReports()"><i class="fas fa-trash"></i> Delete Selected</button>
+        </div>
         <div style="overflow-x:auto">
           <table class="table">
             <thead>
               <tr>
+                <th style="width:36px"><input type="checkbox" id="reports-select-all" onchange="toggleSelectAllReports(this.checked)"></th>
                 <th>Listing / User</th>
                 <th>Reporter</th>
                 <th>Reason</th>
@@ -407,13 +425,13 @@
               </tr>
             </thead>
             <tbody id="reports-table-body">
-              <tr><td colspan="7" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    
+
     <!-- Contact Messages Tab -->
     <div id="admin-tab-messages" class="admin-tab">
       <div class="admin-header">
@@ -422,10 +440,18 @@
       </div>
 
       <div class="data-table-container">
+        <div class="table-toolbar">
+          <input type="text" placeholder="Search messages..." id="contact-message-search" oninput="filterContactMessages()">
+        </div>
+        <div id="messages-bulk-bar" style="display:none;padding:0.6rem 1rem;background:#fff3cd;border-bottom:1px solid #ffc107;align-items:center;gap:12px">
+          <span id="messages-selected-count">0 selected</span>
+          <button class="btn btn-sm btn-danger" onclick="bulkDeleteMessages()"><i class="fas fa-trash"></i> Delete Selected</button>
+        </div>
         <div style="overflow-x:auto">
           <table class="table">
             <thead>
               <tr>
+                <th style="width:36px"><input type="checkbox" id="messages-select-all" onchange="toggleSelectAllMessages(this.checked)"></th>
                 <th>From</th>
                 <th>Subject</th>
                 <th>Message</th>
@@ -435,7 +461,7 @@
               </tr>
             </thead>
             <tbody id="messages-table-body">
-              <tr><td colspan="6" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
+              <tr><td colspan="7" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -505,6 +531,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="/js/firebase-config.js"></script>
@@ -514,6 +541,29 @@
   let allReports = [];
   let allMessages = [];
   let currentAdmin = null;
+
+  // Bulk-select state per tab. Each render*Table() call refreshes the
+  // matching "visible" array below so "select all" always matches what's
+  // currently on screen (post-search/filter), not the full collection.
+  let selectedUserIds = new Set();
+  let selectedListingIds = new Set();
+  let selectedReportIds = new Set();
+  let selectedMessageIds = new Set();
+  let visibleUserIds = [];
+  let visibleListingIds = [];
+  let visibleReportIds = [];
+  let visibleMessageIds = [];
+
+  function updateBulkBar(selectedSet, barId, countId) {
+    const bar = document.getElementById(barId);
+    const count = document.getElementById(countId);
+    if (selectedSet.size > 0) {
+      bar.style.display = 'flex';
+      count.textContent = `${selectedSet.size} selected`;
+    } else {
+      bar.style.display = 'none';
+    }
+  }
 
   // Check admin access
   AUBazaar.auth.onAuthStateChanged(async (user) => {
@@ -677,14 +727,21 @@
 
   function renderUsersTable(users) {
     const tbody = document.getElementById('users-table-body');
-    
+    visibleUserIds = users.map(u => u.id);
+    for (const id of [...selectedUserIds]) {
+      if (!visibleUserIds.includes(id)) selectedUserIds.delete(id);
+    }
+    document.getElementById('users-select-all').checked = users.length > 0 && users.every(u => u.id === currentAdmin.uid || selectedUserIds.has(u.id));
+    updateBulkBar(selectedUserIds, 'users-bulk-bar', 'users-selected-count');
+
     if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray)">No users found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--gray)">No users found</td></tr>';
       return;
     }
-    
+
     tbody.innerHTML = users.map(user => `
       <tr>
+        <td><input type="checkbox" onchange="toggleUserSelection('${user.id}')" ${selectedUserIds.has(user.id) ? 'checked' : ''} ${user.id === currentAdmin.uid ? 'disabled title="You cannot select your own account"' : ''}></td>
         <td>
           <div style="display:flex;align-items:center;gap:10px">
             <div class="user-row-avatar">${(user.fullName || 'U').charAt(0).toUpperCase()}</div>
@@ -765,14 +822,21 @@
 
   function renderListingsTable(listings) {
     const tbody = document.getElementById('listings-table-body');
-    
+    visibleListingIds = listings.map(l => l.id);
+    for (const id of [...selectedListingIds]) {
+      if (!visibleListingIds.includes(id)) selectedListingIds.delete(id);
+    }
+    document.getElementById('listings-select-all').checked = listings.length > 0 && listings.every(l => selectedListingIds.has(l.id));
+    updateBulkBar(selectedListingIds, 'listings-bulk-bar', 'listings-selected-count');
+
     if (listings.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--gray)">No listings found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--gray)">No listings found</td></tr>';
       return;
     }
-    
+
     tbody.innerHTML = listings.map(listing => `
       <tr>
+        <td><input type="checkbox" onchange="toggleListingSelection('${listing.id}')" ${selectedListingIds.has(listing.id) ? 'checked' : ''}></td>
         <td>
           <div style="display:flex;align-items:center;gap:10px">
             <div class="listing-thumb-admin">
@@ -852,9 +916,15 @@
 
   function renderReportsTable(reports) {
     const tbody = document.getElementById('reports-table-body');
+    visibleReportIds = reports.map(r => r.id);
+    for (const id of [...selectedReportIds]) {
+      if (!visibleReportIds.includes(id)) selectedReportIds.delete(id);
+    }
+    document.getElementById('reports-select-all').checked = reports.length > 0 && reports.every(r => selectedReportIds.has(r.id));
+    updateBulkBar(selectedReportIds, 'reports-bulk-bar', 'reports-selected-count');
 
     if (reports.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray)">No reports found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--gray)">No reports found</td></tr>';
       return;
     }
 
@@ -862,6 +932,7 @@
       const isUserReport = report.reportType === 'user';
       return `
       <tr>
+        <td><input type="checkbox" onchange="toggleReportSelection('${report.id}')" ${selectedReportIds.has(report.id) ? 'checked' : ''}></td>
         <td>
           ${isUserReport
             ? `<a href="/profile?id=${report.reportedUserId}" target="_blank" style="color:var(--primary);font-weight:600;font-size:0.9rem">
@@ -1009,6 +1080,226 @@
     });
     
     renderListingsTable(filtered);
+  }
+
+  function filterReports() {
+    const search = document.getElementById('report-search').value.toLowerCase();
+    const filtered = allReports.filter(report => {
+      if (!search) return true;
+      const reporterName = getReporterName(report.reporterId).toLowerCase();
+      const targetName = report.reportType === 'user' ? getReporterName(report.reportedUserId).toLowerCase() : '';
+      return reporterName.includes(search) ||
+        targetName.includes(search) ||
+        (report.reason || '').toLowerCase().includes(search) ||
+        (report.details || '').toLowerCase().includes(search);
+    });
+    renderReportsTable(filtered);
+  }
+
+  function filterContactMessages() {
+    const search = document.getElementById('contact-message-search').value.toLowerCase();
+    const filtered = allMessages.filter(msg => {
+      if (!search) return true;
+      return (msg.email || '').toLowerCase().includes(search) ||
+        (msg.subject || '').toLowerCase().includes(search) ||
+        (msg.message || '').toLowerCase().includes(search);
+    });
+    renderMessagesTable(filtered);
+  }
+
+  // --- Bulk selection: checkbox toggles + select-all, one set per tab ---
+
+  function toggleUserSelection(id) {
+    if (selectedUserIds.has(id)) selectedUserIds.delete(id); else selectedUserIds.add(id);
+    document.getElementById('users-select-all').checked = visibleUserIds.length > 0 && visibleUserIds.every(uid => uid === currentAdmin.uid || selectedUserIds.has(uid));
+    updateBulkBar(selectedUserIds, 'users-bulk-bar', 'users-selected-count');
+  }
+
+  function toggleSelectAllUsers(checked) {
+    visibleUserIds.forEach(id => {
+      if (id === currentAdmin.uid) return; // never allow selecting your own account
+      if (checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
+    });
+    renderUsersTable(allUsers.filter(u => visibleUserIds.includes(u.id)));
+  }
+
+  function toggleListingSelection(id) {
+    if (selectedListingIds.has(id)) selectedListingIds.delete(id); else selectedListingIds.add(id);
+    document.getElementById('listings-select-all').checked = visibleListingIds.length > 0 && visibleListingIds.every(lid => selectedListingIds.has(lid));
+    updateBulkBar(selectedListingIds, 'listings-bulk-bar', 'listings-selected-count');
+  }
+
+  function toggleSelectAllListings(checked) {
+    visibleListingIds.forEach(id => { if (checked) selectedListingIds.add(id); else selectedListingIds.delete(id); });
+    renderListingsTable(allListings.filter(l => visibleListingIds.includes(l.id)));
+  }
+
+  function toggleReportSelection(id) {
+    if (selectedReportIds.has(id)) selectedReportIds.delete(id); else selectedReportIds.add(id);
+    document.getElementById('reports-select-all').checked = visibleReportIds.length > 0 && visibleReportIds.every(rid => selectedReportIds.has(rid));
+    updateBulkBar(selectedReportIds, 'reports-bulk-bar', 'reports-selected-count');
+  }
+
+  function toggleSelectAllReports(checked) {
+    visibleReportIds.forEach(id => { if (checked) selectedReportIds.add(id); else selectedReportIds.delete(id); });
+    renderReportsTable(allReports.filter(r => visibleReportIds.includes(r.id)));
+  }
+
+  function toggleMessageSelection(id) {
+    if (selectedMessageIds.has(id)) selectedMessageIds.delete(id); else selectedMessageIds.add(id);
+    document.getElementById('messages-select-all').checked = visibleMessageIds.length > 0 && visibleMessageIds.every(mid => selectedMessageIds.has(mid));
+    updateBulkBar(selectedMessageIds, 'messages-bulk-bar', 'messages-selected-count');
+  }
+
+  function toggleSelectAllMessages(checked) {
+    visibleMessageIds.forEach(id => { if (checked) selectedMessageIds.add(id); else selectedMessageIds.delete(id); });
+    renderMessagesTable(allMessages.filter(m => visibleMessageIds.includes(m.id)));
+  }
+
+  // --- Bulk delete: real deletion, including Firebase Auth accounts for
+  // users and Storage images for listings, not just hiding rows in the UI ---
+
+  async function bulkDeleteUsers() {
+    const ids = [...selectedUserIds];
+    if (ids.length === 0) return;
+
+    const confirmResult = await Swal.fire({
+      title: `Delete ${ids.length} user${ids.length > 1 ? 's' : ''}?`,
+      text: 'This permanently deletes their account (login credentials included) and their profile data. This cannot be undone!',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete permanently',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+      const deleteUsersFn = firebase.app().functions('us-central1').httpsCallable('deleteUsers');
+      const result = await deleteUsersFn({ uids: ids });
+
+      await Promise.all(ids.map(id => AUBazaar.db.collection('users').doc(id).delete().catch(() => {})));
+
+      selectedUserIds.clear();
+      Swal.close();
+      AUBazaar.showToast(
+        result.data.failureCount > 0
+          ? `Deleted ${result.data.successCount}, failed ${result.data.failureCount}`
+          : `${result.data.successCount} user${result.data.successCount > 1 ? 's' : ''} deleted`,
+        result.data.failureCount > 0 ? 'error' : 'success'
+      );
+      await loadUsers();
+      await loadStats();
+    } catch (error) {
+      Swal.close();
+      console.error('Bulk delete users failed:', error);
+      AUBazaar.showToast('Failed to delete users: ' + error.message, 'error');
+    }
+  }
+
+  async function bulkDeleteListings() {
+    const ids = [...selectedListingIds];
+    if (ids.length === 0) return;
+
+    const confirmResult = await Swal.fire({
+      title: `Delete ${ids.length} listing${ids.length > 1 ? 's' : ''}?`,
+      text: 'This completely removes the listings and their images from the database. This cannot be undone!',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete permanently',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+      for (const id of ids) {
+        const listingDoc = await AUBazaar.db.collection('listings').doc(id).get();
+        const listingData = listingDoc.data();
+        if (listingData && listingData.images && listingData.images.length > 0) {
+          for (const imageUrl of listingData.images) {
+            try {
+              const urlParts = imageUrl.split('/o/');
+              if (urlParts[1]) {
+                const path = decodeURIComponent(urlParts[1].split('?')[0]);
+                await AUBazaar.storage.ref(path).delete();
+              }
+            } catch (imgError) {
+              console.log('Could not delete image:', imgError.message);
+            }
+          }
+        }
+        await AUBazaar.db.collection('listings').doc(id).delete();
+      }
+
+      selectedListingIds.clear();
+      Swal.close();
+      AUBazaar.showToast(`${ids.length} listing${ids.length > 1 ? 's' : ''} deleted`, 'success');
+      await loadAllListings();
+      await loadStats();
+    } catch (error) {
+      Swal.close();
+      console.error('Bulk delete listings failed:', error);
+      AUBazaar.showToast('Failed to delete listings: ' + error.message, 'error');
+    }
+  }
+
+  async function bulkDeleteReports() {
+    const ids = [...selectedReportIds];
+    if (ids.length === 0) return;
+
+    const confirmResult = await Swal.fire({
+      title: `Delete ${ids.length} report${ids.length > 1 ? 's' : ''}?`,
+      text: 'This only removes the report entries themselves - it will not affect the reported users or listings.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      await Promise.all(ids.map(id => AUBazaar.db.collection('reports').doc(id).delete()));
+      selectedReportIds.clear();
+      AUBazaar.showToast(`${ids.length} report${ids.length > 1 ? 's' : ''} deleted`, 'success');
+      await loadReports();
+      await loadStats();
+    } catch (error) {
+      console.error('Bulk delete reports failed:', error);
+      AUBazaar.showToast('Failed to delete reports', 'error');
+    }
+  }
+
+  async function bulkDeleteMessages() {
+    const ids = [...selectedMessageIds];
+    if (ids.length === 0) return;
+
+    const confirmResult = await Swal.fire({
+      title: `Delete ${ids.length} message${ids.length > 1 ? 's' : ''}?`,
+      text: 'This will permanently remove these messages from your inbox.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      await Promise.all(ids.map(id => AUBazaar.db.collection('contact_messages').doc(id).delete()));
+      selectedMessageIds.clear();
+      AUBazaar.showToast(`${ids.length} message${ids.length > 1 ? 's' : ''} deleted`, 'success');
+      await loadContactMessages();
+      await loadStats();
+    } catch (error) {
+      console.error('Bulk delete messages failed:', error);
+      AUBazaar.showToast('Failed to delete messages', 'error');
+    }
   }
 
   async function toggleUserStatus(userId, currentStatus) {
@@ -1310,14 +1601,21 @@
 
   function renderMessagesTable(messages) {
     const tbody = document.getElementById('messages-table-body');
+    visibleMessageIds = messages.map(m => m.id);
+    for (const id of [...selectedMessageIds]) {
+      if (!visibleMessageIds.includes(id)) selectedMessageIds.delete(id);
+    }
+    document.getElementById('messages-select-all').checked = messages.length > 0 && messages.every(m => selectedMessageIds.has(m.id));
+    updateBulkBar(selectedMessageIds, 'messages-bulk-bar', 'messages-selected-count');
 
     if (messages.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray)">No messages found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray)">No messages found</td></tr>';
       return;
     }
 
     tbody.innerHTML = messages.map(msg => `
       <tr>
+        <td><input type="checkbox" onchange="toggleMessageSelection('${msg.id}')" ${selectedMessageIds.has(msg.id) ? 'checked' : ''}></td>
         <td style="font-size:0.85rem">${msg.email || ''}</td>
         <td style="font-size:0.9rem;font-weight:600">${msg.subject || ''}</td>
         <td style="font-size:0.85rem;max-width:280px" title="${(msg.message || '').replace(/"/g, '&quot;')}">
