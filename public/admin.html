@@ -904,9 +904,13 @@
   }
 
   async function deleteReport(reportId) {
+    const report = allReports.find(r => r.id === reportId);
+    const isUserReport = report && report.reportType === 'user';
     const confirmResult = await Swal.fire({
       title: 'Delete this report?',
-      text: 'This only removes the report entry itself - it will not affect the listing it was about.',
+      text: isUserReport
+        ? 'This only removes the report entry itself - it will not affect the reported user\'s account.'
+        : 'This only removes the report entry itself - it will not affect the listing it was about.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Yes, delete',
