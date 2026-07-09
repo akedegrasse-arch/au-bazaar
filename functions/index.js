@@ -27,15 +27,18 @@ exports.deleteUsers = onCall(async (request) => {
   if (uids.includes(request.auth.uid)) {
     throw new HttpsError('invalid-argument', "You can't delete your own account this way.");
   }
-  if (uids.length > 100) {
-    throw new HttpsError('invalid-argument', 'Too many accounts at once (max 100 per batch).');
+  if (uids.length > 1000) {
+    // admin.auth().deleteUsers() itself caps out at 1000 identifiers per
+    // call - the client is expected to chunk larger selections into
+    // batches and call this function once per chunk.
+    throw new HttpsError('invalid-argument', 'Too many accounts at once (max 1000 per batch).');
   }
 
   const result = await admin.auth().deleteUsers(uids);
   return {
     successCount: result.successCount,
     failureCount: result.failureCount,
-    errors: result.errors.map(e => ({ index: e.index, uid: uids[e.index], message: e.error.message }))
+    errors: result.errors.map(e => ({ index: e.index, uid: uids[e.index], code: e.error.code, message: e.error.message }))
   };
 });
 

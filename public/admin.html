@@ -1159,6 +1159,12 @@
   // --- Bulk delete: real deletion, including Firebase Auth accounts for
   // users and Storage images for listings, not just hiding rows in the UI ---
 
+  function chunkArray(arr, size) {
+    const chunks = [];
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    return chunks;
+  }
+
   async function bulkDeleteUsers() {
     const ids = [...selectedUserIds];
     if (ids.length === 0) return;
@@ -1174,29 +1180,59 @@
     });
     if (!confirmResult.isConfirmed) return;
 
+    // The Cloud Function caps out at 1000 uids per call (Admin SDK's own
+    // limit), and a huge single batch also risks the callable timing out -
+    // chunk into batches of 100 and call it once per chunk so any
+    // selection size works instead of failing outright above the cap.
+    const CHUNK_SIZE = 100;
+    const chunks = chunkArray(ids, CHUNK_SIZE);
+    const deleteUsersFn = firebase.app().functions('us-central1').httpsCallable('deleteUsers');
+
+    let totalSuccess = 0;
+    let totalFailure = 0;
+    const firestoreCleanupFailures = [];
+
     Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    try {
-      const deleteUsersFn = firebase.app().functions('us-central1').httpsCallable('deleteUsers');
-      const result = await deleteUsersFn({ uids: ids });
+    for (let i = 0; i < chunks.length; i++) {
+      Swal.update({
+        title: chunks.length > 1 ? `Deleting... (batch ${i + 1} of ${chunks.length})` : 'Deleting...'
+      });
 
-      await Promise.all(ids.map(id => AUBazaar.db.collection('users').doc(id).delete().catch(() => {})));
+      try {
+        const result = await deleteUsersFn({ uids: chunks[i] });
+        totalSuccess += result.data.successCount;
+        totalFailure += result.data.failureCount;
 
-      selectedUserIds.clear();
-      Swal.close();
-      AUBazaar.showToast(
-        result.data.failureCount > 0
-          ? `Deleted ${result.data.successCount}, failed ${result.data.failureCount}`
-          : `${result.data.successCount} user${result.data.successCount > 1 ? 's' : ''} deleted`,
-        result.data.failureCount > 0 ? 'error' : 'success'
-      );
-      await loadUsers();
-      await loadStats();
-    } catch (error) {
-      Swal.close();
-      console.error('Bulk delete users failed:', error);
-      AUBazaar.showToast('Failed to delete users: ' + error.message, 'error');
+        // A uid failing with "not found" means the Auth account was already
+        // gone (e.g. a stale profile doc left over from an earlier partial
+        // cleanup) - still safe, and desirable, to delete its Firestore doc.
+        // Only genuine failures (permission issues, etc.) should leave the
+        // doc alone rather than risk deleting a still-real account's data.
+        const hardFailureUids = new Set(
+          result.data.errors.filter(e => e.code !== 'auth/user-not-found').map(e => e.uid)
+        );
+        const idsToCleanUp = chunks[i].filter(id => !hardFailureUids.has(id));
+
+        await Promise.all(idsToCleanUp.map(id =>
+          AUBazaar.db.collection('users').doc(id).delete().catch(() => firestoreCleanupFailures.push(id))
+        ));
+      } catch (error) {
+        console.error('Bulk delete users batch failed:', error);
+        totalFailure += chunks[i].length;
+      }
     }
+
+    selectedUserIds.clear();
+    Swal.close();
+
+    const parts = [`${totalSuccess} deleted`];
+    if (totalFailure > 0) parts.push(`${totalFailure} failed`);
+    if (firestoreCleanupFailures.length > 0) parts.push(`${firestoreCleanupFailures.length} profile doc(s) left behind`);
+    AUBazaar.showToast(parts.join(', '), (totalFailure > 0 || firestoreCleanupFailures.length > 0) ? 'error' : 'success');
+
+    await loadUsers();
+    await loadStats();
   }
 
   async function bulkDeleteListings() {

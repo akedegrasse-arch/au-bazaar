@@ -35,7 +35,12 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount', 'ratingSum'])
       );
 
-      allow delete: if false;
+      // Only admins can hard-delete a user doc (e.g. the admin panel's
+      // bulk-delete-users feature, cleaning up test/bad accounts). Regular
+      // users never hard-delete their own doc - account removal elsewhere
+      // in the app is a soft delete (status: 'deleted').
+      allow delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Allow authenticated users to manage their own favorites
