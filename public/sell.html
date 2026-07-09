@@ -427,15 +427,10 @@
       <div class="form-error hidden" id="condition-error"></div>
     </div>
     
-    <!-- Location -->
+    <!-- Contact -->
     <div class="form-section">
-      <div class="form-section-title"><i class="fas fa-map-marker-alt"></i> Location & Contact</div>
-      
-      <div class="form-group">
-        <label class="form-label">Pickup Location</label>
-        <input type="text" class="form-control" id="location" placeholder="e.g., Near Main Library, Hostel Block A, Student Center..." required>
-      </div>
-      
+      <div class="form-section-title"><i class="fas fa-comment-dots"></i> Contact</div>
+
       <div class="form-group">
         <label class="form-label">Contact Preference</label>
         <select class="form-control" id="contact-preference">
@@ -657,8 +652,7 @@
       document.getElementById('title').value = listing.title;
       document.getElementById('description').value = listing.description;
       document.getElementById('price').value = listing.price;
-      document.getElementById('location').value = listing.location;
-      
+
       updateCharCount('title', 100);
       updateCharCount('description', 1000);
       
@@ -891,7 +885,6 @@
         category: selectedCategory,
         condition: selectedCondition,
         serialNumber: selectedCategory === 'electronics' ? serialNumber : null,
-        location: document.getElementById('location').value,
         contactPreference: document.getElementById('contact-preference').value,
         contactPhone: document.getElementById('contact-phone').value || null,
         images: imageUrls,
@@ -953,8 +946,7 @@
       description: document.getElementById('description').value,
       price: document.getElementById('price').value,
       category: selectedCategory,
-      condition: selectedCondition,
-      location: document.getElementById('location').value
+      condition: selectedCondition
     };
     localStorage.setItem('aubazaar_draft', JSON.stringify(draft));
     AUBazaar.showToast('Draft saved!', 'success');

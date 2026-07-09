@@ -260,10 +260,6 @@
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-condition">-</td>
               </tr>
               <tr>
-                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Location</td>
-                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-location">-</td>
-              </tr>
-              <tr>
                 <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Posted</td>
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-posted">-</td>
               </tr>
@@ -500,9 +496,6 @@
         <i class="fas fa-tag"></i> ${listing.category}
       </div>
       <div class="listing-meta-item">
-        <i class="fas fa-map-marker-alt"></i> ${listing.location || 'AU Campus'}
-      </div>
-      <div class="listing-meta-item">
         <i class="fas fa-clock"></i> ${AUBazaar.formatDate(listing.createdAt)}
       </div>
     `;
@@ -513,7 +506,6 @@
     // Details
     document.getElementById('detail-category').textContent = listing.category;
     document.getElementById('detail-condition').innerHTML = `<span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>`;
-    document.getElementById('detail-location').textContent = listing.location || 'AU Campus';
     document.getElementById('detail-posted').textContent = AUBazaar.formatDate(listing.createdAt);
     document.getElementById('detail-views').textContent = (listing.views || 0) + ' views';
 
