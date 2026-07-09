@@ -474,6 +474,25 @@
   let selectedCategory = '';
   let selectedCondition = '';
   let isEditMode = false;
+
+  // Soft flag only - never blocks posting. Catches careless/lazy attempts
+  // at coded language for illegal items; does nothing against anyone even
+  // slightly deliberate, so this exists purely to surface listings for
+  // faster admin review, not as a real detection system.
+  const FLAGGED_KEYWORDS = [
+    'weed', 'marijuana', 'cannabis', 'ganja', 'dagga', 'zol', 'kush',
+    'cocaine', 'heroin', 'meth', 'crystal meth', 'mandrax', 'bronclear',
+    'bronco', 'codeine', 'lean', 'molly', 'ecstasy', 'mdma', 'lsd',
+    'acid tabs', 'blotter', 'pills no prescription', 'unprescribed'
+  ];
+
+  function checkFlaggedKeywords(text) {
+    const lower = text.toLowerCase();
+    return FLAGGED_KEYWORDS.filter(term => {
+      const pattern = new RegExp('\\b' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+      return pattern.test(lower);
+    });
+  }
   let editListingId = null;
 
   // Check auth only - everyone gets 3 free listings/month with no wall at
@@ -877,7 +896,9 @@
       // Get user data
       const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
       const userData = userDoc.data() || {};
-      
+
+      const flaggedTerms = checkFlaggedKeywords(title + ' ' + description);
+
       const listingData = {
         title,
         description,
@@ -885,6 +906,8 @@
         category: selectedCategory,
         condition: selectedCondition,
         serialNumber: selectedCategory === 'electronics' ? serialNumber : null,
+        flaggedForReview: flaggedTerms.length > 0,
+        flaggedTerms: flaggedTerms,
         contactPreference: document.getElementById('contact-preference').value,
         contactPhone: document.getElementById('contact-phone').value || null,
         images: imageUrls,
