@@ -397,7 +397,7 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Listing</th>
+                <th>Listing / User</th>
                 <th>Reporter</th>
                 <th>Reason</th>
                 <th>Details</th>
@@ -858,12 +858,19 @@
       return;
     }
 
-    tbody.innerHTML = reports.map(report => `
+    tbody.innerHTML = reports.map(report => {
+      const isUserReport = report.reportType === 'user';
+      return `
       <tr>
         <td>
-          <a href="/listing/${report.listingId}" target="_blank" style="color:var(--primary);font-weight:600;font-size:0.9rem">
-            View Listing <i class="fas fa-external-link-alt" style="font-size:0.75rem"></i>
-          </a>
+          ${isUserReport
+            ? `<a href="/profile?id=${report.reportedUserId}" target="_blank" style="color:var(--primary);font-weight:600;font-size:0.9rem">
+                 <i class="fas fa-user"></i> ${getReporterName(report.reportedUserId)} <i class="fas fa-external-link-alt" style="font-size:0.75rem"></i>
+               </a>`
+            : `<a href="/listing/${report.listingId}" target="_blank" style="color:var(--primary);font-weight:600;font-size:0.9rem">
+                 View Listing <i class="fas fa-external-link-alt" style="font-size:0.75rem"></i>
+               </a>`
+          }
         </td>
         <td style="font-size:0.85rem">${getReporterName(report.reporterId)}</td>
         <td><span class="badge badge-warning">${report.reason}</span></td>
@@ -879,10 +886,10 @@
         <td>
           <div style="display:flex;gap:0.3rem">
             ${report.status === 'pending' ? `
-              <button class="btn btn-sm btn-success" onclick="resolveReport('${report.id}', 'resolved')" title="Resolve: dismiss report, listing stays up">
+              <button class="btn btn-sm btn-success" onclick="resolveReport('${report.id}', 'resolved')" title="${isUserReport ? 'Resolve: dismiss report' : 'Resolve: dismiss report, listing stays up'}">
                 <i class="fas fa-check"></i>
               </button>
-              <button class="btn btn-sm btn-danger" onclick="resolveReport('${report.id}', 'action-taken')" title="Take Action: remove the listing">
+              <button class="btn btn-sm btn-danger" onclick="resolveReport('${report.id}', 'action-taken')" title="${isUserReport ? 'Take Action: suspend this user' : 'Take Action: remove the listing'}">
                 <i class="fas fa-ban"></i>
               </button>
             ` : ''}
@@ -892,7 +899,8 @@
           </div>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   }
 
   async function deleteReport(reportId) {
@@ -1194,14 +1202,17 @@
   async function resolveReport(reportId, resolution) {
     const report = allReports.find(r => r.id === reportId);
     if (!report) return;
+    const isUserReport = report.reportType === 'user';
 
     if (resolution === 'action-taken') {
       const confirmResult = await Swal.fire({
-        title: 'Remove this listing?',
-        text: 'This will hide the reported listing from the marketplace and notify the reporter that it was removed.',
+        title: isUserReport ? 'Suspend this user?' : 'Remove this listing?',
+        text: isUserReport
+          ? 'This will suspend the reported user\'s account and notify the reporter.'
+          : 'This will hide the reported listing from the marketplace and notify the reporter that it was removed.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, remove listing',
+        confirmButtonText: isUserReport ? 'Yes, suspend user' : 'Yes, remove listing',
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#dc3545'
       });
@@ -1210,7 +1221,9 @@
 
     try {
       let listingData = null;
-      if (resolution === 'action-taken' && report.listingId) {
+      if (resolution === 'action-taken' && isUserReport && report.reportedUserId) {
+        await AUBazaar.db.collection('users').doc(report.reportedUserId).update({ status: 'suspended' });
+      } else if (resolution === 'action-taken' && report.listingId) {
         const listingDoc = await AUBazaar.db.collection('listings').doc(report.listingId).get();
         listingData = listingDoc.data();
 
@@ -1228,16 +1241,22 @@
       });
 
       if (report.reporterId) {
-        await notifyReporter(report.reporterId, resolution);
+        await notifyReporter(report.reporterId, resolution, isUserReport);
       }
 
       if (resolution === 'action-taken' && listingData && listingData.sellerId) {
         await notifySellerOfRemoval(listingData.sellerId, listingData.title, `Reported for: ${report.reason}.`);
       }
 
-      AUBazaar.showToast(resolution === 'action-taken' ? 'Listing removed and reporter/seller notified' : 'Report resolved and reporter notified', 'success');
+      AUBazaar.showToast(
+        resolution === 'action-taken'
+          ? (isUserReport ? 'User suspended and reporter notified' : 'Listing removed and reporter/seller notified')
+          : 'Report resolved and reporter notified',
+        'success'
+      );
       await loadReports();
       await loadAllListings();
+      await loadUsers();
       await loadStats();
     } catch (error) {
       AUBazaar.showToast('Failed to resolve report', 'error');
@@ -1245,12 +1264,16 @@
     }
   }
 
-  async function notifyReporter(reporterId, resolution) {
+  async function notifyReporter(reporterId, resolution, isUserReport) {
     const adminUid = currentAdmin.uid;
     const conversationId = [adminUid, reporterId].sort().join('_') + '_report';
     const text = resolution === 'action-taken'
-      ? "Thanks for your report. We reviewed the listing and removed it for violating AUBazaar's policies."
-      : "Thanks for your report. We reviewed the listing and didn't find a violation, so it remains active.";
+      ? (isUserReport
+          ? "Thanks for your report. We reviewed it and suspended the reported user's account."
+          : "Thanks for your report. We reviewed the listing and removed it for violating AUBazaar's policies.")
+      : (isUserReport
+          ? "Thanks for your report. We reviewed it and didn't find a violation."
+          : "Thanks for your report. We reviewed the listing and didn't find a violation, so it remains active.");
 
     await AUBazaar.db.collection('conversations').doc(conversationId).set({
       participants: [adminUid, reporterId],

@@ -451,8 +451,8 @@
               <div style="color:var(--primary);font-weight:700" id="chat-listing-price">$0</div>
             </div>
           </div>
-          <button class="btn btn-sm btn-danger" onclick="deleteCurrentConversation()" title="Delete conversation" style="margin-left:auto">
-            <i class="fas fa-trash"></i>
+          <button class="btn btn-sm btn-outline" onclick="showChatOptionsMenu(event)" title="Options" style="margin-left:auto">
+            <i class="fas fa-ellipsis-v"></i>
           </button>
         </div>
         
@@ -476,7 +476,34 @@
         </div>
       </div>
     </div>
-    
+
+  </div>
+</div>
+
+<!-- Report User Modal -->
+<div id="report-user-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:16px;max-width:420px;width:100%;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
+    <h3 style="margin:0 0 4px 0">Report <span id="report-user-name">this user</span></h3>
+    <p style="color:var(--gray);font-size:0.85rem;margin-bottom:16px">Admins will review this and can take action, including suspending the account.</p>
+    <div class="form-group">
+      <label class="form-label">Reason</label>
+      <select class="form-control" id="report-user-reason">
+        <option value="">Select a reason...</option>
+        <option value="harassment">Harassment or threats</option>
+        <option value="spam">Spam messages</option>
+        <option value="scam">Scam attempt</option>
+        <option value="inappropriate">Inappropriate behavior</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Additional Details (Optional)</label>
+      <textarea class="form-control" id="report-user-details" rows="3" placeholder="Provide more details..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeReportUserModal()">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="submitReportUser()"><i class="fas fa-flag"></i> Submit Report</button>
+    </div>
   </div>
 </div>
 
@@ -489,6 +516,7 @@
 <script src="/js/firebase-config.js"></script>
 <script>
   let currentUser = null;
+  let currentUserData = {};
   let conversations = [];
   let activeConversation = null;
   let messagesUnsubscribe = null;
@@ -515,10 +543,13 @@
     }
     currentUser = user;
     document.getElementById('nav-user-avatar').textContent = (user.displayName || user.email).charAt(0).toUpperCase();
-    
+
+    const ownDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+    currentUserData = ownDoc.exists ? ownDoc.data() : {};
+
     // Request notification permission
     await AUBazaar.requestNotificationPermission();
-    
+
     loadConversations();
   });
 
@@ -732,12 +763,14 @@
       
       // Load messages
       loadMessages(convId);
-      
+
       // Setup typing listener
       setupTypingListener(convId);
-      
+
       // Mark messages as read
       markMessagesAsRead(convId);
+
+      updateChatInputBlockedState();
     } catch (error) {
       console.error('Error opening conversation:', error);
       AUBazaar.showToast('Error opening conversation', 'error');
@@ -1163,6 +1196,164 @@
   function viewListing() {
     if (activeConversation?.listingId) {
       window.location.href = `/listing/${activeConversation.listingId}`;
+    }
+  }
+
+  let chatOptionsMenu = null;
+
+  function showChatOptionsMenu(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    hideChatOptionsMenu();
+    if (!activeConversation || !activeConversation.otherUser) return;
+
+    const isBlocked = (currentUserData.blockedUsers || []).includes(activeConversation.otherUser.id);
+
+    chatOptionsMenu = document.createElement('div');
+    chatOptionsMenu.id = 'chat-options-menu';
+    chatOptionsMenu.style.cssText = 'position:fixed;z-index:10000;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:6px 0;min-width:190px;font-size:14px';
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    chatOptionsMenu.style.top = (rect.bottom + 4) + 'px';
+    chatOptionsMenu.style.right = (window.innerWidth - rect.right) + 'px';
+
+    chatOptionsMenu.innerHTML = `
+      <div onclick="${isBlocked ? 'unblockUser()' : 'blockUser()'}" style="padding:10px 16px;cursor:pointer;color:#dc3545">
+        <i class="fas fa-ban"></i> ${isBlocked ? 'Unblock User' : 'Block User'}
+      </div>
+      <div onclick="openReportUserModal()" style="padding:10px 16px;cursor:pointer">
+        <i class="fas fa-flag"></i> Report User
+      </div>
+      <div onclick="deleteCurrentConversation()" style="padding:10px 16px;cursor:pointer">
+        <i class="fas fa-trash"></i> Delete Conversation
+      </div>
+    `;
+    document.body.appendChild(chatOptionsMenu);
+    setTimeout(() => document.addEventListener('click', hideChatOptionsMenu), 0);
+  }
+
+  function hideChatOptionsMenu() {
+    if (chatOptionsMenu) {
+      chatOptionsMenu.remove();
+      chatOptionsMenu = null;
+    }
+    document.removeEventListener('click', hideChatOptionsMenu);
+  }
+
+  async function blockUser() {
+    if (!activeConversation || !activeConversation.otherUser) return;
+    const otherId = activeConversation.otherUser.id;
+    const otherName = activeConversation.otherUser.fullName || 'this user';
+    hideChatOptionsMenu();
+
+    const result = await Swal.fire({
+      title: `Block ${otherName}?`,
+      text: 'They will no longer be able to send you messages. You can unblock them later.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, block',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      await AUBazaar.db.collection('users').doc(currentUser.uid).set({
+        blockedUsers: firebase.firestore.FieldValue.arrayUnion(otherId)
+      }, { merge: true });
+      currentUserData.blockedUsers = [...(currentUserData.blockedUsers || []), otherId];
+      AUBazaar.showToast(`${otherName} has been blocked`, 'success');
+      updateChatInputBlockedState();
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      AUBazaar.showToast('Failed to block user', 'error');
+    }
+  }
+
+  async function unblockUser() {
+    if (!activeConversation || !activeConversation.otherUser) return;
+    const otherId = activeConversation.otherUser.id;
+    hideChatOptionsMenu();
+
+    try {
+      await AUBazaar.db.collection('users').doc(currentUser.uid).update({
+        blockedUsers: firebase.firestore.FieldValue.arrayRemove(otherId)
+      });
+      currentUserData.blockedUsers = (currentUserData.blockedUsers || []).filter(id => id !== otherId);
+      AUBazaar.showToast('User unblocked', 'success');
+      updateChatInputBlockedState();
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      AUBazaar.showToast('Failed to unblock user', 'error');
+    }
+  }
+
+  function updateChatInputBlockedState() {
+    if (!activeConversation || !activeConversation.otherUser) return;
+    const otherId = activeConversation.otherUser.id;
+    const iBlockedThem = (currentUserData.blockedUsers || []).includes(otherId);
+    const theyBlockedMe = (activeConversation.otherUser.blockedUsers || []).includes(currentUser.uid);
+
+    const inputArea = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    let notice = document.getElementById('blocked-notice');
+
+    if (iBlockedThem || theyBlockedMe) {
+      if (inputArea) { inputArea.disabled = true; inputArea.placeholder = iBlockedThem ? "You've blocked this user" : "You can't message this user"; }
+      if (sendBtn) sendBtn.disabled = true;
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'blocked-notice';
+        notice.style.cssText = 'padding:8px 14px;background:#f8d7da;color:#721c24;font-size:0.85rem;text-align:center';
+        document.getElementById('typing-indicator').insertAdjacentElement('afterend', notice);
+      }
+      notice.textContent = iBlockedThem ? "You've blocked this user - unblock them to send messages." : "You can't message this user.";
+      notice.style.display = 'block';
+    } else {
+      if (inputArea) { inputArea.disabled = false; inputArea.placeholder = 'Type a message...'; }
+      if (sendBtn) sendBtn.disabled = false;
+      if (notice) notice.style.display = 'none';
+    }
+  }
+
+  function openReportUserModal() {
+    if (!activeConversation || !activeConversation.otherUser) return;
+    hideChatOptionsMenu();
+    document.getElementById('report-user-name').textContent = activeConversation.otherUser.fullName || 'this user';
+    document.getElementById('report-user-reason').value = '';
+    document.getElementById('report-user-details').value = '';
+    document.getElementById('report-user-modal').style.display = 'flex';
+  }
+
+  function closeReportUserModal() {
+    document.getElementById('report-user-modal').style.display = 'none';
+  }
+
+  async function submitReportUser() {
+    const reason = document.getElementById('report-user-reason').value;
+    const details = document.getElementById('report-user-details').value;
+    if (!reason) {
+      AUBazaar.showToast('Please select a reason', 'warning');
+      return;
+    }
+    if (!activeConversation || !activeConversation.otherUser) return;
+
+    try {
+      await AUBazaar.db.collection('reports').add({
+        reportType: 'user',
+        reportedUserId: activeConversation.otherUser.id,
+        listingId: null,
+        reporterId: currentUser.uid,
+        reason,
+        details,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      closeReportUserModal();
+      AUBazaar.showToast('Report submitted. Thank you for keeping AUBazaar safe!', 'success');
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      AUBazaar.showToast('Failed to submit report', 'error');
     }
   }
 

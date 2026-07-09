@@ -167,11 +167,40 @@ auth.onAuthStateChanged(async (user) => {
     window.currentUser = user;
     updateNavbarForUser(user, userData);
     watchUnreadMessagesBadge(user.uid);
+    maybeShowNotificationBanner(user, userData);
   } else {
     window.currentUser = null;
     updateNavbarForGuest();
   }
 });
+
+function maybeShowNotificationBanner(user, userData) {
+  if (typeof Notification === 'undefined') return; // unsupported browser
+  if (Notification.permission === 'granted') return; // already enabled
+  if (userData.notificationBannerDismissed) return; // user said no thanks already
+  if (document.getElementById('aub-notif-banner')) return; // already showing
+
+  const banner = document.createElement('div');
+  banner.id = 'aub-notif-banner';
+  banner.style.cssText = 'position:sticky;top:0;z-index:999;background:#d32f2f;color:white;padding:0.7rem 1rem;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:0.88rem;text-align:center';
+  banner.innerHTML = `
+    <span><i class="fas fa-bell"></i> Turn on notifications to know the moment someone messages you - even with AUBazaar closed.</span>
+    <button id="aub-notif-banner-enable" style="background:white;color:#d32f2f;border:none;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer;font-size:0.85rem">Enable</button>
+    <button id="aub-notif-banner-dismiss" style="background:none;border:1px solid rgba(255,255,255,0.6);color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:0.85rem">Not now</button>
+  `;
+  document.body.prepend(banner);
+
+  banner.querySelector('#aub-notif-banner-enable').addEventListener('click', async () => {
+    const enabled = await AUBazaar.enablePushNotifications();
+    if (enabled) banner.remove();
+  });
+  banner.querySelector('#aub-notif-banner-dismiss').addEventListener('click', async () => {
+    banner.remove();
+    if (auth.currentUser) {
+      await db.collection('users').doc(auth.currentUser.uid).set({ notificationBannerDismissed: true }, { merge: true });
+    }
+  });
+}
 
 let unreadBadgeUnsubscribe = null;
 
