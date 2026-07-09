@@ -683,30 +683,49 @@
       // Get reviewer name
       const reviewerDoc = await AUBazaar.db.collection('users').doc(currentUser.uid).get();
       const reviewerName = reviewerDoc.data()?.fullName || currentUser.displayName || 'AU Member';
-      
-      // Add review
-      await AUBazaar.db.collection('reviews').add({
-        revieweeId: userId,
-        reviewerId: currentUser.uid,
-        reviewerName,
-        rating: selectedRating,
-        comment,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+
+      // Atomically add the review and update the reviewee's aggregate
+      // rating together, inside a transaction - without this, two people
+      // rating the same seller at nearly the same moment could both read
+      // the same starting average, and the slower write would silently
+      // overwrite the faster one's contribution.
+      const revieweeRef = AUBazaar.db.collection('users').doc(userId);
+      const newReviewRef = AUBazaar.db.collection('reviews').doc();
+
+      await AUBazaar.db.runTransaction(async (transaction) => {
+        const revieweeDoc = await transaction.get(revieweeRef);
+        const data = revieweeDoc.exists ? revieweeDoc.data() : {};
+        const currentCount = data.ratingCount || 0;
+        // ratingSum is new - bootstrap it from the existing average*count
+        // the first time, so this stays correct for sellers who already
+        // had reviews before this fix shipped.
+        const currentSum = data.ratingSum != null ? data.ratingSum : (data.rating || 0) * currentCount;
+
+        const newSum = currentSum + selectedRating;
+        const newCount = currentCount + 1;
+
+        transaction.set(newReviewRef, {
+          revieweeId: userId,
+          reviewerId: currentUser.uid,
+          reviewerName,
+          rating: selectedRating,
+          comment,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        transaction.set(revieweeRef, {
+          rating: newSum / newCount,
+          ratingSum: newSum,
+          ratingCount: newCount
+        }, { merge: true });
       });
-      
-      // Update user's average rating
-      const reviewsSnap = await AUBazaar.db.collection('reviews').where('revieweeId', '==', userId).get();
-      const ratings = [];
-      reviewsSnap.forEach(doc => ratings.push(doc.data().rating));
-      const avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
-      
-      await AUBazaar.db.collection('users').doc(userId).set({ rating: avgRating, ratingCount: ratings.length }, { merge: true });
-      
+
       closeRateModal();
       AUBazaar.showToast('Review submitted successfully!', 'success');
       loadReviews(userId);
-      
+
     } catch (error) {
+      console.error('Error submitting review:', error);
       AUBazaar.showToast('Failed to submit review', 'error');
     }
   }

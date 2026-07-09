@@ -474,6 +474,11 @@
   let selectedCategory = '';
   let selectedCondition = '';
   let isEditMode = false;
+  // Guards against a double-click/double-tap firing handleSubmit twice
+  // before the button visually disables - without this, two near-
+  // simultaneous submissions could both read "under the free cap" before
+  // either write lands, letting one extra listing slip through.
+  let isSubmitting = false;
 
   // Soft flag only - never blocks posting. Catches careless/lazy attempts
   // at coded language for illegal items; does nothing against anyone even
@@ -811,12 +816,15 @@
 
   async function handleSubmit(event) {
     event.preventDefault();
-    
+    if (isSubmitting) return;
+
     const user = AUBazaar.auth.currentUser;
     if (!user) {
       window.location.href = '/login?redirect=/sell';
       return;
     }
+
+    isSubmitting = true;
     
     // Validate
     let hasError = false;
@@ -863,13 +871,19 @@
     }
 
 
-    if (hasError) return;
+    if (hasError) {
+      isSubmitting = false;
+      return;
+    }
 
     // New listings count against the monthly free cap; editing an existing
     // listing doesn't (it's not a new post).
     if (!isEditMode) {
       const allowed = await checkListingQuota(user);
-      if (!allowed) return;
+      if (!allowed) {
+        isSubmitting = false;
+        return;
+      }
     }
 
     const btn = document.getElementById('submit-btn');
@@ -960,6 +974,8 @@
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Listing';
       btn.disabled = false;
       AUBazaar.showToast('Failed to post listing. Please try again.', 'error');
+    } finally {
+      isSubmitting = false;
     }
   }
 
