@@ -577,38 +577,46 @@
     });
   }
 
+  // Returns { allowed, userDoc, userData } - the caller reuses userDoc so
+  // submitListing() doesn't have to fetch the same document a second time
+  // right after this one, which was adding a fully redundant round-trip to
+  // every single new-listing post.
   async function checkListingQuota(user) {
     const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
     const userData = userDoc.exists ? userDoc.data() : {};
 
     // Admins and active Unlimited subscribers bypass the free cap entirely
-    if (userData.role === 'admin') return true;
+    if (userData.role === 'admin') return { allowed: true, userDoc, userData };
 
     const unlimitedUntilRaw = userData.unlimitedSellerUntil;
     if (unlimitedUntilRaw) {
       const unlimitedUntil = unlimitedUntilRaw.toDate ? unlimitedUntilRaw.toDate() : new Date(unlimitedUntilRaw);
-      if (unlimitedUntil > new Date()) return true;
+      if (unlimitedUntil > new Date()) return { allowed: true, userDoc, userData };
     }
 
     // Count listings this user has posted in the last 30 days - a rolling
     // window rather than "since the 1st of this calendar month" so someone
     // can't post 3 on the last day of the month and 3 more the next day.
+    // Only need to know whether they're AT the cap, not the exact total, so
+    // this is bounded to FREE_CAP+1 docs with a server-side date filter
+    // instead of downloading a seller's entire listing history on every
+    // single post just to count how many were recent.
     const windowStart = new Date();
     windowStart.setDate(windowStart.getDate() - 30);
 
-    const listingsSnap = await AUBazaar.db.collection('listings').where('sellerId', '==', user.uid).get();
-    const recentCount = listingsSnap.docs.filter(doc => {
-      const created = doc.data().createdAt;
-      if (!created) return false;
-      const createdDate = created.toDate ? created.toDate() : new Date(created);
-      return createdDate >= windowStart;
-    }).length;
-
     const FREE_CAP = 3;
-    if (recentCount < FREE_CAP) return true;
+    const listingsSnap = await AUBazaar.db.collection('listings')
+      .where('sellerId', '==', user.uid)
+      .where('createdAt', '>=', windowStart)
+      .orderBy('createdAt', 'desc')
+      .limit(FREE_CAP + 1)
+      .get();
+
+    if (listingsSnap.size < FREE_CAP) return { allowed: true, userDoc, userData };
 
     // Over the free cap for the last 30 days - let them choose pay-per-listing vs upgrade
-    return await showQuotaPaywall(user);
+    const allowed = await showQuotaPaywall(user);
+    return { allowed, userDoc, userData };
   }
 
   function showQuotaPaywall(user) {
@@ -975,12 +983,14 @@
 
     // New listings count against the monthly free cap; editing an existing
     // listing doesn't (it's not a new post).
+    let prefetchedUserDoc = null;
     if (!isEditMode) {
-      const allowed = await checkListingQuota(user);
-      if (!allowed) {
+      const quotaResult = await checkListingQuota(user);
+      if (!quotaResult.allowed) {
         isSubmitting = false;
         return;
       }
+      prefetchedUserDoc = quotaResult.userDoc;
     }
 
     const btn = document.getElementById('submit-btn');
@@ -993,7 +1003,7 @@
       // below - so no matter what stalls on a bad connection, the button
       // resets and the user sees an error instead of "Posting..." forever.
       await Promise.race([
-        submitListing(user, title, description, price, serialNumber),
+        submitListing(user, title, description, price, serialNumber, prefetchedUserDoc),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Posting timed out - check your connection and try again')), 45000))
       ]);
     } catch (error) {
@@ -1006,7 +1016,7 @@
     }
   }
 
-  async function submitListing(user, title, description, price, serialNumber) {
+  async function submitListing(user, title, description, price, serialNumber, prefetchedUserDoc) {
       // Upload images to Firebase Storage in parallel (if any) - sequential
       // uploads meant a 3-photo listing paid for 3 upload round-trips back
       // to back, which is slow on mobile data. Each upload is still capped
@@ -1035,8 +1045,10 @@
         });
       }
       
-      // Get user data
-      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      // Get user data - reuse the doc checkListingQuota() already fetched
+      // for a new listing instead of fetching it again; edits skip the
+      // quota check entirely so they still need their own fetch here.
+      const userDoc = prefetchedUserDoc || await AUBazaar.db.collection('users').doc(user.uid).get();
       const userData = userDoc.data() || {};
 
       const flaggedTerms = checkFlaggedKeywords(title + ' ' + description);
@@ -1065,36 +1077,36 @@
       if (isEditMode && editListingId) {
         await AUBazaar.db.collection('listings').doc(editListingId).update(listingData);
         AUBazaar.showToast('Listing updated successfully!', 'success');
-        setTimeout(() => window.location.href = `/listing/${editListingId}`, 1500);
+        setTimeout(() => window.location.href = `/listing/${editListingId}`, 700);
       } else {
         listingData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         
         const docRef = await AUBazaar.db.collection('listings').add(listingData);
-        
+
         // Update user's listing count. Only seed baseline fields the first
         // time the doc is created - an unconditional set() here would
         // silently overwrite an existing user's real role/createdAt every
         // time they post a listing (merge only protects fields NOT listed).
+        // Not awaited - the listing itself is already saved at this point,
+        // this is just a secondary counter update that shouldn't hold up
+        // the success screen the user is actually waiting on.
         const userRef = AUBazaar.db.collection('users').doc(user.uid);
-        if (userDoc.exists) {
-          await userRef.update({
-            totalListings: firebase.firestore.FieldValue.increment(1)
-          });
-        } else {
-          await userRef.set({
-            totalListings: 1,
-            email: user.email,
-            fullName: user.displayName || '',
-            role: 'student',
-            rating: 0,
-            ratingCount: 0,
-            totalSales: 0,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        
+        const counterUpdate = userDoc.exists
+          ? userRef.update({ totalListings: firebase.firestore.FieldValue.increment(1) })
+          : userRef.set({
+              totalListings: 1,
+              email: user.email,
+              fullName: user.displayName || '',
+              role: 'student',
+              rating: 0,
+              ratingCount: 0,
+              totalSales: 0,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        counterUpdate.catch(err => console.error('Failed to update listing counter:', err));
+
         AUBazaar.showToast('Listing posted successfully!', 'success');
-        setTimeout(() => window.location.href = `/listing/${docRef.id}`, 1500);
+        setTimeout(() => window.location.href = `/listing/${docRef.id}`, 700);
       }
   }
 
