@@ -1316,10 +1316,15 @@
       
       AUBazaar.showToast('Deleting your account...', 'info');
       
-      // Delete all user's listings, except sold ones - those stay as an
-      // anonymized historical record so admin can still see past
-      // transactions after the account is gone (get all and filter to
-      // avoid needing a composite index).
+      // Soft-delete the user's non-sold listings rather than hard-deleting
+      // them - they disappear from the marketplace exactly the same either
+      // way (marketplace.html only shows status:'active'), but this way
+      // the listing doc (and its Storage images) still exist for admin to
+      // review and manually permanently-delete via the existing Listings
+      // tab flow, instead of the images being silently orphaned in Storage
+      // with no doc left to ever find or clean them up by.
+      // Sold ones stay as an anonymized historical record. (Get all and
+      // filter client-side to avoid needing a composite index.)
       const allListingsSnap = await AUBazaar.db.collection('listings').get();
       const userListings = allListingsSnap.docs.filter(doc => doc.data().sellerId === userId);
       const soldListings = userListings.filter(doc => doc.data().status === 'sold');
@@ -1327,7 +1332,11 @@
 
       if (otherListings.length > 0 || soldListings.length > 0) {
         const batch = AUBazaar.db.batch();
-        otherListings.forEach(doc => batch.delete(doc.ref));
+        otherListings.forEach(doc => batch.update(doc.ref, {
+          status: 'deleted',
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deletedBy: 'account-deletion'
+        }));
         soldListings.forEach(doc => batch.update(doc.ref, {
           sellerName: 'Deleted User',
           sellerEmail: null
