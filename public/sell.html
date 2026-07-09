@@ -472,6 +472,11 @@
 <script src="/js/firebase-config.js"></script>
 <script>
   let selectedImages = [];
+  // Already-uploaded image URLs kept from the listing being edited - kept
+  // separate from selectedImages since these are Storage URLs, not local
+  // files waiting to be uploaded. Untouched originals get merged back in
+  // on save instead of only ever saving newly-added photos.
+  let existingImageUrls = [];
   let selectedCategory = '';
   let selectedCondition = '';
   let isEditMode = false;
@@ -695,7 +700,12 @@
         const condEl = document.querySelector(`input[name="condition"][value="${listing.condition}"]`);
         if (condEl) selectCondition(listing.condition, condEl.closest('.condition-option'));
       }
-      
+
+      if (listing.images && listing.images.length > 0) {
+        existingImageUrls = [...listing.images];
+        renderPreviews();
+      }
+
       document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Update Listing';
     } catch (error) {
       console.error('Error loading listing for edit:', error);
@@ -723,24 +733,80 @@
     addImages(files);
   }
 
-  function addImages(files) {
-    const remaining = 5 - selectedImages.length;
-    const toAdd = files.slice(0, remaining);
-    
-    toAdd.forEach(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        AUBazaar.showToast(`${file.name} is too large (max 5MB)`, 'warning');
-        return;
-      }
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        selectedImages.push({ file, dataUrl: e.target.result });
-        renderPreviews();
+  // Re-encodes a photo through a canvas before it's used anywhere else.
+  // Two problems this solves at once:
+  // 1. Speed - phone camera photos are routinely several MB at full
+  //    resolution; shrinking to a sane max dimension and JPEG-compressing
+  //    cuts the upload payload dramatically, which matters a lot more on
+  //    mobile data than on wifi.
+  // 2. Compatibility - iPhones capture photos as HEIC by default. HEIC
+  //    previews fine in Safari on the same phone (it has native decode
+  //    support), but an <img> tag pointing at a raw HEIC file renders as
+  //    broken in Chrome/Firefox/Android/Windows - so a listing photo
+  //    posted from an iPhone looked fine to the poster and broken to
+  //    everyone else. Canvas re-encoding always outputs a standard JPEG
+  //    regardless of the source format.
+  function resizeImage(file, maxDim = 1600, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round(height * (maxDim / width));
+            width = maxDim;
+          } else {
+            width = Math.round(width * (maxDim / height));
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) { reject(new Error('Could not process image')); return; }
+          resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+        }, 'image/jpeg', quality);
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Unsupported or corrupted image'));
+      };
+      img.src = objectUrl;
     });
-    
+  }
+
+  async function addImages(files) {
+    const remaining = 5 - existingImageUrls.length - selectedImages.length;
+    const toAdd = files.slice(0, remaining);
+
+    for (const file of toAdd) {
+      // Generous cap on the ORIGINAL file - resizing below shrinks it
+      // regardless, this just guards against something absurd.
+      if (file.size > 20 * 1024 * 1024) {
+        AUBazaar.showToast(`${file.name} is too large (max 20MB)`, 'warning');
+        continue;
+      }
+
+      try {
+        const resized = await resizeImage(file);
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = () => reject(new Error('Could not read image'));
+          reader.readAsDataURL(resized);
+        });
+        selectedImages.push({ file: resized, dataUrl });
+        renderPreviews();
+      } catch (err) {
+        console.error('Error processing image:', err);
+        AUBazaar.showToast(`Could not process ${file.name} - try a different photo`, 'error');
+      }
+    }
+
     if (files.length > remaining) {
       AUBazaar.showToast(`Maximum 5 images allowed. Only ${remaining} more can be added.`, 'warning');
     }
@@ -748,20 +814,32 @@
 
   function renderPreviews() {
     const grid = document.getElementById('preview-grid');
-    grid.innerHTML = selectedImages.map((img, i) => `
+    const totalCount = existingImageUrls.length + selectedImages.length;
+
+    const existingHtml = existingImageUrls.map((url, i) => `
+      <div class="preview-item">
+        <img src="${url}" alt="Existing photo ${i+1}">
+        ${i === 0 ? '<div class="preview-main-badge">Cover</div>' : ''}
+        <button type="button" class="preview-remove" onclick="removeExistingImage(${i})">✕</button>
+      </div>
+    `).join('');
+
+    const newHtml = selectedImages.map((img, i) => `
       <div class="preview-item">
         <img src="${img.dataUrl}" alt="Preview ${i+1}">
-        ${i === 0 ? '<div class="preview-main-badge">Cover</div>' : ''}
+        ${existingImageUrls.length === 0 && i === 0 ? '<div class="preview-main-badge">Cover</div>' : ''}
         <button type="button" class="preview-remove" onclick="removeImage(${i})">✕</button>
       </div>
     `).join('');
-    
-    if (selectedImages.length > 0) {
+
+    grid.innerHTML = existingHtml + newHtml;
+
+    if (totalCount > 0) {
       document.getElementById('upload-zone').style.display = 'none';
     }
-    
+
     // Add "add more" button if less than 5
-    if (selectedImages.length > 0 && selectedImages.length < 5) {
+    if (totalCount > 0 && totalCount < 5) {
       grid.innerHTML += `
         <div class="preview-item" style="cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--gray-light);border:2px dashed var(--gray)" onclick="document.getElementById('image-input').click()">
           <div style="text-align:center;color:var(--gray)">
@@ -775,7 +853,15 @@
 
   function removeImage(index) {
     selectedImages.splice(index, 1);
-    if (selectedImages.length === 0) {
+    if (existingImageUrls.length === 0 && selectedImages.length === 0) {
+      document.getElementById('upload-zone').style.display = 'block';
+    }
+    renderPreviews();
+  }
+
+  function removeExistingImage(index) {
+    existingImageUrls.splice(index, 1);
+    if (existingImageUrls.length === 0 && selectedImages.length === 0) {
       document.getElementById('upload-zone').style.display = 'block';
     }
     renderPreviews();
@@ -921,27 +1007,32 @@
   }
 
   async function submitListing(user, title, description, price, serialNumber) {
-      // Upload images to Firebase Storage (if any). Each upload is capped
-      // with a timeout - on an unstable mobile connection, a Storage
-      // upload can stall without ever resolving OR rejecting, which would
+      // Upload images to Firebase Storage in parallel (if any) - sequential
+      // uploads meant a 3-photo listing paid for 3 upload round-trips back
+      // to back, which is slow on mobile data. Each upload is still capped
+      // with its own timeout - on an unstable connection, a Storage upload
+      // can stall without ever resolving OR rejecting, which would
       // otherwise leave the submit button spinning forever with no error
       // and no listing ever created.
-      const imageUrls = [];
+      // Start with whatever existing images the user kept (empty for a
+      // brand-new listing, or a listing being edited with no changes to
+      // its photos) - newly uploaded ones are appended after.
+      const imageUrls = [...existingImageUrls];
       if (selectedImages && selectedImages.length > 0) {
-        for (const img of selectedImages) {
-          try {
-            const storageRef = AUBazaar.storage.ref(`listings/${user.uid}/${Date.now()}_${img.file.name}`);
-            const uploadWithTimeout = Promise.race([
-              storageRef.put(img.file).then(snapshot => snapshot.ref.getDownloadURL()),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Image upload timed out')), 30000))
-            ]);
-            const url = await uploadWithTimeout;
-            imageUrls.push(url);
-          } catch (imgError) {
-            console.error('Error uploading image:', imgError);
-            // Continue with other images even if one fails or times out
+        const uploadResults = await Promise.allSettled(selectedImages.map((img) => {
+          const storageRef = AUBazaar.storage.ref(`listings/${user.uid}/${Date.now()}_${img.file.name}`);
+          return Promise.race([
+            storageRef.put(img.file).then(snapshot => snapshot.ref.getDownloadURL()),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Image upload timed out')), 30000))
+          ]);
+        }));
+        uploadResults.forEach((result, i) => {
+          if (result.status === 'fulfilled') {
+            imageUrls.push(result.value);
+          } else {
+            console.error('Error uploading image', selectedImages[i].file.name, result.reason);
           }
-        }
+        });
       }
       
       // Get user data
