@@ -255,7 +255,7 @@
                 <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;width:40%">Category</td>
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem" id="detail-category">-</td>
               </tr>
-              <tr>
+              <tr id="detail-condition-row">
                 <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Condition</td>
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-condition">-</td>
               </tr>
@@ -489,9 +489,7 @@
     
     // Meta
     document.getElementById('listing-meta').innerHTML = `
-      <div class="listing-meta-item">
-        <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
-      </div>
+      ${listing.condition ? `<div class="listing-meta-item">${AUBazaar.getConditionBadge(listing.condition)}</div>` : ''}
       <div class="listing-meta-item">
         <i class="fas fa-tag"></i> ${listing.category}
       </div>
@@ -505,7 +503,11 @@
     
     // Details
     document.getElementById('detail-category').textContent = listing.category;
-    document.getElementById('detail-condition').innerHTML = `<span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>`;
+    if (listing.condition) {
+      document.getElementById('detail-condition').innerHTML = AUBazaar.getConditionBadge(listing.condition);
+    } else {
+      document.getElementById('detail-condition-row').classList.add('hidden');
+    }
     document.getElementById('detail-posted').textContent = AUBazaar.formatDate(listing.createdAt);
     document.getElementById('detail-views').textContent = (listing.views || 0) + ' views';
 
@@ -613,7 +615,7 @@
             <div class="product-card-title">${listing.title}</div>
             <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
             <div class="product-card-meta">
-              <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+              ${AUBazaar.getConditionBadge(listing.condition)}
               <span>${AUBazaar.formatDate(listing.createdAt)}</span>
             </div>
           </div>

@@ -399,8 +399,8 @@
       </div>
     </div>
 
-    <!-- Condition -->
-    <div class="form-section">
+    <!-- Condition - doesn't apply to food, which isn't "new" or "used" -->
+    <div class="form-section" id="condition-section">
       <div class="form-section-title"><i class="fas fa-star"></i> Condition <span style="color:var(--danger)">*</span></div>
       <div class="condition-options">
         <label class="condition-option" onclick="selectCondition('new', this)">
@@ -794,6 +794,16 @@
       document.getElementById('serial-number').value = '';
       document.getElementById('serial-number-error').classList.add('hidden');
     }
+
+    const conditionSection = document.getElementById('condition-section');
+    if (category === 'food') {
+      conditionSection.classList.add('hidden');
+      selectedCondition = null;
+      document.querySelectorAll('.condition-option').forEach(opt => opt.classList.remove('selected'));
+      document.getElementById('condition-error').classList.add('hidden');
+    } else {
+      conditionSection.classList.remove('hidden');
+    }
   }
 
   function selectCondition(condition, el) {
@@ -857,7 +867,7 @@
       hasError = true;
     }
     
-    if (!selectedCondition) {
+    if (!selectedCondition && selectedCategory !== 'food') {
       document.getElementById('condition-error').textContent = 'Please select a condition';
       document.getElementById('condition-error').classList.remove('hidden');
       hasError = true;

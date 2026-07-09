@@ -574,7 +574,7 @@
           <div class="product-card-title">${listing.title}</div>
           <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
           <div class="product-card-meta">
-            <span class="product-card-condition condition-${listing.condition}">${AUBazaar.getConditionLabel(listing.condition)}</span>
+            ${AUBazaar.getConditionBadge(listing.condition)}
             <span>${AUBazaar.formatDate(listing.createdAt)}</span>
           </div>
         </div>

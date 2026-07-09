@@ -419,6 +419,13 @@ function getConditionLabel(condition) {
   return labels[condition] || condition;
 }
 
+// Utility: Get the condition badge HTML, or '' if there's no condition -
+// food listings don't have one, since "new/used" doesn't apply to food.
+function getConditionBadge(condition) {
+  if (!condition) return '';
+  return `<span class="product-card-condition condition-${condition}">${getConditionLabel(condition)}</span>`;
+}
+
 // Utility: Get category icon
 function getCategoryIcon(category) {
   const icons = {
@@ -445,6 +452,7 @@ window.AUBazaar = {
   showToast,
   isValidAUEmail,
   getConditionLabel,
+  getConditionBadge,
   getCategoryIcon,
   handleLogout: async function() {
     const result = await Swal.fire({
