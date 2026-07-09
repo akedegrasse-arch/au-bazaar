@@ -566,7 +566,7 @@ window.AUBazaar = {
         formDiv.innerHTML = `
           <h4 style="margin:0 0 10px 0;color:${color}">${providerName} Payment</h4>
           <p style="color:#666;font-size:0.85rem;margin-bottom:10px">Enter your ${providerName} number</p>
-          <input type="tel" id="aub-mobile-number" placeholder="e.g. 0771234567" maxlength="10" style="width:100%;padding:14px;font-size:1.1rem;border:2px solid ${color};border-radius:10px;box-sizing:border-box;text-align:center;letter-spacing:1px;margin-bottom:12px">
+          <input type="tel" id="aub-mobile-number" placeholder="e.g. 0771234567 or +263771234567" maxlength="20" style="width:100%;padding:14px;font-size:1.1rem;border:2px solid ${color};border-radius:10px;box-sizing:border-box;text-align:center;letter-spacing:1px;margin-bottom:12px">
           <button id="aub-mobile-pay-btn" style="width:100%;padding:14px;background:${color};color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer">Pay $${amount.toFixed(2)}</button>
           <button id="aub-back-btn" style="width:100%;padding:10px;background:none;border:none;color:#888;margin-top:8px;cursor:pointer">&larr; Choose a different method</button>
         `;
@@ -576,8 +576,12 @@ window.AUBazaar = {
         });
         formDiv.querySelector('#aub-mobile-pay-btn').addEventListener('click', () => {
           const number = formDiv.querySelector('#aub-mobile-number').value.replace(/[^0-9]/g, '');
-          if (!/^0\d{9}$/.test(number)) {
-            showToast('Enter a valid 10-digit phone number', 'warning');
+          // Lenient on format - accept a plain local number (0771234567) or
+          // one with a country code (263771234567 / +263 77 123 4567) alike.
+          // This is a simulated payment, so any plausible phone number should
+          // be allowed straight through instead of being rejected on format.
+          if (number.length < 9) {
+            showToast('Enter a valid phone number', 'warning');
             return;
           }
           runFakeProcessing(providerName, color);
