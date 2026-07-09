@@ -147,6 +147,11 @@
         </li>
       </ul>
       
+      <div class="mobile-quick-nav">
+        <a href="/top-sellers" title="Top Sellers"><i class="fas fa-trophy"></i></a>
+        <a href="/messages" class="mobile-quick-auth" title="Messages" style="display:none"><i class="fas fa-envelope"></i></a>
+        <a href="/profile" class="mobile-quick-auth" title="My Profile" style="display:none"><i class="fas fa-user"></i></a>
+      </div>
       <div class="hamburger" onclick="toggleMobileNav()">
         <span></span><span></span><span></span>
       </div>
@@ -172,8 +177,6 @@
     <li><a href="#" onclick="showTab('listings', null); closeMobileNav(); return false;"><i class="fas fa-list"></i> My Listings</a></li>
     <li><a href="#" onclick="showTab('favorites', null); closeMobileNav(); return false;"><i class="fas fa-heart"></i> Favorites</a></li>
     <li><a href="/sell" onclick="closeMobileNav()"><i class="fas fa-plus-circle"></i> Sell Item</a></li>
-    <li><a href="/messages" onclick="closeMobileNav()"><i class="fas fa-envelope"></i> Messages</a></li>
-    <li><a href="/profile" onclick="closeMobileNav()"><i class="fas fa-user"></i> My Profile</a></li>
     <li><a href="#" onclick="showTab('profile', null); closeMobileNav(); return false;"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
     <li><a href="#" onclick="showTab('settings', null); closeMobileNav(); return false;"><i class="fas fa-cog"></i> Settings</a></li>
     <li id="mobile-admin-link" style="display:none"><a href="/admin" onclick="closeMobileNav()"><i class="fas fa-shield-alt"></i> Admin Panel</a></li>

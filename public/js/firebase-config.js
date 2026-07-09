@@ -120,6 +120,10 @@ auth.onAuthStateChanged(async (user) => {
   await new Promise(resolve => setTimeout(resolve, 100));
 
   if (user) {
+    // Reveal the signed-in-only mobile quick icons right away, before the
+    // user-doc fetch below, so they don't flash missing on slower loads.
+    setMobileQuickAuthVisible(true);
+
     const userRef = db.collection('users').doc(user.uid);
     const doc = await userRef.get();
     const userData = doc.exists ? doc.data() : {};
@@ -170,6 +174,7 @@ auth.onAuthStateChanged(async (user) => {
     maybeShowNotificationBanner(user, userData);
   } else {
     window.currentUser = null;
+    setMobileQuickAuthVisible(false);
     updateNavbarForGuest();
   }
 });
@@ -308,6 +313,16 @@ function updateNavbarForGuest() {
   const mobileUserNav = document.getElementById('mobile-user-nav');
   if (mobileGuestNav) mobileGuestNav.style.display = 'block';
   if (mobileUserNav) mobileUserNav.style.display = 'none';
+}
+
+// Mobile/tablet top-bar quick icons that only make sense when signed in
+// (Messages, My Profile). Toggled directly from the auth observer the
+// instant we know whether there's a user - not gated behind the async
+// user-doc fetch - so a logged-in visitor doesn't briefly see them missing.
+function setMobileQuickAuthVisible(visible) {
+  document.querySelectorAll('.mobile-quick-auth').forEach(el => {
+    el.style.display = visible ? 'flex' : 'none';
+  });
 }
 
 // Utility: Require authentication
