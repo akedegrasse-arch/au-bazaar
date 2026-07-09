@@ -802,11 +802,16 @@
         lastDate = msgDate;
       }
       
-      // Skip messages deleted by current user
+      // Skip messages deleted by current user, or deleted for everyone
+      // (kept in Firestore either way - deletedForEveryone only hides it
+      // from the chat UI, it's not an actual data deletion)
       if (msg.deletedBy && msg.deletedBy.includes(currentUser.uid)) {
         return;
       }
-      
+      if (msg.deletedForEveryone) {
+        return;
+      }
+
       const isSent = msg.senderId === currentUser.uid;
       const time = msg.createdAt ? AUBazaar.formatDate(msg.createdAt) : '';
       
@@ -1218,53 +1223,26 @@
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#dc3545'
     });
-    
+
     if (!result.isConfirmed) {
       hideMessageMenu();
       return;
     }
-    
+
     try {
-      await AUBazaar.db.collection('messages').doc(messageId).delete();
+      // Soft-delete: hides the message from both people's chat view, but
+      // keeps the document (and its content) in Firestore rather than
+      // erasing it, so it isn't gone if it's ever relevant to a report.
+      await AUBazaar.db.collection('messages').doc(messageId).update({
+        deletedForEveryone: true,
+        deletedForEveryoneAt: firebase.firestore.FieldValue.serverTimestamp(),
+        deletedForEveryoneBy: currentUser.uid
+      });
       AUBazaar.showToast('Message deleted for everyone', 'success');
     } catch (error) {
       AUBazaar.showToast('Failed to delete message', 'error');
     }
     hideMessageMenu();
-  }
-
-  async function deleteMessage(messageId) {
-    const result = await Swal.fire({
-      title: 'Delete Message?',
-      html: 'Choose delete option:',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete for Everyone',
-      cancelButtonText: 'Delete for Me Only',
-      confirmButtonColor: '#dc3545'
-    });
-    
-    if (!result.isConfirmed && result.dismiss === Swal.DismissReason.cancel) {
-      // Delete for me only - just hide it locally
-      try {
-        await AUBazaar.db.collection('messages').doc(messageId).update({
-          deletedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-        });
-        AUBazaar.showToast('Message hidden for you', 'success');
-      } catch (error) {
-        AUBazaar.showToast('Failed to hide message', 'error');
-      }
-      return;
-    }
-    
-    if (!result.isConfirmed) return;
-    
-    try {
-      await AUBazaar.db.collection('messages').doc(messageId).delete();
-      AUBazaar.showToast('Message deleted for everyone', 'success');
-    } catch (error) {
-      AUBazaar.showToast('Failed to delete message', 'error');
-    }
   }
 
   // Clear all messages - delete all conversations and messages for current user
