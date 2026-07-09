@@ -388,7 +388,17 @@
       </div>
       <div class="form-error hidden" id="category-error"></div>
     </div>
-    
+
+    <!-- Serial Number - electronics only, helps deter stolen device resale -->
+    <div class="form-section hidden" id="serial-section">
+      <div class="form-group">
+        <label class="form-label">Serial Number / IMEI <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="form-control" id="serial-number" placeholder="e.g., IMEI for phones, serial number for laptops/tablets" maxlength="60">
+        <div class="form-hint">Required for electronics - helps buyers verify the item isn't stolen, and helps the real owner recognize a stolen item if it's ever resold here.</div>
+        <div class="form-error hidden" id="serial-number-error"></div>
+      </div>
+    </div>
+
     <!-- Condition -->
     <div class="form-section">
       <div class="form-section-title"><i class="fas fa-star"></i> Condition <span style="color:var(--danger)">*</span></div>
@@ -656,7 +666,12 @@
         const catEl = document.querySelector(`input[value="${listing.category}"]`);
         if (catEl) selectCategory(listing.category, catEl.closest('.category-option'));
       }
-      
+
+      if (listing.category === 'electronics' && listing.serialNumber) {
+        document.getElementById('serial-number').value = listing.serialNumber;
+      }
+
+
       if (listing.condition) {
         const condEl = document.querySelector(`input[name="condition"][value="${listing.condition}"]`);
         if (condEl) selectCondition(listing.condition, condEl.closest('.condition-option'));
@@ -752,6 +767,15 @@
     document.querySelectorAll('.category-option').forEach(opt => opt.classList.remove('selected'));
     el.classList.add('selected');
     document.getElementById('category-error').classList.add('hidden');
+
+    const serialSection = document.getElementById('serial-section');
+    if (category === 'electronics') {
+      serialSection.classList.remove('hidden');
+    } else {
+      serialSection.classList.add('hidden');
+      document.getElementById('serial-number').value = '';
+      document.getElementById('serial-number-error').classList.add('hidden');
+    }
   }
 
   function selectCondition(condition, el) {
@@ -817,7 +841,15 @@
       document.getElementById('condition-error').classList.remove('hidden');
       hasError = true;
     }
-    
+
+    const serialNumber = document.getElementById('serial-number').value.trim();
+    if (selectedCategory === 'electronics' && !serialNumber) {
+      document.getElementById('serial-number-error').textContent = 'Serial number / IMEI is required for electronics';
+      document.getElementById('serial-number-error').classList.remove('hidden');
+      hasError = true;
+    }
+
+
     if (hasError) return;
 
     // New listings count against the monthly free cap; editing an existing
@@ -858,6 +890,7 @@
         price,
         category: selectedCategory,
         condition: selectedCondition,
+        serialNumber: selectedCategory === 'electronics' ? serialNumber : null,
         location: document.getElementById('location').value,
         contactPreference: document.getElementById('contact-preference').value,
         contactPhone: document.getElementById('contact-phone').value || null,

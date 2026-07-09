@@ -271,6 +271,10 @@
                 <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Views</td>
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-views">-</td>
               </tr>
+              <tr id="detail-serial-row" class="hidden">
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Serial Number / IMEI</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-serial">-</td>
+              </tr>
             </table>
           </div>
         </div>
@@ -512,7 +516,12 @@
     document.getElementById('detail-location').textContent = listing.location || 'AU Campus';
     document.getElementById('detail-posted').textContent = AUBazaar.formatDate(listing.createdAt);
     document.getElementById('detail-views').textContent = (listing.views || 0) + ' views';
-    
+
+    if (listing.category === 'electronics' && listing.serialNumber) {
+      document.getElementById('detail-serial-row').classList.remove('hidden');
+      document.getElementById('detail-serial').textContent = listing.serialNumber;
+    }
+
     // Images
     if (listing.images && listing.images.length > 0) {
       const mainImg = document.getElementById('main-image');
