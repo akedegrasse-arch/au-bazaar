@@ -1232,9 +1232,19 @@
         await batch.commit();
       }
       
-      // Delete user document
-      await AUBazaar.db.collection('users').doc(userId).delete();
-      
+      // Soft-delete the user document rather than erasing it: the auth
+      // account is genuinely deleted below (that's what actually blocks
+      // them from logging back in), but the Firestore record is kept,
+      // marked deleted, so admins can still investigate a reported scam
+      // after the account behind it is gone. Public-facing views must
+      // check status === 'deleted' and show a generic placeholder rather
+      // than leaking the underlying data back to other users.
+      await AUBazaar.db.collection('users').doc(userId).update({
+        status: 'deleted',
+        deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        deletedBy: 'self'
+      });
+
       // Delete auth user
       await user.delete();
       

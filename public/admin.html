@@ -311,6 +311,7 @@
             <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="suspended">Suspended</option>
+            <option value="deleted">Deleted</option>
           </select>
         </div>
         <div style="overflow-x:auto">
@@ -618,8 +619,9 @@
       ]);
       
       const activeListings = listingsSnap.docs.filter(d => d.data().status === 'active').length;
-      
-      document.getElementById('admin-total-users').textContent = usersSnap.size;
+      const nonDeletedUsers = usersSnap.docs.filter(d => d.data().status !== 'deleted').length;
+
+      document.getElementById('admin-total-users').textContent = nonDeletedUsers;
       document.getElementById('admin-total-listings').textContent = listingsSnap.size;
       document.getElementById('admin-active-listings').textContent = activeListings;
       document.getElementById('admin-reports').textContent = reportsSnap.size;
@@ -691,18 +693,19 @@
         <td>${user.totalListings || 0}</td>
         <td style="font-size:0.85rem">${user.createdAt ? AUBazaar.formatDate(user.createdAt) : 'N/A'}</td>
         <td>
-          <span class="badge ${user.status === 'suspended' ? 'badge-danger' : 'badge-success'}">
+          <span class="badge ${user.status === 'suspended' ? 'badge-danger' : user.status === 'deleted' ? 'badge-gray' : 'badge-success'}">
             ${user.status || 'active'}
           </span>
+          ${user.status === 'deleted' && user.deletedAt ? `<div style="font-size:0.75rem;color:var(--gray);margin-top:2px">${AUBazaar.formatDate(user.deletedAt)}</div>` : ''}
         </td>
         <td>
           <div style="display:flex;gap:0.3rem">
             <button class="btn btn-sm btn-outline" onclick="viewUserProfile('${user.id}')" title="View">
               <i class="fas fa-eye"></i>
             </button>
-            ${user.role !== 'admin' ? `
-              <button class="btn btn-sm ${user.status === 'suspended' ? 'btn-success' : 'btn-danger'}" 
-                onclick="toggleUserStatus('${user.id}', '${user.status}')" 
+            ${user.status === 'deleted' ? '' : user.role !== 'admin' ? `
+              <button class="btn btn-sm ${user.status === 'suspended' ? 'btn-success' : 'btn-danger'}"
+                onclick="toggleUserStatus('${user.id}', '${user.status}')"
                 title="${user.status === 'suspended' ? 'Activate' : 'Suspend'}">
                 <i class="fas fa-${user.status === 'suspended' ? 'check' : 'ban'}"></i>
               </button>
@@ -831,7 +834,10 @@
 
   function getReporterName(uid) {
     const user = allUsers.find(u => u.id === uid);
-    if (user) return user.fullName || user.email;
+    if (user) {
+      const name = user.fullName || user.email;
+      return user.status === 'deleted' ? `${name} (deleted account)` : name;
+    }
     return uid ? uid.substring(0, 8) + '...' : 'Unknown';
   }
 
@@ -927,14 +933,15 @@
         </div>
       `).join('') || '<p style="color:var(--gray)">No data available</p>';
     
-    // Role stats
+    // Role stats - exclude deleted accounts, they're not part of the live user base
     const roleCounts = {};
-    allUsers.forEach(u => {
+    const liveUsers = allUsers.filter(u => u.status !== 'deleted');
+    liveUsers.forEach(u => {
       roleCounts[u.role || 'student'] = (roleCounts[u.role || 'student'] || 0) + 1;
     });
-    
+
     const roleContainer = document.getElementById('role-stats');
-    const totalUsers = allUsers.length || 1;
+    const totalUsers = liveUsers.length || 1;
     
     roleContainer.innerHTML = Object.entries(roleCounts)
       .sort((a, b) => b[1] - a[1])

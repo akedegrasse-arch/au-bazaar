@@ -532,12 +532,17 @@
             continue;
           }
           
-          // Get other participant info
+          // Get other participant info - deleted accounts are soft-deleted
+          // (the doc still exists, for admin investigation) so check status,
+          // not just existence, before showing their real name/photo.
           const otherId = conv.participants.find(p => p !== currentUser.uid);
           if (otherId) {
             try {
               const userDoc = await AUBazaar.db.collection('users').doc(otherId).get();
-              conv.otherUser = userDoc.exists ? { id: otherId, ...userDoc.data() } : { id: otherId, fullName: 'AU Member' };
+              const otherData = userDoc.exists ? userDoc.data() : null;
+              conv.otherUser = (otherData && otherData.status !== 'deleted')
+                ? { id: otherId, ...otherData }
+                : { id: otherId, fullName: 'Deleted User' };
             } catch (e) {
               conv.otherUser = { id: otherId, fullName: 'AU Member' };
             }
@@ -1266,56 +1271,48 @@
   async function clearAllMessages() {
     const result = await Swal.fire({
       title: 'Clear All Messages?',
-      html: 'This will permanently delete ALL your conversations and messages. This cannot be undone!',
+      html: 'This will hide all your conversations from your list. The other person in each conversation will still see their side.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, Delete All',
+      confirmButtonText: 'Yes, Hide All',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#dc3545'
     });
-    
+
     if (!result.isConfirmed) return;
-    
+
     try {
-      // Show loading
-      AUBazaar.showToast('Deleting all messages...', 'info');
-      
+      AUBazaar.showToast('Clearing your conversation list...', 'info');
+
       // Get all conversations for current user
       const convsSnapshot = await AUBazaar.db.collection('conversations')
         .where('participants', 'array-contains', currentUser.uid)
         .get();
-      
-      // Delete all messages in each conversation
-      for (const convDoc of convsSnapshot.docs) {
-        const convId = convDoc.id;
-        
-        // Get all messages in this conversation
-        const msgsSnapshot = await AUBazaar.db.collection('messages')
-          .where('conversationId', '==', convId)
-          .get();
-        
-        // Delete all messages
-        const deletePromises = msgsSnapshot.docs.map(msgDoc => 
-          msgDoc.ref.delete()
-        );
-        await Promise.all(deletePromises);
-        
-        // Delete the conversation itself
-        await convDoc.ref.delete();
-      }
-      
+
+      // Hide each conversation for the current user only - same per-user
+      // hide already used for a single conversation (deleteCurrentConversation),
+      // so the other participant's copy and message history are untouched
+      // and still exist for the other side / for investigating reports.
+      const batch = AUBazaar.db.batch();
+      convsSnapshot.docs.forEach(convDoc => {
+        batch.update(convDoc.ref, {
+          hiddenBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+        });
+      });
+      await batch.commit();
+
       // Clear local cache
       conversations = [];
       activeConversation = null;
-      
+
       // Refresh the UI
       renderConversations();
-      showNoConversation();
-      
-      AUBazaar.showToast('All messages deleted', 'success');
+      backToList();
+
+      AUBazaar.showToast('All conversations cleared', 'success');
     } catch (error) {
       console.error('Error clearing messages:', error);
-      AUBazaar.showToast('Failed to delete some messages', 'error');
+      AUBazaar.showToast('Failed to clear some conversations', 'error');
     }
   }
 
