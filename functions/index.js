@@ -129,3 +129,97 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
     await db.collection('users').doc(message.receiverId).update(updates).catch(() => {});
   }
 });
+
+// Push a notification to EVERY admin's every enabled device. Used for events
+// that don't live in the `messages` collection (new reports, new contact
+// messages), so they'd otherwise only show up as a badge count in the admin
+// panel with no alert. Reuses the same multi-device token model + dead-token
+// pruning as onNewMessage.
+async function notifyAdmins(title, body, link, tag) {
+  const adminsSnap = await db.collection('users').where('role', '==', 'admin').get();
+
+  // token -> { uid, legacy } so a dead token can be pruned from the right
+  // admin's doc (and from the legacy single-token field if that's the one).
+  const tokenInfo = new Map();
+  adminsSnap.forEach((doc) => {
+    const d = doc.data() || {};
+    if (Array.isArray(d.fcmTokens)) {
+      d.fcmTokens.forEach((t) => { if (t && !tokenInfo.has(t)) tokenInfo.set(t, { uid: doc.id, legacy: false }); });
+    }
+    if (d.fcmToken && !tokenInfo.has(d.fcmToken)) tokenInfo.set(d.fcmToken, { uid: doc.id, legacy: true });
+  });
+
+  const tokens = [...tokenInfo.keys()];
+  if (tokens.length === 0) return; // no admin has push enabled on any device
+
+  let response;
+  try {
+    response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      webpush: {
+        headers: { Urgency: 'high', TTL: '86400' },
+        notification: {
+          icon: 'https://aubazaar-12d35.web.app/favicon.png',
+          badge: 'https://aubazaar-12d35.web.app/favicon.png',
+          tag,
+          renotify: true,
+          requireInteraction: false
+        },
+        fcmOptions: { link }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to notify admins:', error);
+    return;
+  }
+
+  // Prune dead tokens, grouped by the admin doc that owns them.
+  const pruneByUid = {};
+  response.responses.forEach((r, i) => {
+    if (!r.success && r.error && (
+      r.error.code === 'messaging/registration-token-not-registered' ||
+      r.error.code === 'messaging/invalid-registration-token'
+    )) {
+      const info = tokenInfo.get(tokens[i]);
+      const bucket = pruneByUid[info.uid] || (pruneByUid[info.uid] = { arr: [], legacy: false });
+      if (info.legacy) bucket.legacy = true; else bucket.arr.push(tokens[i]);
+    }
+  });
+  await Promise.all(Object.entries(pruneByUid).map(([uid, bucket]) => {
+    const updates = {};
+    if (bucket.arr.length) updates.fcmTokens = admin.firestore.FieldValue.arrayRemove(...bucket.arr);
+    if (bucket.legacy) updates.fcmToken = admin.firestore.FieldValue.delete();
+    return Object.keys(updates).length
+      ? db.collection('users').doc(uid).update(updates).catch(() => {})
+      : null;
+  }));
+}
+
+// New report filed -> alert every admin (reports live in their own
+// collection, so onNewMessage doesn't cover them).
+exports.onNewReport = onDocumentCreated('reports/{reportId}', async (event) => {
+  const report = event.data && event.data.data();
+  if (!report) return;
+  const kind = report.reportType === 'user' ? 'user' : 'listing';
+  const reason = report.reason ? ` (${report.reason})` : '';
+  await notifyAdmins(
+    'New report filed',
+    `A ${kind} was reported${reason}. Tap to review in the admin panel.`,
+    'https://aubazaar-12d35.web.app/admin',
+    'aubazaar-admin-report-' + event.params.reportId
+  );
+});
+
+// New contact-form message -> alert every admin.
+exports.onNewContactMessage = onDocumentCreated('contact_messages/{messageId}', async (event) => {
+  const msg = event.data && event.data.data();
+  if (!msg) return;
+  const subject = msg.subject ? `"${msg.subject}"` : 'a message';
+  await notifyAdmins(
+    'New contact message',
+    `${msg.email || 'Someone'} sent ${subject}. Tap to read it in the admin panel.`,
+    'https://aubazaar-12d35.web.app/admin',
+    'aubazaar-admin-contact-' + event.params.messageId
+  );
+});
