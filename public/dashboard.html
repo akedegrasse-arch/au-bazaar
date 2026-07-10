@@ -963,7 +963,9 @@
 
   async function sendSaleClaimMessage(listingId, listingTitle, buyerId) {
     const sellerUid = currentUser.uid;
-    const conversationId = [sellerUid, buyerId].sort().join('_') + '_sale_' + listingId;
+    // Per-pair conversation so this lands in the same thread the buyer and
+    // seller were already talking in, not a separate "sale" thread.
+    const conversationId = [sellerUid, buyerId].sort().join('_');
     const text = `Marked you as the buyer of "${listingTitle}". If this wasn't you, please dispute it below.`;
 
     await AUBazaar.db.collection('conversations').doc(conversationId).set({

@@ -257,8 +257,8 @@
     }
     .no-conversation-icon { font-size: 4rem; opacity: 0.3; }
     
-    /* Mobile back button */
-    @media (max-width: 1024px) {
+    /* Mobile back button - matches the single-column breakpoint below */
+    @media (max-width: 992px) {
       #back-btn { display: block !important; }
     }
     
@@ -294,7 +294,14 @@
       }
     }
     
-    @media (max-width: 768px) {
+    /* Single-column messaging on phone AND tablet portrait (up to 992px,
+       matching the global mobile breakpoint). Below this the conversation
+       list and the open chat swap in and out; above it they sit side by
+       side. Previously this only covered <=768px, so 769-992px tablets
+       fell into a gap where the global stylesheet hid the conversation
+       list with no way to get it back - you'd land on "Select a
+       conversation" with nothing to select. */
+    @media (max-width: 992px) {
       .messages-layout {
         grid-template-columns: 1fr;
         height: calc(100vh - 70px);
@@ -604,7 +611,29 @@
           
           conversations.push(conv);
         }
-        
+
+        // Collapse any duplicate conversations with the SAME person into one
+        // row (keep the most recently updated doc, sum the unread counts) so
+        // each profile appears once. New messages all use a single per-pair
+        // conversation now, but older data may still have separate per-listing
+        // or per-notice threads with the same person - this keeps the list
+        // clean either way.
+        const byPerson = new Map();
+        for (const conv of conversations) {
+          const key = (conv.otherUser && conv.otherUser.id) || conv.id;
+          const existing = byPerson.get(key);
+          if (!existing) {
+            byPerson.set(key, conv);
+          } else {
+            const t = conv.updatedAt ? (conv.updatedAt.seconds || 0) : 0;
+            const et = existing.updatedAt ? (existing.updatedAt.seconds || 0) : 0;
+            const winner = t >= et ? conv : existing;
+            winner.unreadCount = (existing.unreadCount || 0) + (conv.unreadCount || 0);
+            byPerson.set(key, winner);
+          }
+        }
+        conversations = Array.from(byPerson.values());
+
         // Sort by updatedAt descending in JavaScript
         conversations.sort((a, b) => {
           const aTime = a.updatedAt ? (a.updatedAt.seconds || 0) : 0;
@@ -754,12 +783,14 @@
         console.log('active-chat style:', activeChatEl.style.display);
       }
       
-      // Mobile
-      if (window.innerWidth <= 768) {
+      // Single-column mode (phone + tablet portrait) - swap the list out for
+      // the open chat. Must match the 992px CSS breakpoint above; using 768
+      // here left 769-992px tablets unable to open a conversation.
+      if (window.innerWidth <= 992) {
         const convList = document.getElementById('conversations-list');
         const chatArea = document.getElementById('chat-area');
         const backBtn = document.getElementById('back-btn');
-        
+
         if (convList) convList.classList.add('hidden');
         if (chatArea) chatArea.classList.add('active');
         if (backBtn) backBtn.style.display = 'flex';

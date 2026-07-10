@@ -1471,7 +1471,9 @@
 
   async function notifySellerOfRemoval(sellerId, listingTitle, reason) {
     const adminUid = currentAdmin.uid;
-    const conversationId = [adminUid, sellerId].sort().join('_') + '_removal';
+    // Per-pair so all admin<->user notices share one thread instead of a
+    // separate thread per notice type.
+    const conversationId = [adminUid, sellerId].sort().join('_');
     const text = `Your listing "${listingTitle}" was removed by an admin. Reason: ${reason} If you have questions, you can reply here to reach an admin.`;
 
     await AUBazaar.db.collection('conversations').doc(conversationId).set({
@@ -1610,7 +1612,8 @@
 
   async function notifyReporter(reporterId, resolution, isUserReport) {
     const adminUid = currentAdmin.uid;
-    const conversationId = [adminUid, reporterId].sort().join('_') + '_report';
+    // Per-pair so all admin<->user notices share one thread.
+    const conversationId = [adminUid, reporterId].sort().join('_');
     const text = resolution === 'action-taken'
       ? (isUserReport
           ? "Thanks for your report. We reviewed it and suspended the reported user's account."
@@ -1726,7 +1729,8 @@
   async function replyInApp(senderId) {
     try {
       const adminUid = currentAdmin.uid;
-      const conversationId = [adminUid, senderId].sort().join('_') + '_contact';
+      // Per-pair so all admin<->user notices share one thread.
+      const conversationId = [adminUid, senderId].sort().join('_');
       // No need to check existence first - merge:true is a no-op on fields
       // that are already correct if the conversation already exists, and
       // a fresh .get() here would fail the read rule anyway (it requires

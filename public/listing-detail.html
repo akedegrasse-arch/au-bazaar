@@ -656,9 +656,12 @@
     if (!user) return;
     
     try {
-      // Create or find conversation
-      const conversationId = [user.uid, currentListing.sellerId].sort().join('_') + '_' + listingId;
-      
+      // One conversation per pair of people, not per listing - otherwise
+      // messaging the same seller about two items shows up as two separate
+      // threads for the same person. The listing context stays on each
+      // message (listingId/listingTitle) so it's never lost.
+      const conversationId = [user.uid, currentListing.sellerId].sort().join('_');
+
       await AUBazaar.db.collection('messages').add({
         conversationId,
         senderId: user.uid,
