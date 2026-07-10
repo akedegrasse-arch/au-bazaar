@@ -52,9 +52,19 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
   if (!message || !message.receiverId || !message.senderId) return;
 
   const receiverDoc = await db.collection('users').doc(message.receiverId).get();
-  const receiverData = receiverDoc.data();
-  const fcmToken = receiverData && receiverData.fcmToken;
-  if (!fcmToken) return; // receiver never enabled push notifications
+  const receiverData = receiverDoc.data() || {};
+
+  // A receiver can have push enabled on multiple devices - collect every
+  // registered token so the notification reaches all of them, not just the
+  // most recently enabled one. Also honour the legacy single-token field
+  // so accounts that enabled before this change keep working.
+  const tokenSet = new Set();
+  if (Array.isArray(receiverData.fcmTokens)) {
+    receiverData.fcmTokens.forEach(t => { if (t) tokenSet.add(t); });
+  }
+  if (receiverData.fcmToken) tokenSet.add(receiverData.fcmToken);
+  const tokens = [...tokenSet];
+  if (tokens.length === 0) return; // receiver never enabled push on any device
 
   const senderDoc = await db.collection('users').doc(message.senderId).get();
   const senderName = (senderDoc.data() && senderDoc.data().fullName) || 'Someone';
@@ -63,9 +73,10 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
     ? message.content
     : (message.content && message.content.length > 100 ? message.content.slice(0, 100) + '...' : message.content) || 'Sent you a message';
 
+  let response;
   try {
-    await admin.messaging().send({
-      token: fcmToken,
+    response = await admin.messaging().sendEachForMulticast({
+      tokens,
       notification: {
         title: `New message from ${senderName}`,
         body
@@ -80,12 +91,28 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
       }
     });
   } catch (error) {
-    // Token is stale/invalid (e.g. user cleared site data) - clear it so
-    // we stop trying to send to a dead token every time.
-    if (error.code === 'messaging/registration-token-not-registered') {
-      await db.collection('users').doc(message.receiverId).update({ fcmToken: admin.firestore.FieldValue.delete() });
-    } else {
-      console.error('Failed to send push notification:', error);
+    console.error('Failed to send push notifications:', error);
+    return;
+  }
+
+  // Prune any tokens FCM reports as dead (site data cleared, app removed,
+  // etc.) so we stop trying to reach them on every future message.
+  const deadTokens = [];
+  response.responses.forEach((r, i) => {
+    if (!r.success && r.error && (
+      r.error.code === 'messaging/registration-token-not-registered' ||
+      r.error.code === 'messaging/invalid-registration-token' ||
+      r.error.code === 'messaging/invalid-argument'
+    )) {
+      deadTokens.push(tokens[i]);
     }
+  });
+  if (deadTokens.length > 0) {
+    const updates = { fcmTokens: admin.firestore.FieldValue.arrayRemove(...deadTokens) };
+    // Also drop the legacy single-token field if that's the one that died.
+    if (receiverData.fcmToken && deadTokens.includes(receiverData.fcmToken)) {
+      updates.fcmToken = admin.firestore.FieldValue.delete();
+    }
+    await db.collection('users').doc(message.receiverId).update(updates).catch(() => {});
   }
 });

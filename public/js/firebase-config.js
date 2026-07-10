@@ -669,7 +669,17 @@ window.AUBazaar = {
       }
 
       if (auth.currentUser) {
-        await db.collection('users').doc(auth.currentUser.uid).set({ fcmToken: token }, { merge: true });
+        const userRef = db.collection('users').doc(auth.currentUser.uid);
+        // Store tokens as an array so notifications reach every device the
+        // user has enabled, not just the most recent one. Migrate any legacy
+        // single-token field into the array, then drop it.
+        const snap = await userRef.get();
+        const legacy = snap.exists ? snap.data().fcmToken : null;
+        const toAdd = legacy && legacy !== token ? [legacy, token] : [token];
+        await userRef.set({ fcmTokens: firebase.firestore.FieldValue.arrayUnion(...toAdd) }, { merge: true });
+        if (legacy) {
+          await userRef.update({ fcmToken: firebase.firestore.FieldValue.delete() }).catch(() => {});
+        }
       }
 
       setupForegroundMessageListener(msg);
@@ -683,9 +693,20 @@ window.AUBazaar = {
   },
   disablePushNotifications: async function() {
     if (auth.currentUser) {
-      await db.collection('users').doc(auth.currentUser.uid).update({
-        fcmToken: firebase.firestore.FieldValue.delete()
-      }).catch(() => {});
+      const userRef = db.collection('users').doc(auth.currentUser.uid);
+      // Only remove THIS device's token - disabling on one device shouldn't
+      // turn off notifications on the user's other devices.
+      try {
+        const msg = await getMessagingInstance();
+        const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+          || await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration }).catch(() => null);
+        if (token) {
+          await userRef.update({ fcmTokens: firebase.firestore.FieldValue.arrayRemove(token) }).catch(() => {});
+        }
+      } catch (e) { /* best effort */ }
+      // Clear the legacy single-token field too if present.
+      await userRef.update({ fcmToken: firebase.firestore.FieldValue.delete() }).catch(() => {});
     }
     showToast('Push notifications disabled', 'success');
   },
