@@ -223,3 +223,22 @@ exports.onNewContactMessage = onDocumentCreated('contact_messages/{messageId}', 
     'aubazaar-admin-contact-' + event.params.messageId
   );
 });
+
+// New listing that tripped the keyword filter -> alert every admin, so a
+// suspicious posting doesn't just sit as a badge until someone opens the
+// panel. Fires on creation (a fresh post); the function runs for every new
+// listing but returns immediately unless it was flagged.
+exports.onFlaggedListing = onDocumentCreated('listings/{listingId}', async (event) => {
+  const listing = event.data && event.data.data();
+  if (!listing || !listing.flaggedForReview) return;
+  const terms = (Array.isArray(listing.flaggedTerms) && listing.flaggedTerms.length)
+    ? ` (matched: ${listing.flaggedTerms.join(', ')})`
+    : '';
+  const title = listing.title ? `"${listing.title}"` : 'A listing';
+  await notifyAdmins(
+    'Listing flagged for review',
+    `${title} may violate policy${terms}. Tap to review it in the admin panel.`,
+    'https://aubazaar-12d35.web.app/admin',
+    'aubazaar-admin-flagged-' + event.params.listingId
+  );
+});
