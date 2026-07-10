@@ -21,6 +21,10 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.notification?.body || '',
     icon: '/favicon.png',
     badge: '/favicon.png',
+    // Unique tag + renotify so each message alerts separately instead of the
+    // newest silently replacing the previous one.
+    tag: 'aubazaar-msg-' + Date.now(),
+    renotify: true,
     data: { url: payload.fcmOptions?.link || payload.data?.link || '/messages' }
   };
   self.registration.showNotification(title, options);

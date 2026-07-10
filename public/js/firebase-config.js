@@ -759,7 +759,12 @@ window.AUBazaar = {
         body: body,
         icon: icon,
         badge: '/favicon.png',
-        tag: 'aubazaar-message',
+        // A unique tag per notification (plus renotify) so a second and third
+        // message each alert separately, instead of silently replacing the
+        // previous one - the fixed 'aubazaar-message' tag made it look like
+        // notifications only ever showed once.
+        tag: 'aubazaar-message-' + Date.now(),
+        renotify: true,
         requireInteraction: false,
         silent: false
       });

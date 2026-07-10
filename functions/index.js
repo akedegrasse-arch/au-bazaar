@@ -82,8 +82,18 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
         body
       },
       webpush: {
+        // High urgency + a day-long TTL so the push is delivered promptly
+        // and still arrives if the device was briefly offline.
+        headers: { Urgency: 'high', TTL: '86400' },
         notification: {
-          icon: 'https://aubazaar-12d35.web.app/favicon.png'
+          icon: 'https://aubazaar-12d35.web.app/favicon.png',
+          badge: 'https://aubazaar-12d35.web.app/favicon.png',
+          // Group per sender and renotify so a second/third message from the
+          // same person still alerts, instead of silently replacing the last
+          // one (the cause of "it only showed once").
+          tag: `aubazaar-${message.senderId}`,
+          renotify: true,
+          requireInteraction: false
         },
         fcmOptions: {
           link: 'https://aubazaar-12d35.web.app/messages'
@@ -99,10 +109,13 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
   // etc.) so we stop trying to reach them on every future message.
   const deadTokens = [];
   response.responses.forEach((r, i) => {
+    // Only prune tokens that are genuinely dead. Deliberately NOT pruning on
+    // 'messaging/invalid-argument' - that can be raised for a bad payload
+    // rather than a bad token, and pruning on it would wrongly wipe every
+    // valid token whenever a payload problem occurs.
     if (!r.success && r.error && (
       r.error.code === 'messaging/registration-token-not-registered' ||
-      r.error.code === 'messaging/invalid-registration-token' ||
-      r.error.code === 'messaging/invalid-argument'
+      r.error.code === 'messaging/invalid-registration-token'
     )) {
       deadTokens.push(tokens[i]);
     }
