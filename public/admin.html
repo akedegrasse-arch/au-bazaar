@@ -752,11 +752,17 @@
         <td>
           <div style="display:flex;align-items:center;gap:10px">
             <div class="user-row-avatar">${(user.fullName || 'U').charAt(0).toUpperCase()}</div>
-            <div>
-              <div style="font-weight:600;font-size:0.9rem">${user.fullName || 'Unknown'}</div>
-              <div style="font-size:0.78rem;color:var(--gray)">
-                ${user.studentId ? `ID: ${user.studentId}` : '<span style="color:#c0392b">No ID</span>'}
-                ${user.department ? ` &middot; ${roleDetailLabel(user.role)}: ${user.department}` : ''}
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:0.9rem;line-height:1.3">${user.fullName || 'Unknown'}</div>
+              <div style="margin-top:3px;font-size:0.72rem;line-height:1.55">
+                <div>
+                  ${user.studentId
+                    ? `<span style="color:var(--gray);opacity:.6">ID</span>&nbsp;<span style="color:var(--gray);font-weight:600">${user.studentId}</span>`
+                    : '<span style="color:#c0392b;font-weight:600">⚠ No ID</span>'}
+                </div>
+                ${user.department
+                  ? `<div><span style="color:var(--gray);opacity:.6">${roleDetailLabel(user.role)}</span>&nbsp;<span style="color:var(--gray);font-weight:600">${user.department}</span></div>`
+                  : ''}
               </div>
             </div>
           </div>
