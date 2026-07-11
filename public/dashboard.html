@@ -657,7 +657,7 @@
     }
   }
 
-  function updatePushNotificationUI() {
+  async function updatePushNotificationUI() {
     const container = document.getElementById('push-notification-section');
     if (!container) return;
 
@@ -666,25 +666,42 @@
       return;
     }
 
-    const enabled = AUBazaar.isPushNotificationEnabled();
-    container.innerHTML = `
-      <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">
-        Get a real notification - even with AUBazaar closed - the moment a message arrives.
-      </p>
-      ${enabled
-        ? `<button class="btn btn-outline" onclick="togglePushNotifications(false)"><i class="fas fa-bell-slash"></i> Turn Off</button>`
-        : `<button class="btn btn-primary" onclick="togglePushNotifications(true)"><i class="fas fa-bell"></i> Enable Push Notifications</button>`
-      }
-    `;
+    const blurb = `<p style="color:var(--gray);font-size:0.9rem;margin-bottom:1rem">Get a real notification on this device - even with AUBazaar closed - the moment a message arrives.</p>`;
+
+    // Show a checking state while we confirm the TRUE per-device status
+    // (browser permission alone lies - see getPushStatusForThisDevice).
+    container.innerHTML = blurb + '<p style="color:var(--gray);font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Checking notification status…</p>';
+
+    const status = await AUBazaar.getPushStatusForThisDevice();
+
+    if (status === 'on') {
+      container.innerHTML = blurb + `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:#28a745;font-weight:600"><i class="fas fa-check-circle"></i> Notifications are ON for this device</div>
+        <button class="btn btn-outline" onclick="togglePushNotifications(false)"><i class="fas fa-bell-slash"></i> Turn Off on this device</button>`;
+    } else if (status === 'blocked') {
+      container.innerHTML = blurb + `
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;font-size:0.85rem;color:#856404">
+          <strong>Notifications are blocked for this site in your browser.</strong><br>
+          Tap the lock / settings icon next to the address bar → Site settings → allow <b>Notifications</b>, then reload this page.
+        </div>`;
+    } else if (status === 'unsupported') {
+      container.innerHTML = blurb + `<p style="color:var(--gray);font-size:0.85rem">This browser doesn't support push notifications. On iPhone, add AUBazaar to your Home Screen and open it from there first.</p>`;
+    } else {
+      container.innerHTML = blurb + `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:var(--gray);font-weight:600"><i class="fas fa-bell-slash"></i> OFF on this device</div>
+        <button class="btn btn-primary" onclick="togglePushNotifications(true)"><i class="fas fa-bell"></i> Enable Push Notifications</button>`;
+    }
   }
 
   async function togglePushNotifications(enable) {
+    const container = document.getElementById('push-notification-section');
+    if (container) container.innerHTML = '<p style="color:var(--gray);font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Working…</p>';
     if (enable) {
       await AUBazaar.enablePushNotifications();
     } else {
       await AUBazaar.disablePushNotifications();
     }
-    updatePushNotificationUI();
+    await updatePushNotificationUI();
   }
 
   function updateInstallAppUI() {

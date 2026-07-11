@@ -652,10 +652,18 @@ window.AUBazaar = {
       return false;
     }
 
+    // If the browser has notifications BLOCKED, requestPermission() returns
+    // 'denied' instantly without a prompt - the button then looks broken.
+    // Tell the user exactly how to unblock it instead of a vague error.
+    if (Notification.permission === 'denied') {
+      showToast('Notifications are blocked for this site. Tap the lock/settings icon next to the address bar → Site settings → allow Notifications, then try again.', 'error');
+      return false;
+    }
+
     try {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        showToast('Notification permission denied', 'warning');
+        showToast('You didn\'t allow notifications. Tap Enable again and choose "Allow" when your browser asks.', 'warning');
         return false;
       }
 
@@ -664,7 +672,7 @@ window.AUBazaar = {
       const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
 
       if (!token) {
-        showToast('Could not get a notification token', 'error');
+        showToast('Could not register this device for notifications. Try reloading the page and enabling again.', 'error');
         return false;
       }
 
@@ -683,11 +691,20 @@ window.AUBazaar = {
       }
 
       setupForegroundMessageListener(msg);
-      showToast('Push notifications enabled!', 'success');
+      showToast('Push notifications enabled on this device!', 'success');
       return true;
     } catch (error) {
       console.error('Failed to enable push notifications:', error);
-      showToast('Failed to enable push notifications', 'error');
+      // Give the specific reason where we can, so the button doesn't just
+      // fail silently.
+      const code = error && error.code;
+      if (code === 'messaging/permission-blocked' || code === 'messaging/notifications-blocked') {
+        showToast('Notifications are blocked in your browser settings. Allow them for this site, then try again.', 'error');
+      } else if (code === 'messaging/unsupported-browser') {
+        showToast('This browser doesn\'t support push notifications. On iPhone, add AUBazaar to your Home Screen first, then enable from there.', 'error');
+      } else {
+        showToast('Could not enable notifications on this device. Reload the page and try again - on iPhone, install AUBazaar to your Home Screen first.', 'error');
+      }
       return false;
     }
   },
@@ -712,6 +729,31 @@ window.AUBazaar = {
   },
   isPushNotificationEnabled: function() {
     return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  },
+  // The TRUTHFUL "is push on for this device" check. Browser permission alone
+  // (isPushNotificationEnabled) is sticky and misleading - it stays 'granted'
+  // forever even after you turn notifications off in-app, and it's 'granted'
+  // even if a token was never actually saved. This confirms this device's
+  // current token is really registered in Firestore, i.e. this device will
+  // actually receive notifications. Returns 'on', 'off', or 'blocked'.
+  getPushStatusForThisDevice: async function() {
+    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) return 'unsupported';
+    if (Notification.permission === 'denied') return 'blocked';
+    if (Notification.permission !== 'granted') return 'off';
+    if (!auth.currentUser) return 'off';
+    try {
+      const msg = await getMessagingInstance();
+      const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+        || await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration }).catch(() => null);
+      if (!token) return 'off';
+      const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+      const data = doc.exists ? doc.data() : {};
+      const tokens = Array.isArray(data.fcmTokens) ? data.fcmTokens : [];
+      return (tokens.includes(token) || data.fcmToken === token) ? 'on' : 'off';
+    } catch (e) {
+      return 'off';
+    }
   },
   // Whether the browser is currently offering to install AUBazaar as an
   // app - false if already installed, or if the browser hasn't decided
