@@ -1,5 +1,6 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -241,4 +242,39 @@ exports.onFlaggedListing = onDocumentCreated('listings/{listingId}', async (even
     'https://aubazaar-12d35.web.app/admin',
     'aubazaar-admin-flagged-' + event.params.listingId
   );
+});
+
+// Permanently remove messages that were "deleted for everyone" more than 90
+// days ago. Deleting for everyone only soft-deletes (keeps the doc, hidden
+// from the chat) so it's still available if a dispute/report comes up soon
+// after - this reclaims that data once the dispute window has passed. Normal
+// (non-deleted) messages are never touched.
+const PURGE_AFTER_DAYS = 90;
+async function purgeOldDeletedMessages() {
+  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - PURGE_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  let totalDeleted = 0;
+  // Drain in batches of 500 (Firestore's batch limit), capped so a huge
+  // backlog can't run the function forever - leftovers get the next run.
+  for (let i = 0; i < 20; i++) {
+    const snap = await db.collection('messages')
+      .where('deletedForEveryone', '==', true)
+      .where('deletedForEveryoneAt', '<=', cutoff)
+      .limit(500)
+      .get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    totalDeleted += snap.size;
+    if (snap.size < 500) break;
+  }
+  if (totalDeleted > 0) {
+    console.log(`Purged ${totalDeleted} messages deleted-for-everyone over ${PURGE_AFTER_DAYS} days ago.`);
+  }
+  return totalDeleted;
+}
+
+// Runs daily.
+exports.purgeDeletedMessages = onSchedule('every 24 hours', async () => {
+  await purgeOldDeletedMessages();
 });
