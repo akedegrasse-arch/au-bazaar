@@ -907,7 +907,7 @@
     }
 
     const conditionSection = document.getElementById('condition-section');
-    if (category === 'food') {
+    if (!categoryNeedsCondition(category)) {
       conditionSection.classList.add('hidden');
       selectedCondition = null;
       document.querySelectorAll('.condition-option').forEach(opt => opt.classList.remove('selected'));
@@ -915,6 +915,13 @@
     } else {
       conditionSection.classList.remove('hidden');
     }
+  }
+
+  // Condition (New/Used/etc.) doesn't apply to Food or Services - a plate of
+  // food or a haircut isn't "like new". One place so the hide + the validation
+  // can never disagree.
+  function categoryNeedsCondition(category) {
+    return category !== 'food' && category !== 'services';
   }
 
   function selectCondition(condition, el) {
@@ -978,7 +985,7 @@
       hasError = true;
     }
     
-    if (!selectedCondition && selectedCategory !== 'food') {
+    if (!selectedCondition && categoryNeedsCondition(selectedCategory)) {
       document.getElementById('condition-error').textContent = 'Please select a condition';
       document.getElementById('condition-error').classList.remove('hidden');
       hasError = true;
