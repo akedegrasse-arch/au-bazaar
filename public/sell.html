@@ -599,12 +599,13 @@
     const userData = userDoc.exists ? userDoc.data() : {};
 
     // Admins and active Unlimited subscribers bypass the free cap entirely
-    if (userData.role === 'admin') return { allowed: true, userDoc, userData };
+    // (recentCount null = they're exempt, so no "last free listing" reminder)
+    if (userData.role === 'admin') return { allowed: true, userDoc, userData, recentCount: null };
 
     const unlimitedUntilRaw = userData.unlimitedSellerUntil;
     if (unlimitedUntilRaw) {
       const unlimitedUntil = unlimitedUntilRaw.toDate ? unlimitedUntilRaw.toDate() : new Date(unlimitedUntilRaw);
-      if (unlimitedUntil > new Date()) return { allowed: true, userDoc, userData };
+      if (unlimitedUntil > new Date()) return { allowed: true, userDoc, userData, recentCount: null };
     }
 
     // Count listings this user has posted in the last 30 days - a rolling
@@ -625,11 +626,13 @@
       .limit(FREE_CAP + 1)
       .get();
 
-    if (listingsSnap.size < FREE_CAP) return { allowed: true, userDoc, userData };
+    // recentCount = how many listings they already have this 30-day window,
+    // BEFORE this post - used to decide the "last free listing" reminder.
+    if (listingsSnap.size < FREE_CAP) return { allowed: true, userDoc, userData, recentCount: listingsSnap.size };
 
     // Over the free cap for the last 30 days - let them choose pay-per-listing vs upgrade
     const allowed = await showQuotaPaywall(user);
-    return { allowed, userDoc, userData };
+    return { allowed, userDoc, userData, recentCount: listingsSnap.size };
   }
 
   function showQuotaPaywall(user) {
@@ -997,6 +1000,7 @@
     // New listings count against the monthly free cap; editing an existing
     // listing doesn't (it's not a new post).
     let prefetchedUserDoc = null;
+    let recentCount = null;
     if (!isEditMode) {
       const quotaResult = await checkListingQuota(user);
       if (!quotaResult.allowed) {
@@ -1004,6 +1008,7 @@
         return;
       }
       prefetchedUserDoc = quotaResult.userDoc;
+      recentCount = quotaResult.recentCount;
     }
 
     const btn = document.getElementById('submit-btn');
@@ -1016,7 +1021,7 @@
       // below - so no matter what stalls on a bad connection, the button
       // resets and the user sees an error instead of "Posting..." forever.
       await Promise.race([
-        submitListing(user, title, description, price, serialNumber, prefetchedUserDoc),
+        submitListing(user, title, description, price, serialNumber, prefetchedUserDoc, recentCount),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Posting timed out - check your connection and try again')), 45000))
       ]);
     } catch (error) {
@@ -1029,7 +1034,7 @@
     }
   }
 
-  async function submitListing(user, title, description, price, serialNumber, prefetchedUserDoc) {
+  async function submitListing(user, title, description, price, serialNumber, prefetchedUserDoc, recentCount) {
       // Upload images to Firebase Storage in parallel (if any) - sequential
       // uploads meant a 3-photo listing paid for 3 upload round-trips back
       // to back, which is slow on mobile data. Each upload is still capped
@@ -1119,8 +1124,74 @@
         counterUpdate.catch(err => console.error('Failed to update listing counter:', err));
 
         AUBazaar.showToast('Listing posted successfully!', 'success');
-        setTimeout(() => window.location.href = `/listing/${docRef.id}`, 700);
+
+        // One-time tip after the FIRST post: what to do once it sells. Then,
+        // on the 3rd listing of the rolling window, a heads-up that the free
+        // allowance is now used. Otherwise just go to the new listing.
+        const goToListing = () => { window.location.href = `/listing/${docRef.id}`; };
+        if (!userData.firstSaleTipShown) {
+          AUBazaar.db.collection('users').doc(user.uid).set({ firstSaleTipShown: true }, { merge: true }).catch(() => {});
+          showFirstSaleTip(goToListing);
+        } else if (recentCount === 2) {
+          // recentCount was the count BEFORE this post; 2 -> this is the 3rd.
+          showLastFreeReminder(goToListing);
+        } else {
+          setTimeout(goToListing, 700);
+        }
       }
+  }
+
+  // Shown once, right after a seller's very first post - explains what to do
+  // when the item actually sells (the Mark Sold + buyer-confirm flow).
+  function showFirstSaleTip(onDone) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:16px;max-width:460px;width:100%;padding:28px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
+        <div style="text-align:center;margin-bottom:18px">
+          <i class="fas fa-circle-check" style="font-size:2.5rem;color:#28a745"></i>
+          <h2 style="margin:10px 0 4px 0">Your item is live! 🎉</h2>
+          <p style="color:var(--gray);font-size:0.9rem">Here's what to do when it sells:</p>
+        </div>
+        <div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+            <span style="background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0">1</span>
+            <div>Go to <strong>Dashboard → My Listings</strong> and tap <strong style="color:#28a745">Mark Sold</strong> on the item.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+            <span style="background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0">2</span>
+            <div>Choose <strong>who bought it</strong> from your buyers. They get a message to <strong>confirm it was them</strong>.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0">3</span>
+            <div>Done! The item shows as <strong>Sold</strong> and counts toward your seller stats and rating.</div>
+          </div>
+        </div>
+        <button id="first-sale-tip-btn" style="width:100%;padding:14px;background:var(--primary);color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer">Got it</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#first-sale-tip-btn').addEventListener('click', () => { overlay.remove(); onDone(); });
+  }
+
+  // Shown when the seller posts their 3rd listing in the rolling 30-day
+  // window - a heads-up that the next one needs payment (no surprise paywall).
+  function showLastFreeReminder(onDone) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:16px;max-width:440px;width:100%;padding:28px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
+        <div style="text-align:center;margin-bottom:16px">
+          <i class="fas fa-circle-info" style="font-size:2.5rem;color:#f39c12"></i>
+          <h2 style="margin:10px 0 6px 0">That was your last free listing</h2>
+        </div>
+        <p style="color:#444;font-size:0.92rem;margin-bottom:14px">You've now used all <strong>3 free listings</strong> for this period. Your item is posted fine — this is just a heads-up for next time.</p>
+        <p style="color:#444;font-size:0.92rem;margin-bottom:16px">Your <strong>next</strong> listing will ask for a small payment: <strong>$0.50</strong> for one extra, or <strong>$3/month</strong> for unlimited. Your 3 free listings refresh on a rolling 30-day basis.</p>
+        <button id="last-free-btn" style="width:100%;padding:14px;background:var(--primary);color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer">Got it</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#last-free-btn').addEventListener('click', () => { overlay.remove(); onDone(); });
   }
 
   function saveDraft() {
