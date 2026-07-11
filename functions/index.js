@@ -76,29 +76,23 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
 
   let response;
   try {
+    // DATA-ONLY message (no `notification` payload). With a notification
+    // payload, FCM auto-displays it in the background AND our service
+    // worker's onBackgroundMessage shows one too - two notifications for a
+    // single message. Sending data only means the service worker is the
+    // single place that displays it, so it shows exactly once.
     response = await admin.messaging().sendEachForMulticast({
       tokens,
-      notification: {
+      data: {
         title: `New message from ${senderName}`,
-        body
+        body: String(body || ''),
+        link: 'https://aubazaar-12d35.web.app/messages',
+        tag: `aubazaar-${message.senderId}`
       },
       webpush: {
         // High urgency + a day-long TTL so the push is delivered promptly
         // and still arrives if the device was briefly offline.
-        headers: { Urgency: 'high', TTL: '86400' },
-        notification: {
-          icon: 'https://aubazaar-12d35.web.app/favicon.png',
-          badge: 'https://aubazaar-12d35.web.app/favicon.png',
-          // Group per sender and renotify so a second/third message from the
-          // same person still alerts, instead of silently replacing the last
-          // one (the cause of "it only showed once").
-          tag: `aubazaar-${message.senderId}`,
-          renotify: true,
-          requireInteraction: false
-        },
-        fcmOptions: {
-          link: 'https://aubazaar-12d35.web.app/messages'
-        }
+        headers: { Urgency: 'high', TTL: '86400' }
       }
     });
   } catch (error) {
@@ -155,19 +149,18 @@ async function notifyAdmins(title, body, link, tag) {
 
   let response;
   try {
+    // Data-only (see onNewMessage) so the service worker shows it exactly
+    // once instead of FCM auto-displaying a second copy.
     response = await admin.messaging().sendEachForMulticast({
       tokens,
-      notification: { title, body },
+      data: {
+        title: String(title || 'AUBazaar'),
+        body: String(body || ''),
+        link: String(link || 'https://aubazaar-12d35.web.app/admin'),
+        tag: String(tag || 'aubazaar-admin')
+      },
       webpush: {
-        headers: { Urgency: 'high', TTL: '86400' },
-        notification: {
-          icon: 'https://aubazaar-12d35.web.app/favicon.png',
-          badge: 'https://aubazaar-12d35.web.app/favicon.png',
-          tag,
-          renotify: true,
-          requireInteraction: false
-        },
-        fcmOptions: { link }
+        headers: { Urgency: 'high', TTL: '86400' }
       }
     });
   } catch (error) {

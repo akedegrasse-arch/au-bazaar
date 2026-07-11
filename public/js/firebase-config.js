@@ -97,9 +97,12 @@ function setupForegroundMessageListener(msg) {
   msg.onMessage((payload) => {
     if (window.location.pathname === '/messages') return;
 
-    const title = (payload.notification && payload.notification.title) || 'AUBazaar';
-    const body = (payload.notification && payload.notification.body) || '';
-    const link = (payload.fcmOptions && payload.fcmOptions.link) || '/messages';
+    // Messages are data-only now, so read from payload.data (fall back to
+    // notification for safety).
+    const d = payload.data || {};
+    const title = d.title || (payload.notification && payload.notification.title) || 'AUBazaar';
+    const body = d.body || (payload.notification && payload.notification.body) || '';
+    const link = d.link || (payload.fcmOptions && payload.fcmOptions.link) || '/messages';
 
     const notification = new Notification(title, { body, icon: '/favicon.png' });
     notification.onclick = () => {

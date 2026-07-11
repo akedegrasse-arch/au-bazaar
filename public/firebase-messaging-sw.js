@@ -16,16 +16,20 @@ const messaging = firebase.messaging();
 // piece that makes it work even with the site fully closed, since the
 // service worker runs independently of any open tab.
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || 'AUBazaar';
+  // Messages are sent DATA-ONLY (see the Cloud Function) so this handler is
+  // the single place a notification is shown - no FCM auto-display, so no
+  // duplicate. Everything comes from payload.data.
+  const d = payload.data || {};
+  const title = d.title || 'AUBazaar';
   const options = {
-    body: payload.notification?.body || '',
+    body: d.body || '',
     icon: '/favicon.png',
     badge: '/favicon.png',
-    // Unique tag + renotify so each message alerts separately instead of the
-    // newest silently replacing the previous one.
-    tag: 'aubazaar-msg-' + Date.now(),
+    // Per-sender tag + renotify: repeat messages from the same person
+    // re-alert you without piling up dozens of separate notifications.
+    tag: d.tag || ('aubazaar-msg-' + Date.now()),
     renotify: true,
-    data: { url: payload.fcmOptions?.link || payload.data?.link || '/messages' }
+    data: { url: d.link || '/messages' }
   };
   self.registration.showNotification(title, options);
 });
