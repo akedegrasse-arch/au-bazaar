@@ -368,8 +368,9 @@
                 <div class="form-hint">Your university ID (set at registration)</div>
               </div>
               <div class="form-group">
-                <label class="form-label">Department/Faculty</label>
-                <input type="text" class="form-control" id="profile-department" placeholder="e.g., Computer Science">
+                <label class="form-label" id="profile-department-label">Program of study</label>
+                <input type="text" class="form-control" id="profile-department" placeholder="e.g. BSc Computer Science">
+                <div class="form-hint" id="profile-department-hint">What you're studying at AU</div>
               </div>
               <div class="form-group full-width">
                 <label class="form-label">Bio</label>
@@ -583,6 +584,9 @@
       document.getElementById('profile-studentid').value = userData.studentId || '';
       document.getElementById('profile-department').value = userData.department || '';
       document.getElementById('profile-bio').value = userData.bio || '';
+
+      // Label the role-dependent field to match this user's role.
+      applyRoleDetailLabel(userData.role || 'student');
 
       // Load dashboard data after user data is loaded
       await loadDashboardData();
@@ -1228,6 +1232,24 @@
     }
   }
   
+  // Label the role-dependent profile field to match the user's role, mirroring
+  // registration (Student -> Program of study, Faculty -> Department/Faculty,
+  // Staff -> Role/Department at AU).
+  function applyRoleDetailLabel(role) {
+    const map = {
+      student: { label: 'Program of study', hint: "What you're studying at AU", placeholder: 'e.g. BSc Computer Science' },
+      faculty: { label: 'Department / Faculty', hint: 'The department or faculty you teach in', placeholder: 'e.g. Faculty of Science & Technology' },
+      staff:   { label: 'Role / Department at AU', hint: 'Your role and/or department at AU', placeholder: 'e.g. IT Support, ICT Department' }
+    };
+    const cfg = map[role] || map.student;
+    const labelEl = document.getElementById('profile-department-label');
+    const hintEl = document.getElementById('profile-department-hint');
+    const input = document.getElementById('profile-department');
+    if (labelEl) labelEl.textContent = cfg.label;
+    if (hintEl) hintEl.textContent = cfg.hint;
+    if (input) input.placeholder = cfg.placeholder;
+  }
+
   async function updateProfile(event) {
     event.preventDefault();
     const btn = document.getElementById('save-profile-btn');
@@ -1253,12 +1275,21 @@
         btn.disabled = false;
         return;
       }
-      
+
+      const department = document.getElementById('profile-department').value.trim();
+      if (!department) {
+        const label = document.getElementById('profile-department-label').textContent.trim();
+        AUBazaar.showToast(`Please enter your ${label.toLowerCase()}`, 'error');
+        btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        btn.disabled = false;
+        return;
+      }
+
       const updates = {
         fullName: fullName,
         phone: document.getElementById('profile-phone').value.trim(),
         studentId: studentId,
-        department: document.getElementById('profile-department').value.trim(),
+        department: department,
         bio: document.getElementById('profile-bio').value.trim(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };

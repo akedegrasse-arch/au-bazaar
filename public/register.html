@@ -95,6 +95,13 @@
         </div>
       </div>
 
+      <!-- Role-dependent field: label/placeholder change with the chosen role -->
+      <div class="form-group" id="role-detail-group">
+        <label class="form-label" id="role-detail-label"><i class="fas fa-book-open"></i> Program of study <span style="color:red">*</span></label>
+        <input type="text" class="form-control" id="roleDetail" placeholder="e.g. BSc Computer Science" required>
+        <div class="form-error hidden" id="roleDetail-error"></div>
+      </div>
+
       <div class="form-group" style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:8px;padding:0.9rem 1rem">
         <div style="display:flex;gap:10px;align-items:flex-start">
           <i class="fas fa-triangle-exclamation" style="color:var(--danger);margin-top:2px"></i>
@@ -145,6 +152,23 @@
     if (user && !window.__authFlowInProgress) window.location.href = '/marketplace';
   });
 
+  // The role-dependent field's label + placeholder + icon, keyed by role.
+  const ROLE_DETAIL = {
+    student: { label: 'Program of study', icon: 'fa-book-open', placeholder: 'e.g. BSc Computer Science' },
+    faculty: { label: 'Department / Faculty', icon: 'fa-building-columns', placeholder: 'e.g. Faculty of Science & Technology' },
+    staff:   { label: 'Role / Department at AU', icon: 'fa-briefcase', placeholder: 'e.g. IT Support, ICT Department' }
+  };
+
+  function updateRoleDetailField(role) {
+    const cfg = ROLE_DETAIL[role] || ROLE_DETAIL.student;
+    document.getElementById('role-detail-label').innerHTML =
+      `<i class="fas ${cfg.icon}"></i> ${cfg.label} <span style="color:red">*</span>`;
+    const input = document.getElementById('roleDetail');
+    input.placeholder = cfg.placeholder;
+    input.value = ''; // clear when switching roles so a stale value isn't kept
+    document.getElementById('roleDetail-error').classList.add('hidden');
+  }
+
   function selectRole(role, el) {
     selectedRole = role;
     document.querySelectorAll('.role-option').forEach(opt => {
@@ -155,6 +179,7 @@
     el.classList.add('selected');
     el.style.borderColor = 'var(--primary)';
     el.style.background = '#eaf4fb';
+    updateRoleDetailField(role);
   }
 
   async function handleGoogleRegister(e) {
@@ -163,6 +188,7 @@
 
     const fullName = document.getElementById('fullName').value.trim();
     const studentId = document.getElementById('studentId').value.trim();
+    const roleDetail = document.getElementById('roleDetail').value.trim();
     const terms = document.getElementById('terms').checked;
 
     if (!fullName) {
@@ -171,6 +197,11 @@
     }
     if (!studentId) {
       showFieldError('studentId-error', 'Please enter your Student/Staff ID');
+      return;
+    }
+    if (!roleDetail) {
+      const cfg = ROLE_DETAIL[selectedRole] || ROLE_DETAIL.student;
+      showFieldError('roleDetail-error', `Please enter your ${cfg.label.toLowerCase()}`);
       return;
     }
     if (!terms) {
@@ -206,6 +237,7 @@
         await userRef.set({
           fullName: fullName,
           studentId: studentId,
+          department: roleDetail,
           email: user.email,
           photoURL: user.photoURL,
           role: selectedRole || 'student',

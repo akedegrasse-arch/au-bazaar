@@ -520,6 +520,16 @@
       return;
     }
 
+    // Must have actually completed registration (a profile doc), not just be
+    // authenticated - otherwise someone half-way through auth could reach the
+    // form. Registration is where the role/ID/program get set.
+    const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) {
+      await AUBazaar.auth.signOut().catch(() => {});
+      window.location.href = '/register';
+      return;
+    }
+
     document.getElementById('auth-required').style.display = 'none';
     document.getElementById('sell-form').style.display = 'block';
 
@@ -531,9 +541,9 @@
       loadListingForEdit(editListingId);
     } else {
       // First time posting - show a quick explainer of how the free
-      // cap/pricing works before they start filling out the form.
-      const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
-      const userData = userDoc.exists ? userDoc.data() : {};
+      // cap/pricing works before they start filling out the form. Reuse the
+      // profile doc we already fetched above.
+      const userData = userDoc.data() || {};
       if (!userData.sellIntroShown) {
         showSellIntro(user);
       }

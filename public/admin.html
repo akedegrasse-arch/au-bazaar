@@ -725,6 +725,13 @@
     }
   }
 
+  // Short label for the role-dependent detail field, per role.
+  function roleDetailLabel(role) {
+    if (role === 'faculty') return 'Dept/Faculty';
+    if (role === 'staff') return 'Role/Dept';
+    return 'Program';
+  }
+
   function renderUsersTable(users) {
     const tbody = document.getElementById('users-table-body');
     visibleUserIds = users.map(u => u.id);
@@ -747,7 +754,10 @@
             <div class="user-row-avatar">${(user.fullName || 'U').charAt(0).toUpperCase()}</div>
             <div>
               <div style="font-weight:600;font-size:0.9rem">${user.fullName || 'Unknown'}</div>
-              <div style="font-size:0.8rem;color:var(--gray)">${user.studentId || ''}</div>
+              <div style="font-size:0.78rem;color:var(--gray)">
+                ${user.studentId ? `ID: ${user.studentId}` : '<span style="color:#c0392b">No ID</span>'}
+                ${user.department ? ` &middot; ${roleDetailLabel(user.role)}: ${user.department}` : ''}
+              </div>
             </div>
           </div>
         </td>
