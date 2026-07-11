@@ -109,6 +109,23 @@
     @media (max-width: 600px) {
       .profile-edit-form { grid-template-columns: 1fr; }
     }
+    /* On phones/tablets the listing row would cram the thumbnail, title,
+       status and 4 action buttons onto one line - squeezing the title out
+       entirely. Let it wrap: thumbnail + title + status on top, then the
+       action buttons as a clear labelled 2x2 grid below. */
+    @media (max-width: 768px) {
+      .listing-row { flex-wrap: wrap; row-gap: 0.6rem; }
+      .listing-info { flex: 1 1 0; min-width: 130px; }
+      .listing-info h4 { white-space: normal; }
+      .listing-actions {
+        order: 5;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .listing-actions .btn { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
@@ -774,14 +791,12 @@
         </div>
         <span class="status-badge status-${listing.status}">${listing.status}</span>
         <div class="listing-actions">
-          <a href="/listing/${listing.id}" class="btn btn-sm btn-outline" title="View"><i class="fas fa-eye"></i></a>
-          <a href="/sell?edit=${listing.id}" class="btn btn-sm btn-outline" title="Edit"><i class="fas fa-edit"></i></a>
-          <button class="btn btn-sm btn-danger" onclick="markAsSold('${listing.id}')" title="Mark Sold" ${listing.status === 'sold' ? 'disabled' : ''}>
-            <i class="fas fa-check"></i>
-          </button>
-          <button class="btn btn-sm btn-danger" onclick="deleteListing('${listing.id}')" title="Delete">
-            <i class="fas fa-trash"></i>
-          </button>
+          <a href="/listing/${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
+          <a href="/sell?edit=${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-pen"></i> Edit</a>
+          ${listing.status === 'sold'
+            ? `<button class="btn btn-sm btn-success" disabled><i class="fas fa-check"></i> Sold</button>`
+            : `<button class="btn btn-sm btn-success" onclick="markAsSold('${listing.id}')"><i class="fas fa-check"></i> Mark Sold</button>`}
+          <button class="btn btn-sm btn-danger" onclick="deleteListing('${listing.id}')"><i class="fas fa-trash"></i> Delete</button>
         </div>
       </div>
     `).join('');
