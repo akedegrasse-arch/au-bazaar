@@ -667,7 +667,11 @@ window.AUBazaar = {
         return false;
       }
 
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      // Wait until the service worker is actually ACTIVE before asking for a
+      // token - getToken can fail on first-run/some devices if it's called
+      // while the worker is still installing.
+      const registration = await navigator.serviceWorker.ready;
       const msg = await getMessagingInstance();
       const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
 
@@ -743,8 +747,9 @@ window.AUBazaar = {
     if (!auth.currentUser) return 'off';
     try {
       const msg = await getMessagingInstance();
-      const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
-        || await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await (navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+        || navigator.serviceWorker.register('/firebase-messaging-sw.js'));
+      const registration = await navigator.serviceWorker.ready;
       const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration }).catch(() => null);
       if (!token) return 'off';
       const doc = await db.collection('users').doc(auth.currentUser.uid).get();
