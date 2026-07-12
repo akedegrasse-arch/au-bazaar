@@ -1890,8 +1890,104 @@
     }
   }
 
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function toMillis(v) {
+    if (!v) return 0;
+    if (v.toMillis) return v.toMillis();
+    if (v.seconds) return v.seconds * 1000;
+    return typeof v === 'number' ? v : 0;
+  }
+
+  // Admin user detail popup. Works for ANY account, including deleted ones -
+  // self-deletion is a soft delete that keeps the profile fields, so this
+  // shows the real name/ID/program plus who deleted it and when, which the
+  // public /profile page deliberately hides.
   function viewUserProfile(userId) {
-    window.open(`/profile?id=${userId}`, '_blank');
+    const u = (allUsers || []).find(x => x.id === userId);
+    if (!u) { window.open(`/profile?id=${userId}`, '_blank'); return; }
+
+    const mine = (allListings || []).filter(l => l.sellerId === userId).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+    const active = mine.filter(l => l.status === 'active').length;
+    const sold = mine.filter(l => l.status === 'sold').length;
+    const removed = mine.filter(l => l.status === 'deleted').length;
+    const trashed = (allTrashed || []).filter(l => l.sellerId === userId).length;
+
+    const lbl = 'color:var(--gray);font-size:0.68rem;text-transform:uppercase;letter-spacing:.03em;margin-bottom:1px';
+    const notProvided = '<span style="color:#c0392b">Not provided</span>';
+
+    const statusBadge = u.status === 'suspended'
+      ? '<span class="badge badge-danger">suspended</span>'
+      : u.status === 'deleted'
+        ? '<span class="badge badge-gray">deleted</span>'
+        : '<span class="badge badge-success">active</span>';
+
+    const ratingText = u.ratingCount
+      ? `${(u.rating || 0).toFixed(1)} ★ (${u.ratingCount} review${u.ratingCount === 1 ? '' : 's'})`
+      : 'No reviews yet';
+
+    const whoDeleted = u.deletedBy === 'self' ? 'the user themselves'
+      : u.deletedBy === 'admin' ? 'an admin'
+      : (u.deletedBy || 'unknown');
+    const deletedBlock = u.status === 'deleted'
+      ? `<div style="margin-top:12px;padding:9px 11px;background:#fdecea;border:1px solid #f5c6cb;border-radius:6px;font-size:0.84rem;color:#7a1f1f">
+           <strong>Account deleted</strong>${u.deletedAt ? ' on ' + AUBazaar.formatDate(u.deletedAt) : ''} &middot; by ${escHtml(whoDeleted)}
+         </div>`
+      : '';
+
+    const rows = mine.slice(0, 10).map(l => `
+      <tr>
+        <td style="font-size:0.8rem;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(l.title || 'Untitled')}</td>
+        <td style="font-weight:700;color:var(--primary);font-size:0.8rem;white-space:nowrap">${AUBazaar.formatCurrency(l.price)}</td>
+        <td style="font-size:0.78rem;color:var(--gray);white-space:nowrap">${AUBazaar.formatDate(l.createdAt)}</td>
+        <td><span class="badge ${l.status === 'active' ? 'badge-success' : l.status === 'sold' ? 'badge-primary' : 'badge-danger'}" style="font-size:0.68rem">${l.status}</span></td>
+      </tr>`).join('');
+    const moreRow = mine.length > 10 ? `<tr><td colspan="4" style="text-align:center;color:var(--gray);font-size:0.78rem;padding:6px">+ ${mine.length - 10} more</td></tr>` : '';
+    const listingTable = mine.length
+      ? `<div style="max-height:190px;overflow:auto;border:1px solid var(--gray-light);border-radius:6px"><table class="table" style="margin:0"><tbody>${rows}${moreRow}</tbody></table></div>`
+      : '<div style="color:var(--gray);font-size:0.85rem;padding:6px 0">No listings.</div>';
+
+    const initial = (u.fullName || u.email || 'U').charAt(0).toUpperCase();
+
+    Swal.fire({
+      width: 640,
+      showConfirmButton: true,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#6c757d',
+      html: `
+        <div style="text-align:left">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+            <div class="user-row-avatar" style="width:52px;height:52px;font-size:1.35rem;flex:none">${initial}</div>
+            <div style="min-width:0">
+              <div style="font-weight:700;font-size:1.1rem">${escHtml(u.fullName || 'Unknown')}</div>
+              <div style="margin-top:3px">${statusBadge} <span class="badge badge-primary">${escHtml(u.role || 'student')}</span></div>
+            </div>
+          </div>
+
+          ${deletedBlock}
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-top:14px;font-size:0.88rem">
+            <div><div style="${lbl}">Email</div>${escHtml(u.email || '') || notProvided}</div>
+            <div><div style="${lbl}">Joined</div>${u.createdAt ? AUBazaar.formatDate(u.createdAt) : notProvided}</div>
+            <div><div style="${lbl}">ID number</div>${u.studentId ? escHtml(u.studentId) : notProvided}</div>
+            <div><div style="${lbl}">${escHtml(roleDetailLabel(u.role))}</div>${u.department ? escHtml(u.department) : notProvided}</div>
+            <div><div style="${lbl}">Rating</div>${ratingText}</div>
+            <div><div style="${lbl}">Account ID</div><span style="font-size:0.72rem;color:var(--gray);word-break:break-all">${escHtml(userId)}</span></div>
+          </div>
+
+          <div style="margin-top:18px">
+            <div style="font-weight:600;margin-bottom:6px;font-size:0.92rem">Listings
+              <span style="color:var(--gray);font-weight:400;font-size:0.82rem">(${mine.length} total · ${active} active · ${sold} sold · ${removed} removed${trashed ? ' · ' + trashed + ' in trash' : ''})</span>
+            </div>
+            ${listingTable}
+          </div>
+
+          <div style="margin-top:14px;font-size:0.8rem">
+            <a href="/profile?id=${escHtml(userId)}" target="_blank" rel="noopener">Open public profile ↗</a>
+          </div>
+        </div>`
+    });
   }
 
   function showAdminTab(tabName, linkEl) {
