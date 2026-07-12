@@ -1621,49 +1621,31 @@
     }
   }
 
+  // Admin delete -> moves the listing to Trash (recoverable for 30 days).
+  // A single deletion path: everything an admin deletes lands in the Trash
+  // tab, where it can be restored, and is auto-purged after 30 days.
   async function adminDeleteListing(listingId) {
-    const result = await Swal.fire({
-      title: 'Remove Listing?',
-      text: 'Move it to Trash (recoverable for 30 days), or just hide it from the marketplace:',
-      icon: 'question',
+    const confirmResult = await Swal.fire({
+      title: 'Move to Trash?',
+      text: 'This removes the listing from the marketplace and keeps it in Trash for 30 days, where you can restore it before it is permanently deleted.',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: '🗑️ Move to Trash',
-      cancelButtonText: '👁️ Hide Instead',
-      cancelButtonColor: '#6c757d',
-      confirmButtonColor: '#dc3545',
-      reverseButtons: true
+      confirmButtonText: 'Move to Trash',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
     });
-    
-    if (result.isConfirmed) {
-      // User chose delete permanently
-      await adminPermanentlyDeleteListing(listingId);
-    } else if (result.dismiss === Swal.DismissReason.cancel) {
-      // User chose to hide instead
-      await adminHideListing(listingId);
-    }
-    // If dismissed (clicked outside), do nothing
-  }
-  
-  // Admin hide listing (soft delete)
-  async function adminHideListing(listingId) {
+
+    if (!confirmResult.isConfirmed) return;
+
     try {
-      const listingDoc = await AUBazaar.db.collection('listings').doc(listingId).get();
-      const listingData = listingDoc.data();
-
-      await AUBazaar.db.collection('listings').doc(listingId).update({
-        status: 'deleted',
-        deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        deletedBy: 'admin'
-      });
-
-      if (listingData && listingData.sellerId) {
-        await notifySellerOfRemoval(listingData.sellerId, listingData.title, 'Removed by an admin.');
-      }
-
-      AUBazaar.showToast('Listing hidden and seller notified', 'success');
+      await moveListingsToTrash([listingId], { notifySeller: true });
+      AUBazaar.showToast('Listing moved to Trash and seller notified', 'success');
       await loadAllListings();
+      await loadTrash();
+      await loadStats();
     } catch (error) {
-      AUBazaar.showToast('Failed to hide listing', 'error');
+      AUBazaar.showToast('Failed to move listing to Trash', 'error');
+      console.error(error);
     }
   }
 
@@ -1692,34 +1674,6 @@
     });
   }
   
-  // Admin delete -> moves the listing to Trash (recoverable for 30 days)
-  // rather than hard-deleting. Kept the old function name so existing
-  // callers don't change.
-  async function adminPermanentlyDeleteListing(listingId) {
-    const confirmResult = await Swal.fire({
-      title: 'Move to Trash?',
-      text: 'This removes the listing from the marketplace and keeps it in Trash for 30 days, where you can restore it before it is permanently deleted.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Move to Trash',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#dc3545'
-    });
-
-    if (!confirmResult.isConfirmed) return;
-
-    try {
-      await moveListingsToTrash([listingId], { notifySeller: true });
-      AUBazaar.showToast('Listing moved to Trash and seller notified', 'success');
-      await loadAllListings();
-      await loadTrash();
-      await loadStats();
-    } catch (error) {
-      AUBazaar.showToast('Failed to move listing to Trash', 'error');
-      console.error(error);
-    }
-  }
-
   async function resolveReport(reportId, resolution) {
     const report = allReports.find(r => r.id === reportId);
     if (!report) return;
