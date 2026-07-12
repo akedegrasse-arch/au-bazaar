@@ -791,7 +791,7 @@
         </div>
         <div class="listing-info">
           <h4>${listing.title}</h4>
-          <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.category} • ${listing.views || 0} views • ${AUBazaar.formatDate(listing.createdAt)}</p>
+          <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.category}${(listing.quantity || 1) > 1 ? ` • <strong>${listing.quantity} available</strong>` : ''} • ${listing.views || 0} views • ${AUBazaar.formatDate(listing.createdAt)}</p>
         </div>
         <span class="status-badge status-${listing.status}">${listing.status}</span>
         <div class="listing-actions">
@@ -912,25 +912,65 @@
     const listing = myListings.find(l => l.id === listingId);
     if (!listing) return;
 
+    const available = listing.quantity || 1;
+
+    // For a multi-unit listing, ask how many went to this buyer. A
+    // single-unit listing skips straight to picking the buyer.
+    let soldQty = 1;
+    if (available > 1) {
+      const qtyResult = await Swal.fire({
+        title: 'How many did you sell?',
+        input: 'number',
+        inputLabel: `You have ${available} available`,
+        inputValue: 1,
+        inputAttributes: { min: 1, max: available, step: 1 },
+        showCancelButton: true,
+        confirmButtonText: 'Next: choose buyer',
+        inputValidator: (v) => {
+          const n = parseInt(v, 10);
+          if (isNaN(n) || n < 1) return 'Enter at least 1';
+          if (n > available) return `You only have ${available} available`;
+          return undefined;
+        }
+      });
+      if (!qtyResult.isConfirmed) return;
+      soldQty = parseInt(qtyResult.value, 10);
+    }
+
     const buyer = await pickBuyerModal();
     if (!buyer) return;
 
+    const remaining = available - soldQty;
+
     try {
-      await AUBazaar.db.collection('listings').doc(listingId).update({
-        status: 'sold',
+      const update = {
         soldAt: firebase.firestore.FieldValue.serverTimestamp(),
         soldToUserId: buyer.id,
         soldToName: buyer.fullName || buyer.email
-      });
+      };
+      if (remaining <= 0) {
+        // Last unit(s) gone - the listing is fully sold and leaves the market.
+        update.status = 'sold';
+        update.quantity = 0;
+      } else {
+        // Units remain - the listing stays active with the reduced count.
+        update.quantity = remaining;
+      }
+      await AUBazaar.db.collection('listings').doc(listingId).update(update);
 
-      // Update user stats
+      // Update user stats - count every unit sold, not just the transaction.
       await AUBazaar.db.collection('users').doc(currentUser.uid).set({
-        totalSales: firebase.firestore.FieldValue.increment(1)
+        totalSales: firebase.firestore.FieldValue.increment(soldQty)
       }, { merge: true }).catch(() => {});
 
       await sendSaleClaimMessage(listingId, listing.title, buyer.id);
 
-      AUBazaar.showToast('Item marked as sold!', 'success');
+      AUBazaar.showToast(
+        remaining > 0
+          ? `${soldQty} sold — ${remaining} still available`
+          : 'Item marked as sold!',
+        'success'
+      );
       await loadMyListings();
       updateStats();
     } catch (error) {

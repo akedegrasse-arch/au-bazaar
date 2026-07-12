@@ -271,6 +271,10 @@
                 <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Views</td>
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-views">-</td>
               </tr>
+              <tr id="detail-quantity-row" class="hidden">
+                <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Availability</td>
+                <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-quantity">-</td>
+              </tr>
               <tr id="detail-serial-row" class="hidden">
                 <td style="padding:8px 0;color:var(--gray);font-size:0.9rem;border-top:1px solid var(--gray-light)">Serial Number / IMEI</td>
                 <td style="padding:8px 0;font-weight:600;font-size:0.9rem;border-top:1px solid var(--gray-light)" id="detail-serial">-</td>
@@ -514,6 +518,14 @@
     }
     document.getElementById('detail-posted').textContent = AUBazaar.formatDate(listing.createdAt);
     document.getElementById('detail-views').textContent = (listing.views || 0) + ' views';
+
+    // Availability - only shown for multi-unit listings (a single item
+    // doesn't need "1 available" spelled out).
+    const qty = listing.quantity || 1;
+    if (qty > 1) {
+      document.getElementById('detail-quantity').textContent = qty + ' available';
+      document.getElementById('detail-quantity-row').classList.remove('hidden');
+    }
 
     if (listing.category === 'electronics' && listing.serialNumber) {
       document.getElementById('detail-serial-row').classList.remove('hidden');

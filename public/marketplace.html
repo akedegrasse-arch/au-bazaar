@@ -655,6 +655,7 @@
           <div class="product-card-price">${AUBazaar.formatCurrency(listing.price)}</div>
           <div class="product-card-meta">
             ${AUBazaar.getConditionBadge(listing.condition)}
+            ${(listing.quantity || 1) > 1 ? `<span><i class="fas fa-layer-group"></i> ${listing.quantity} available</span>` : ''}
             <span><i class="fas fa-map-marker-alt"></i> Campus</span>
           </div>
           <div style="font-size:0.8rem;color:var(--gray);margin-top:0.4rem">
