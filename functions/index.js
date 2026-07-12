@@ -271,3 +271,51 @@ async function purgeOldDeletedMessages() {
 exports.purgeDeletedMessages = onSchedule('every 24 hours', async () => {
   await purgeOldDeletedMessages();
 });
+
+// Permanently remove listings that have sat in the admin "Trash"
+// (deleted_listings) for more than 30 days. Admin deletions move a listing
+// there instead of hard-deleting so an accidental bulk delete can be
+// restored; this reclaims anything past the recovery window, including its
+// Storage images (which are kept while a listing is recoverable).
+const LISTING_TRASH_DAYS = 30;
+const STORAGE_BUCKET = 'aubazaar-12d35.firebasestorage.app';
+async function purgeOldTrashedListings() {
+  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - LISTING_TRASH_DAYS * 24 * 60 * 60 * 1000);
+  const bucket = admin.storage().bucket(STORAGE_BUCKET);
+  let totalDeleted = 0;
+  // Bounded loop (same shape as the message purge) so a large backlog can't
+  // run forever - leftovers get picked up on the next daily run.
+  for (let i = 0; i < 20; i++) {
+    const snap = await db.collection('deleted_listings')
+      .where('trashedAt', '<=', cutoff)
+      .limit(200)
+      .get();
+    if (snap.empty) break;
+    for (const doc of snap.docs) {
+      const data = doc.data() || {};
+      if (Array.isArray(data.images)) {
+        for (const url of data.images) {
+          try {
+            const parts = String(url).split('/o/');
+            if (parts[1]) {
+              const path = decodeURIComponent(parts[1].split('?')[0]);
+              await bucket.file(path).delete().catch(() => {});
+            }
+          } catch (e) { /* ignore a malformed image URL */ }
+        }
+      }
+      await doc.ref.delete();
+      totalDeleted++;
+    }
+    if (snap.size < 200) break;
+  }
+  if (totalDeleted > 0) {
+    console.log(`Purged ${totalDeleted} trashed listings older than ${LISTING_TRASH_DAYS} days.`);
+  }
+  return totalDeleted;
+}
+
+// Runs daily.
+exports.purgeDeletedListings = onSchedule('every 24 hours', async () => {
+  await purgeOldTrashedListings();
+});

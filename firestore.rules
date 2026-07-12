@@ -9,6 +9,16 @@ service cloud.firestore {
       allow delete: if request.auth != null;
     }
     
+    // Admin "Trash" for listings. Admin deletions move a listing here
+    // (instead of hard-deleting) so an accidental bulk delete can be
+    // restored within 30 days. Only admins may read it, put things in it,
+    // or remove them - regular users must never see or touch trashed
+    // listings. A scheduled Cloud Function purges entries past 30 days.
+    match /deleted_listings/{listingId} {
+      allow read, create, delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // User profiles are publicly readable, but writes were previously wide
     // open to ANY authenticated user on ANY user's document - meaning
     // anyone could self-grant themselves role:'admin', or edit someone
