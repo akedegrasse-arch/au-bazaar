@@ -1011,6 +1011,40 @@
       };
       
       if (isEditMode && editListingId) {
+        // Record WHAT changed so a listing can't quietly morph (bait-and-
+        // switch) without a trace. We diff against the existing doc and, if
+        // anything meaningful changed, bump an edit counter + append a
+        // compact history entry (field names, plus from/to for price and
+        // quantity - the abuse-relevant fields). History is capped so the
+        // doc can't grow without bound.
+        const oldSnap = await AUBazaar.db.collection('listings').doc(editListingId).get();
+        const old = oldSnap.exists ? oldSnap.data() : {};
+        const changed = [];
+        const entry = { at: Date.now() };
+        if ((old.title || '') !== listingData.title) changed.push('title');
+        if ((old.description || '') !== listingData.description) changed.push('description');
+        if ((old.price ?? null) !== listingData.price) {
+          changed.push('price');
+          entry.priceFrom = old.price ?? null;
+          entry.priceTo = listingData.price;
+        }
+        if ((old.category || '') !== listingData.category) changed.push('category');
+        if ((old.condition || null) !== listingData.condition) changed.push('condition');
+        if ((old.quantity || 1) !== listingData.quantity) {
+          changed.push('quantity');
+          entry.quantityFrom = old.quantity || 1;
+          entry.quantityTo = listingData.quantity;
+        }
+        if ((old.images || []).join('|') !== (listingData.images || []).join('|')) changed.push('images');
+
+        if (changed.length > 0) {
+          entry.changed = changed;
+          const prevHistory = Array.isArray(old.editHistory) ? old.editHistory : [];
+          listingData.editHistory = [...prevHistory.slice(-29), entry]; // keep last 30
+          listingData.editCount = (old.editCount || 0) + 1;
+          listingData.lastEditedAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+
         await AUBazaar.db.collection('listings').doc(editListingId).update(listingData);
         AUBazaar.showToast('Listing updated successfully!', 'success');
         setTimeout(() => window.location.href = `/listing/${editListingId}`, 700);

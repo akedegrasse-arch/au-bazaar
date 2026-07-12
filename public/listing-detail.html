@@ -504,6 +504,7 @@
       <div class="listing-meta-item">
         <i class="fas fa-clock"></i> ${AUBazaar.formatDate(listing.createdAt)}
       </div>
+      ${listing.editCount ? `<div class="listing-meta-item" title="This listing was changed after it was first posted"><i class="fas fa-pen"></i> Edited ${AUBazaar.formatDate(listing.lastEditedAt || listing.updatedAt)}</div>` : ''}
     `;
     
     // Description
