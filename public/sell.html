@@ -400,7 +400,23 @@
       <div class="form-error hidden" id="category-error"></div>
     </div>
 
-    <!-- Serial Number - electronics only, helps deter stolen device resale -->
+    <!-- Type of device - electronics only. Drives whether a serial/IMEI is
+         required (phones/laptops/tablets) or not (earphones, chargers, etc.) -->
+    <div class="form-section hidden" id="device-type-section">
+      <div class="form-section-title"><i class="fas fa-mobile-alt"></i> Type of device <span style="color:var(--danger)">*</span></div>
+      <div id="device-type-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.6rem">
+        <label class="condition-option" onclick="selectDeviceType('phone', this)"><input type="radio" name="deviceType" value="phone"> 📱 Phone</label>
+        <label class="condition-option" onclick="selectDeviceType('laptop', this)"><input type="radio" name="deviceType" value="laptop"> 💻 Laptop</label>
+        <label class="condition-option" onclick="selectDeviceType('tablet', this)"><input type="radio" name="deviceType" value="tablet"> 📲 Tablet</label>
+        <label class="condition-option" onclick="selectDeviceType('audio', this)"><input type="radio" name="deviceType" value="audio"> 🎧 Audio</label>
+        <label class="condition-option" onclick="selectDeviceType('accessory', this)"><input type="radio" name="deviceType" value="accessory"> 🔌 Accessory</label>
+        <label class="condition-option" onclick="selectDeviceType('other', this)"><input type="radio" name="deviceType" value="other"> 📦 Other</label>
+      </div>
+      <div class="form-hint">Phones, laptops and tablets ask for a serial/IMEI. Audio (earphones, headphones), accessories and other small electronics don't.</div>
+      <div class="form-error hidden" id="device-type-error"></div>
+    </div>
+
+    <!-- Serial Number - high-value trackable devices only, helps deter stolen device resale -->
     <div class="form-section hidden" id="serial-section">
       <div class="form-group">
         <label class="form-label">Serial Number / IMEI <span style="color:var(--danger)">*</span></label>
@@ -485,6 +501,29 @@
   let existingImageUrls = [];
   let selectedCategory = '';
   let selectedCondition = '';
+  let selectedDeviceType = null;
+
+  // Only high-value, trackable devices ask for a serial/IMEI. Earphones,
+  // chargers and the like don't have (or need) one.
+  function deviceTypeNeedsSerial(type) {
+    return type === 'phone' || type === 'laptop' || type === 'tablet';
+  }
+
+  function selectDeviceType(type, el) {
+    selectedDeviceType = type;
+    document.querySelectorAll('#device-type-grid .condition-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('device-type-error').classList.add('hidden');
+
+    const serialSection = document.getElementById('serial-section');
+    if (deviceTypeNeedsSerial(type)) {
+      serialSection.classList.remove('hidden');
+    } else {
+      serialSection.classList.add('hidden');
+      document.getElementById('serial-number').value = '';
+      document.getElementById('serial-number-error').classList.add('hidden');
+    }
+  }
   let isEditMode = false;
   // Guards against a double-click/double-tap firing handleSubmit twice
   // before the button visually disables - without this, two near-
@@ -618,6 +657,10 @@
         if (catEl) selectCategory(listing.category, catEl.closest('.category-option'));
       }
 
+      if (listing.category === 'electronics' && listing.deviceType) {
+        const dtEl = document.querySelector(`#device-type-grid input[value="${listing.deviceType}"]`);
+        if (dtEl) selectDeviceType(listing.deviceType, dtEl.closest('.condition-option'));
+      }
       if (listing.category === 'electronics' && listing.serialNumber) {
         document.getElementById('serial-number').value = listing.serialNumber;
       }
@@ -800,11 +843,20 @@
     el.classList.add('selected');
     document.getElementById('category-error').classList.add('hidden');
 
+    // Electronics: ask for the device type first; that decides whether a
+    // serial/IMEI is required. Non-electronics: hide both.
+    const deviceTypeSection = document.getElementById('device-type-section');
     const serialSection = document.getElementById('serial-section');
     if (category === 'electronics') {
-      serialSection.classList.remove('hidden');
-    } else {
+      deviceTypeSection.classList.remove('hidden');
+      // serial stays hidden until a device type that needs one is picked
       serialSection.classList.add('hidden');
+    } else {
+      deviceTypeSection.classList.add('hidden');
+      serialSection.classList.add('hidden');
+      selectedDeviceType = null;
+      document.querySelectorAll('#device-type-grid .condition-option').forEach(o => o.classList.remove('selected'));
+      document.getElementById('device-type-error').classList.add('hidden');
       document.getElementById('serial-number').value = '';
       document.getElementById('serial-number-error').classList.add('hidden');
     }
@@ -901,9 +953,15 @@
       hasError = true;
     }
 
+    if (selectedCategory === 'electronics' && !selectedDeviceType) {
+      document.getElementById('device-type-error').textContent = 'Please choose the type of device';
+      document.getElementById('device-type-error').classList.remove('hidden');
+      hasError = true;
+    }
+
     const serialNumber = document.getElementById('serial-number').value.trim();
-    if (selectedCategory === 'electronics' && !serialNumber) {
-      document.getElementById('serial-number-error').textContent = 'Serial number / IMEI is required for electronics';
+    if (selectedCategory === 'electronics' && deviceTypeNeedsSerial(selectedDeviceType) && !serialNumber) {
+      document.getElementById('serial-number-error').textContent = 'Serial number / IMEI is required for phones, laptops and tablets';
       document.getElementById('serial-number-error').classList.remove('hidden');
       hasError = true;
     }
@@ -995,7 +1053,8 @@
         quantity: Math.max(1, parseInt(document.getElementById('quantity').value, 10) || 1),
         category: selectedCategory,
         condition: selectedCondition,
-        serialNumber: selectedCategory === 'electronics' ? serialNumber : null,
+        deviceType: selectedCategory === 'electronics' ? selectedDeviceType : null,
+        serialNumber: (selectedCategory === 'electronics' && deviceTypeNeedsSerial(selectedDeviceType)) ? serialNumber : null,
         flaggedForReview: flaggedTerms.length > 0,
         flaggedTerms: flaggedTerms,
         contactPreference: document.getElementById('contact-preference').value,

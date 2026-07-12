@@ -511,7 +511,9 @@
     document.getElementById('listing-description-text').textContent = listing.description || 'No description provided.';
     
     // Details
-    document.getElementById('detail-category').textContent = listing.category;
+    document.getElementById('detail-category').textContent = listing.deviceType
+      ? `${listing.category} · ${listing.deviceType}`
+      : listing.category;
     if (listing.condition) {
       document.getElementById('detail-condition').innerHTML = AUBazaar.getConditionBadge(listing.condition);
     } else {
