@@ -15,8 +15,17 @@ service cloud.firestore {
     // or remove them - regular users must never see or touch trashed
     // listings. A scheduled Cloud Function purges entries past 30 days.
     match /deleted_listings/{listingId} {
-      allow read, create, delete: if request.auth != null &&
+      // Admins own the Trash: only they can read it, restore from it, or
+      // permanently delete out of it.
+      allow read, delete: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // A seller's own "Delete Permanently" also routes their listing here
+      // (so admins keep oversight), so allow create either by an admin or by
+      // the listing's own seller - but never for someone else's listing.
+      allow create: if request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        request.resource.data.sellerId == request.auth.uid
+      );
     }
 
     // User profiles are publicly readable, but writes were previously wide

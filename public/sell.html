@@ -593,111 +593,10 @@
     });
   }
 
-  // Returns { allowed, userDoc, userData } - the caller reuses userDoc so
-  // submitListing() doesn't have to fetch the same document a second time
-  // right after this one, which was adding a fully redundant round-trip to
-  // every single new-listing post.
-  async function checkListingQuota(user) {
-    const userDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
-    const userData = userDoc.exists ? userDoc.data() : {};
-
-    // Admins and active Unlimited subscribers bypass the free cap entirely
-    // (recentCount null = they're exempt, so no "last free listing" reminder)
-    if (userData.role === 'admin') return { allowed: true, userDoc, userData, recentCount: null };
-
-    const unlimitedUntilRaw = userData.unlimitedSellerUntil;
-    if (unlimitedUntilRaw) {
-      const unlimitedUntil = unlimitedUntilRaw.toDate ? unlimitedUntilRaw.toDate() : new Date(unlimitedUntilRaw);
-      if (unlimitedUntil > new Date()) return { allowed: true, userDoc, userData, recentCount: null };
-    }
-
-    // Count listings this user has posted in the last 30 days - a rolling
-    // window rather than "since the 1st of this calendar month" so someone
-    // can't post 3 on the last day of the month and 3 more the next day.
-    // Only need to know whether they're AT the cap, not the exact total, so
-    // this is bounded to FREE_CAP+1 docs with a server-side date filter
-    // instead of downloading a seller's entire listing history on every
-    // single post just to count how many were recent.
-    const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 30);
-
-    const FREE_CAP = 3;
-    const listingsSnap = await AUBazaar.db.collection('listings')
-      .where('sellerId', '==', user.uid)
-      .where('createdAt', '>=', windowStart)
-      .orderBy('createdAt', 'desc')
-      .limit(FREE_CAP + 1)
-      .get();
-
-    // recentCount = how many listings they already have this 30-day window,
-    // BEFORE this post - used to decide the "last free listing" reminder.
-    if (listingsSnap.size < FREE_CAP) return { allowed: true, userDoc, userData, recentCount: listingsSnap.size };
-
-    // Over the free cap for the last 30 days - let them choose pay-per-listing vs upgrade
-    const allowed = await showQuotaPaywall(user);
-    return { allowed, userDoc, userData, recentCount: listingsSnap.size };
-  }
-
-  function showQuotaPaywall(user) {
-    return new Promise((resolve) => {
-      const overlay = document.createElement('div');
-      overlay.id = 'quota-paywall-overlay';
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-      overlay.innerHTML = `
-        <div style="background:white;border-radius:16px;max-width:440px;width:100%;padding:28px;box-shadow:0 25px 80px rgba(0,0,0,0.4)">
-          <div style="text-align:center;margin-bottom:20px">
-            <i class="fas fa-store" style="font-size:2.5rem;color:var(--primary)"></i>
-            <h2 style="margin:10px 0 6px 0">You've used your 3 free listings for the last 30 days</h2>
-            <p style="color:var(--gray);font-size:0.9rem">Choose how you'd like to continue:</p>
-          </div>
-          <button id="quota-pay-once-btn" style="width:100%;padding:16px;margin-bottom:12px;border:2px solid var(--primary);background:white;color:var(--primary);border-radius:12px;font-weight:600;cursor:pointer;text-align:left">
-            <div style="font-size:1.1rem">Pay $0.50</div>
-            <div style="font-size:0.82rem;font-weight:400;color:var(--gray)">Just for this one extra listing</div>
-          </button>
-          <button id="quota-unlimited-btn" style="width:100%;padding:16px;margin-bottom:12px;border:none;background:var(--primary);color:white;border-radius:12px;font-weight:600;cursor:pointer;text-align:left">
-            <div style="font-size:1.1rem">Upgrade to Unlimited - $3/month</div>
-            <div style="font-size:0.82rem;font-weight:400;opacity:0.9">Post as many listings as you want this month</div>
-          </button>
-          <button id="quota-cancel-btn" style="width:100%;padding:12px;background:none;border:none;color:var(--gray);cursor:pointer">Cancel</button>
-        </div>
-      `;
-      document.body.appendChild(overlay);
-
-      const cleanup = () => overlay.remove();
-
-      overlay.querySelector('#quota-cancel-btn').addEventListener('click', () => { cleanup(); resolve(false); });
-
-      overlay.querySelector('#quota-pay-once-btn').addEventListener('click', () => {
-        cleanup();
-        AUBazaar.showPaymentModal({
-          amount: 0.50,
-          description: 'One extra listing',
-          onSuccess: () => {
-            AUBazaar.showToast('Payment successful - posting your listing', 'success');
-            resolve(true);
-          }
-        });
-      });
-
-      overlay.querySelector('#quota-unlimited-btn').addEventListener('click', () => {
-        cleanup();
-        AUBazaar.showPaymentModal({
-          amount: 3.00,
-          description: 'Unlimited listings this month',
-          onSuccess: async (txnId) => {
-            const untilDate = new Date();
-            untilDate.setMonth(untilDate.getMonth() + 1);
-            await AUBazaar.db.collection('users').doc(user.uid).set({
-              unlimitedSellerUntil: untilDate,
-              unlimitedSellerPaymentRef: txnId
-            }, { merge: true });
-            AUBazaar.showToast('Unlimited plan activated - posting your listing', 'success');
-            resolve(true);
-          }
-        });
-      });
-    });
-  }
+  // The free-cap quota check + pay/upgrade paywall now live in
+  // firebase-config.js (AUBazaar.checkListingQuota / AUBazaar.showQuotaPaywall)
+  // so the dashboard's "restore a hidden listing" flow enforces the exact
+  // same 3-per-30-days rule instead of a drifting copy.
 
   async function loadListingForEdit(id) {
     try {
@@ -1020,7 +919,7 @@
     let prefetchedUserDoc = null;
     let recentCount = null;
     if (!isEditMode) {
-      const quotaResult = await checkListingQuota(user);
+      const quotaResult = await AUBazaar.checkListingQuota(user);
       if (!quotaResult.allowed) {
         isSubmitting = false;
         return;

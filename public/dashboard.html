@@ -793,14 +793,20 @@
           <h4>${listing.title}</h4>
           <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.category}${(listing.quantity || 1) > 1 ? ` • <strong>${listing.quantity} available</strong>` : ''} • ${listing.views || 0} views • ${AUBazaar.formatDate(listing.createdAt)}</p>
         </div>
-        <span class="status-badge status-${listing.status}">${listing.status}</span>
+        <span class="status-badge status-${listing.status}">${listing.status === 'deleted' ? 'hidden' : listing.status}</span>
         <div class="listing-actions">
-          <a href="/listing/${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
-          <a href="/sell?edit=${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-pen"></i> Edit</a>
-          ${listing.status === 'sold'
-            ? `<button class="btn btn-sm btn-success" disabled><i class="fas fa-check"></i> Sold</button>`
-            : `<button class="btn btn-sm btn-success" onclick="markAsSold('${listing.id}')"><i class="fas fa-check"></i> Mark Sold</button>`}
-          <button class="btn btn-sm btn-danger" onclick="deleteListing('${listing.id}')"><i class="fas fa-trash"></i> Delete</button>
+          ${listing.status === 'deleted' ? `
+            <a href="/listing/${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
+            <button class="btn btn-sm btn-success" onclick="restoreListing('${listing.id}')"><i class="fas fa-undo"></i> Restore</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteListing('${listing.id}')"><i class="fas fa-trash"></i> Delete</button>
+          ` : `
+            <a href="/listing/${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
+            <a href="/sell?edit=${listing.id}" class="btn btn-sm btn-outline"><i class="fas fa-pen"></i> Edit</a>
+            ${listing.status === 'sold'
+              ? `<button class="btn btn-sm btn-success" disabled><i class="fas fa-check"></i> Sold</button>`
+              : `<button class="btn btn-sm btn-success" onclick="markAsSold('${listing.id}')"><i class="fas fa-check"></i> Mark Sold</button>`}
+            <button class="btn btn-sm btn-danger" onclick="deleteListing('${listing.id}')"><i class="fas fa-trash"></i> Delete</button>
+          `}
         </div>
       </div>
     `).join('');
@@ -1087,6 +1093,33 @@
     }
   }
   
+  // Restore a hidden listing back to the marketplace. Restoring re-lists the
+  // item, so it goes through the SAME free-listing quota + paywall as a brand
+  // new post - a hidden listing can't be used to keep selling for free past
+  // the 3-per-30-days cap. On success the createdAt is reset to now so the
+  // restored listing counts as a fresh listing in the rolling window.
+  async function restoreListing(listingId) {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+
+    const quota = await AUBazaar.checkListingQuota(user, { excludeListingId: listingId });
+    if (!quota.allowed) return; // over the free cap and didn't pay/upgrade
+
+    try {
+      await AUBazaar.db.collection('listings').doc(listingId).update({
+        status: 'active',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        deletedAt: firebase.firestore.FieldValue.delete()
+      });
+      AUBazaar.showToast('Listing restored to the marketplace', 'success');
+      await loadMyListings();
+      updateStats();
+    } catch (error) {
+      console.error('Error restoring listing:', error);
+      AUBazaar.showToast('Failed to restore listing', 'error');
+    }
+  }
+
   // Hide listing (soft delete)
   async function hideListing(listingId) {
     try {
@@ -1121,59 +1154,54 @@
     }
   }
   
-  // Delete permanently
+  // "Delete Permanently" from the seller's side. Rather than hard-erasing
+  // the listing (which left admins with no record of what a seller removed),
+  // it MOVES the listing into the admin Trash (deleted_listings), keeping the
+  // doc and its images. To the seller it's gone from their listings and the
+  // marketplace; admins can still see it, restore it, or let it auto-purge
+  // after 30 days.
   async function permanentlyDeleteListing(listingId) {
     const confirmResult = await Swal.fire({
       title: 'Delete Permanently?',
-      text: 'This action cannot be undone!',
+      text: 'This removes the listing from your account and the marketplace.',
       icon: 'error',
       showCancelButton: true,
-      confirmButtonText: 'Yes, delete permanently',
+      confirmButtonText: 'Yes, delete',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#dc3545'
     });
-    
+
     if (!confirmResult.isConfirmed) return;
-    
+
     try {
-      // Get listing first to verify ownership and delete images from storage
       const listingDoc = await AUBazaar.db.collection('listings').doc(listingId).get();
-      
+
       if (!listingDoc.exists) {
         AUBazaar.showToast('Listing not found', 'warning');
         await loadMyListings();
         return;
       }
-      
+
       const listingData = listingDoc.data();
-      const currentUser = firebase.auth().currentUser;
-      
-      // Verify ownership (allow owner or admin to delete)
-      if (listingData.sellerId !== currentUser.uid && listingData.role !== 'admin') {
+      const user = firebase.auth().currentUser;
+
+      // Verify ownership (only the seller removes their own listing here)
+      if (listingData.sellerId !== user.uid) {
         AUBazaar.showToast('You can only delete your own listings', 'error');
         return;
       }
-      
-      // Delete images from Storage if they exist
-      if (listingData && listingData.images && listingData.images.length > 0) {
-        for (const imageUrl of listingData.images) {
-          try {
-            // Extract path from URL
-            const urlParts = imageUrl.split('/o/');
-            if (urlParts[1]) {
-              const path = decodeURIComponent(urlParts[1].split('?')[0]);
-              await AUBazaar.storage.ref(path).delete();
-            }
-          } catch (imgError) {
-            console.log('Could not delete image:', imgError.message);
-          }
-        }
-      }
-      
-      // Delete the listing document permanently
+
+      // Move to the admin Trash instead of hard-deleting (images kept).
+      await AUBazaar.db.collection('deleted_listings').doc(listingId).set({
+        ...listingData,
+        trashedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        trashedBy: user.uid,
+        trashedByEmail: user.email || '',
+        trashedBySeller: true
+      });
       await AUBazaar.db.collection('listings').doc(listingId).delete();
-      
-      AUBazaar.showToast('Listing permanently deleted', 'success');
+
+      AUBazaar.showToast('Listing deleted', 'success');
       await loadMyListings();
       updateStats();
     } catch (error) {
