@@ -675,7 +675,10 @@
     const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const rows = alerts.length ? alerts.map(a => `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #eee">
-        <div style="min-width:0;word-break:break-word"><i class="fas fa-bell" style="color:var(--primary)"></i> <strong>${esc(a.keyword)}</strong></div>
+        <div style="min-width:0;word-break:break-word">
+          <i class="fas fa-bell" style="color:var(--primary)"></i> <strong>${esc(a.keyword)}</strong>
+          ${a.lastMatchListingId ? `<div style="font-size:0.78rem;margin-top:3px"><a href="/listing/${a.lastMatchListingId}" style="color:#28a745"><i class="fas fa-check-circle"></i> Matched: ${esc(a.lastMatchTitle || 'view item')}</a></div>` : ''}
+        </div>
         <button class="btn btn-sm btn-outline" style="white-space:nowrap" onclick="removeAlert('${a.id}')"><i class="fas fa-trash"></i> Remove</button>
       </div>`).join('') : '<p style="color:var(--gray);padding:10px 0">You have no alerts yet. Search for something — if it isn\'t here, you can ask to be notified when it\'s posted.</p>';
 

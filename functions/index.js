@@ -70,11 +70,7 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
   const senderDoc = await db.collection('users').doc(message.senderId).get();
   const senderName = (senderDoc.data() && senderDoc.data().fullName) || 'Someone';
 
-  // A "wishlist_alert" is a system-generated notice that an item the receiver
-  // asked to be alerted about was just posted - it links to the LISTING and
-  // gets its own title, rather than reading as a normal chat message.
-  const isWishlist = message.type === 'wishlist_alert';
-  const body = (message.type === 'sale_claim' || isWishlist)
+  const body = message.type === 'sale_claim'
     ? message.content
     : (message.content && message.content.length > 100 ? message.content.slice(0, 100) + '...' : message.content) || 'Sent you a message';
 
@@ -88,12 +84,10 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
     response = await admin.messaging().sendEachForMulticast({
       tokens,
       data: {
-        title: isWishlist ? '🔔 An item you wanted was just posted' : `New message from ${senderName}`,
+        title: `New message from ${senderName}`,
         body: String(body || ''),
-        link: (isWishlist && message.listingId)
-          ? `https://aubazaar-12d35.web.app/listing/${message.listingId}`
-          : 'https://aubazaar-12d35.web.app/messages',
-        tag: isWishlist ? `aubazaar-wishlist-${message.listingId}` : `aubazaar-${message.senderId}`
+        link: 'https://aubazaar-12d35.web.app/messages',
+        tag: `aubazaar-${message.senderId}`
       },
       webpush: {
         // High urgency + a day-long TTL so the push is delivered promptly
@@ -196,6 +190,50 @@ async function notifyAdmins(title, body, link, tag) {
   }));
 }
 
+// Push a data-only notification to one specific user's every enabled device.
+// Used for system notices that aren't chat messages (e.g. a wishlist match),
+// so nothing has to be written into the messages collection. Same multi-device
+// token model + dead-token pruning as notifyAdmins.
+async function notifyUser(userId, { title, body, link, tag }) {
+  const userDoc = await db.collection('users').doc(userId).get();
+  const d = userDoc.data() || {};
+  const tokenSet = new Set();
+  if (Array.isArray(d.fcmTokens)) d.fcmTokens.forEach((t) => { if (t) tokenSet.add(t); });
+  if (d.fcmToken) tokenSet.add(d.fcmToken);
+  const tokens = [...tokenSet];
+  if (tokens.length === 0) return; // user has push off on every device
+
+  let response;
+  try {
+    response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      data: {
+        title: String(title || 'AUBazaar'),
+        body: String(body || ''),
+        link: String(link || 'https://aubazaar-12d35.web.app/marketplace'),
+        tag: String(tag || 'aubazaar-alert')
+      },
+      webpush: { headers: { Urgency: 'high', TTL: '86400' } }
+    });
+  } catch (error) {
+    console.error('notifyUser failed:', error);
+    return;
+  }
+
+  const dead = [];
+  response.responses.forEach((r, i) => {
+    if (!r.success && r.error && (
+      r.error.code === 'messaging/registration-token-not-registered' ||
+      r.error.code === 'messaging/invalid-registration-token'
+    )) dead.push(tokens[i]);
+  });
+  if (dead.length > 0) {
+    const updates = { fcmTokens: admin.firestore.FieldValue.arrayRemove(...dead) };
+    if (d.fcmToken && dead.includes(d.fcmToken)) updates.fcmToken = admin.firestore.FieldValue.delete();
+    await db.collection('users').doc(userId).update(updates).catch(() => {});
+  }
+}
+
 // New report filed -> alert every admin (reports live in their own
 // collection, so onNewMessage doesn't cover them).
 exports.onNewReport = onDocumentCreated('reports/{reportId}', async (event) => {
@@ -244,11 +282,12 @@ exports.onFlaggedListing = onDocumentCreated('listings/{listingId}', async (even
 });
 
 // New listing -> notify anyone who saved a "notify me when X is posted"
-// alert whose keyword matches the listing. We create a message from the
-// seller to the waiting buyer (so it lands in their inbox + unread badge and
-// they can reply to the seller); the existing onNewMessage trigger then sends
-// the tailored "an item you wanted was just posted" push, linking to the
-// listing. Runs on every new listing but no-ops unless something matches.
+// alert whose keyword matches it. AUBazaar sends the push directly to the
+// waiting user (system notice, NOT a message from the seller) - tapping it
+// opens the LISTING, where they reach out to the seller themselves like any
+// other buyer. We also stamp the match onto the alert doc so the user can see
+// it in "My Alerts" (and tap through) even if they don't have push on.
+// Runs on every new listing but no-ops unless something matches.
 exports.onNewListingWishlist = onDocumentCreated('listings/{listingId}', async (event) => {
   const listing = event.data && event.data.data();
   if (!listing) return;
@@ -267,6 +306,8 @@ exports.onNewListingWishlist = onDocumentCreated('listings/{listingId}', async (
   const listingId = event.params.listingId;
   const title = listing.title || 'an item';
   const priceText = (typeof listing.price === 'number') ? ` ($${listing.price.toFixed(2)})` : '';
+  const qty = listing.quantity || 1;
+  const availText = qty > 1 ? `${qty} available` : 'Just posted';
 
   // One notice per user, even if several of their alerts match this listing.
   const notified = new Set();
@@ -282,28 +323,23 @@ exports.onNewListingWishlist = onDocumentCreated('listings/{listingId}', async (
     if (!pattern.test(text)) continue;
     notified.add(a.userId);
 
-    const buyerId = a.userId;
-    const convId = [sellerId, buyerId].sort().join('_');
-    const content = `🔔 A "${kw}" you asked to be alerted about was just posted: "${title}"${priceText}. Tap the listing to view it, or reply here to reach the seller.`;
     try {
-      await db.collection('conversations').doc(convId).set({
-        participants: [sellerId, buyerId],
-        lastMessage: content,
-        lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      await db.collection('messages').add({
-        conversationId: convId,
-        senderId: sellerId,
-        receiverId: buyerId,
-        listingId,
-        content,
-        type: 'wishlist_alert',
-        read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      // Push straight from AUBazaar, linking to the listing.
+      await notifyUser(a.userId, {
+        title: `🔔 A "${kw}" you wanted was just posted`,
+        body: `${availText} — "${title}"${priceText}. Tap to view it.`,
+        link: `https://aubazaar-12d35.web.app/listing/${listingId}`,
+        tag: `aubazaar-wishlist-${listingId}`
       });
+      // Stamp the match on the alert so it's visible in "My Alerts" too.
+      await doc.ref.update({
+        lastMatchListingId: listingId,
+        lastMatchTitle: title,
+        lastMatchAt: admin.firestore.FieldValue.serverTimestamp(),
+        matchCount: admin.firestore.FieldValue.increment(1)
+      }).catch(() => {});
     } catch (e) {
-      console.error('wishlist notify failed for', buyerId, e);
+      console.error('wishlist notify failed for', a.userId, e);
     }
   }
   if (notified.size > 0) console.log(`Wishlist: notified ${notified.size} user(s) about listing ${listingId}.`);
