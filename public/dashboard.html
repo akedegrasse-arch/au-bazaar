@@ -349,6 +349,9 @@
                 <span class="badge badge-primary" id="profile-role-badge">Student</span>
                 <span class="badge badge-success" id="profile-verified-badge" style="display:none"><i class="fas fa-check"></i> Verified</span>
               </div>
+              <button id="remove-photo-btn" onclick="removeProfilePicture()" style="display:none;margin-top:0.6rem;background:none;border:none;color:var(--danger);font-size:0.82rem;cursor:pointer;padding:0">
+                <i class="fas fa-trash"></i> Remove photo
+              </button>
             </div>
           </div>
           
@@ -575,6 +578,8 @@
         if (avatarInitials) {
           avatarInitials.style.display = 'none';
         }
+        const removeBtn = document.getElementById('remove-photo-btn');
+        if (removeBtn) removeBtn.style.display = 'inline-block';
       }
       
       // Fill profile form - use Firestore data first, fallback to Firebase Auth displayName
@@ -1286,7 +1291,9 @@
       if (avatarInitials) {
         avatarInitials.style.display = 'none';
       }
-      
+      const removeBtn = document.getElementById('remove-photo-btn');
+      if (removeBtn) removeBtn.style.display = 'inline-block';
+
       Swal.fire({
         icon: 'success',
         title: 'Profile Picture Updated!',
@@ -1308,7 +1315,58 @@
       labelEl.innerHTML = '<i class="fas fa-camera"></i>';
     }
   }
-  
+
+  // Remove the profile picture completely: delete the file from Storage AND
+  // drop the profilePicture field, so nothing is left behind in Firebase.
+  async function removeProfilePicture() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+
+    const confirm = await Swal.fire({
+      title: 'Remove profile picture?',
+      text: 'Your photo will be permanently deleted.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Remove',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!confirm.isConfirmed) return;
+
+    try {
+      // Delete the actual file from Storage (fixed path). Treat an already-
+      // missing file as success so the field still gets cleared.
+      await firebase.storage().ref(`profiles/${user.uid}/profile.jpg`).delete().catch((e) => {
+        if (e && e.code !== 'storage/object-not-found') throw e;
+      });
+
+      // Drop the field from the user document entirely.
+      await firebase.firestore().collection('users').doc(user.uid).update({
+        profilePicture: firebase.firestore.FieldValue.delete()
+      });
+
+      // Reset every avatar back to initials.
+      const initials = ((document.getElementById('profile-name-display').textContent || 'U').trim().charAt(0) || 'U').toUpperCase();
+      const sidebar = document.getElementById('sidebar-avatar');
+      if (sidebar) sidebar.textContent = initials;
+      const nav = document.getElementById('nav-user-avatar');
+      if (nav) nav.textContent = initials;
+      const avatarImg = document.getElementById('profile-avatar-img');
+      if (avatarImg) { avatarImg.style.display = 'none'; avatarImg.removeAttribute('src'); }
+      const avatarInitials = document.getElementById('profile-avatar-initials');
+      if (avatarInitials) avatarInitials.style.display = '';
+      const largeAvatar = document.getElementById('profile-avatar-large');
+      if (largeAvatar && !avatarImg) largeAvatar.textContent = initials;
+      const removeBtn = document.getElementById('remove-photo-btn');
+      if (removeBtn) removeBtn.style.display = 'none';
+
+      AUBazaar.showToast('Profile picture removed', 'success');
+    } catch (error) {
+      console.error('Remove profile picture failed:', error);
+      AUBazaar.showToast('Could not remove the picture: ' + (error.message || 'please try again'), 'error');
+    }
+  }
+
   // Label the role-dependent profile field to match the user's role, mirroring
   // registration (Student -> Program of study, Faculty -> Department/Faculty,
   // Staff -> Role/Department at AU).
