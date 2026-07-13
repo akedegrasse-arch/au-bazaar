@@ -1,12 +1,23 @@
 rules_version = "2";
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Listings - authenticated users can create/update, only owner or admin can delete
+    // Listings are public to read; anyone signed in can post one. But only
+    // the listing's OWNER or an ADMIN may edit or delete it - previously ANY
+    // signed-in user could edit/delete ANYONE's listing from the console.
+    // The one exception: any signed-in viewer may bump the view counter (and
+    // nothing else), so view counts still work when other people open it.
     match /listings/{listingId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow update: if request.auth != null && (
+        resource.data.sellerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+      );
+      allow delete: if request.auth != null && (
+        resource.data.sellerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
     
     // Admin "Trash" for listings. Admin deletions move a listing here
@@ -35,11 +46,15 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true;
 
-      // Creating your own doc (registration) is fine, but you can never
-      // set your own role to admin at creation - admin can only ever be
-      // granted by an existing admin via the admin panel.
+      // Creating your own doc (registration) is fine, but: you can never set
+      // your own role to admin at creation, AND the account's email must be an
+      // @africau.edu address. The "@africau.edu" check used to live only in
+      // the registration form's JS, so anyone could register a gmail account
+      // straight from the console - this enforces it server-side.
       allow create: if request.auth != null && request.auth.uid == userId &&
-        request.resource.data.role != 'admin';
+        request.resource.data.role != 'admin' &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower().matches('.*@africau[.]edu');
 
       allow update: if request.auth != null && (
         // Admins can update any user (suspend, promote/demote, etc.)
@@ -94,10 +109,19 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid in resource.data.participants;
     }
     
-    // Allow authenticated users to manage their own reviews
+    // Reviews are public to read. You may only POST a review AS yourself
+    // (reviewerId must be you), and only edit/delete your own (admins may
+    // moderate). Previously any signed-in user could create or delete ANY
+    // review - e.g. wipe a rival's good reviews, or post fake ones as someone
+    // else - straight from the console.
     match /reviews/{reviewId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.resource.data.reviewerId == request.auth.uid;
+      allow update, delete: if request.auth != null && (
+        resource.data.reviewerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
     
     // Anyone signed in can file a report, but only admins can view/manage
