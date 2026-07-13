@@ -300,58 +300,6 @@
   
   <form id="sell-form" onsubmit="handleSubmit(event)">
     
-    <!-- Images Section -->
-    <div class="form-section">
-      <div class="form-section-title"><i class="fas fa-images"></i> Photos (Up to 5)</div>
-      
-      <div class="image-upload-zone" id="upload-zone" onclick="document.getElementById('image-input').click()" 
-           ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
-        <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-        <h4>Click to upload or drag & drop</h4>
-        <p>JPG, PNG, GIF up to 5MB each • First photo will be the cover</p>
-      </div>
-      
-      <input type="file" id="image-input" accept="image/*" multiple style="display:none" onchange="handleImageSelect(event)">
-      
-      <div class="preview-grid" id="preview-grid"></div>
-    </div>
-    
-    <!-- Basic Info -->
-    <div class="form-section">
-      <div class="form-section-title"><i class="fas fa-info-circle"></i> Item Information</div>
-      
-      <div class="form-group">
-        <label class="form-label">Title <span style="color:var(--danger)">*</span></label>
-        <input type="text" class="form-control" id="title" placeholder="e.g., Introduction to Computer Science Textbook" maxlength="100" oninput="updateCharCount('title', 100)" required>
-        <div class="char-count"><span id="title-count">0</span>/100</div>
-        <div class="form-error hidden" id="title-error"></div>
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Description <span style="color:var(--danger)">*</span></label>
-        <textarea class="form-control" id="description" rows="5" placeholder="Describe your item in detail - include brand, model, any defects, reason for selling, etc." maxlength="1000" oninput="updateCharCount('description', 1000)" required></textarea>
-        <div class="char-count"><span id="description-count">0</span>/1000</div>
-        <div class="form-error hidden" id="description-error"></div>
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Price (USD) <span style="color:var(--danger)">*</span></label>
-        <div class="price-input-wrapper">
-          <span class="currency-symbol">$</span>
-          <input type="number" class="form-control" id="price" placeholder="0.00" min="0" step="0.01" required>
-        </div>
-        <div class="form-hint">Set to $0 for free items</div>
-        <div class="form-error hidden" id="price-error"></div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Quantity available <span style="color:var(--danger)">*</span></label>
-        <input type="number" class="form-control" id="quantity" value="1" min="1" step="1" required>
-        <div class="form-hint">How many identical units you have. Leave at 1 for a single item.</div>
-        <div class="form-error hidden" id="quantity-error"></div>
-      </div>
-    </div>
-    
     <!-- Category -->
     <div class="form-section">
       <div class="form-section-title"><i class="fas fa-th-large"></i> Category <span style="color:var(--danger)">*</span></div>
@@ -448,6 +396,58 @@
         </label>
       </div>
       <div class="form-error hidden" id="condition-error"></div>
+    </div>
+    
+    <!-- Images Section -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-images"></i> Photos (Up to 5)</div>
+      
+      <div class="image-upload-zone" id="upload-zone" onclick="document.getElementById('image-input').click()" 
+           ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+        <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <h4>Click to upload or drag & drop</h4>
+        <p>JPG, PNG, GIF up to 5MB each • First photo will be the cover</p>
+      </div>
+      
+      <input type="file" id="image-input" accept="image/*" multiple style="display:none" onchange="handleImageSelect(event)">
+      
+      <div class="preview-grid" id="preview-grid"></div>
+    </div>
+    
+    <!-- Basic Info -->
+    <div class="form-section">
+      <div class="form-section-title"><i class="fas fa-info-circle"></i> Item Information</div>
+      
+      <div class="form-group">
+        <label class="form-label">Title <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="form-control" id="title" placeholder="e.g., Introduction to Computer Science Textbook" maxlength="100" oninput="updateCharCount('title', 100)" required>
+        <div class="char-count"><span id="title-count">0</span>/100</div>
+        <div class="form-error hidden" id="title-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Description <span style="color:var(--danger)">*</span></label>
+        <textarea class="form-control" id="description" rows="5" placeholder="Describe your item in detail - include brand, model, any defects, reason for selling, etc." maxlength="1000" oninput="updateCharCount('description', 1000)" required></textarea>
+        <div class="char-count"><span id="description-count">0</span>/1000</div>
+        <div class="form-error hidden" id="description-error"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Price (USD) <span style="color:var(--danger)">*</span></label>
+        <div class="price-input-wrapper">
+          <span class="currency-symbol">$</span>
+          <input type="number" class="form-control" id="price" placeholder="0.00" min="0" step="0.01" required>
+        </div>
+        <div class="form-hint">Set to $0 for free items</div>
+        <div class="form-error hidden" id="price-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Quantity available <span style="color:var(--danger)">*</span></label>
+        <input type="number" class="form-control" id="quantity" value="1" min="1" step="1" required>
+        <div class="form-hint">How many identical units you have. Leave at 1 for a single item.</div>
+        <div class="form-error hidden" id="quantity-error"></div>
+      </div>
     </div>
     
     <!-- Contact -->
