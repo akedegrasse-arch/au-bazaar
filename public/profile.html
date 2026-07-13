@@ -562,23 +562,28 @@
     const empty = document.getElementById('listings-empty');
     
     try {
+      // Two equality filters (sellerId + active) are served without a
+      // composite index; we sort newest-first in JS instead of an orderBy,
+      // which would otherwise require a (sellerId, status, createdAt) index
+      // and — when missing — made this silently show "No listings".
       const snapshot = await AUBazaar.db.collection('listings')
         .where('sellerId', '==', uid)
         .where('status', '==', 'active')
-        .orderBy('createdAt', 'desc')
-        .limit(6)
         .get();
-      
+
       if (snapshot.empty) {
         grid.innerHTML = '';
         empty.classList.remove('hidden');
         return;
       }
-      
+
+      const toMs = (v) => v ? (v.toMillis ? v.toMillis() : (v.seconds ? v.seconds * 1000 : (typeof v === 'number' ? v : 0))) : 0;
       const listings = [];
       snapshot.forEach(doc => listings.push({ id: doc.id, ...doc.data() }));
-      
-      grid.innerHTML = listings.map(listing => `
+      listings.sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt));
+
+      empty.classList.add('hidden');
+      grid.innerHTML = listings.slice(0, 6).map(listing => `
         <div class="product-card" onclick="window.location.href='/listing/${listing.id}'">
           <div class="product-card-image">
             ${listing.images && listing.images.length > 0 
@@ -593,6 +598,7 @@
       `).join('');
       
     } catch (error) {
+      console.error('Failed to load profile listings:', error);
       grid.innerHTML = '';
       empty.classList.remove('hidden');
     }
