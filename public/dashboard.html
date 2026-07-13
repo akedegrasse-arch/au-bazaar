@@ -791,7 +791,7 @@
         </div>
         <div class="listing-info">
           <h4>${listing.title}</h4>
-          <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.category}${(listing.quantity || 1) > 1 ? ` • <strong>${listing.quantity} available</strong>` : ''} • ${listing.views || 0} views • ${AUBazaar.formatDate(listing.createdAt)}</p>
+          <p>${AUBazaar.formatCurrency(listing.price)} • ${listing.category}${(listing.quantity || 1) > 1 ? ` • <strong>${listing.quantity} available</strong>` : ''}${listing.soldCount ? ` • <strong style="color:var(--primary)">${listing.soldCount} sold</strong>` : ''} • ${listing.views || 0} views • ${AUBazaar.formatDate(listing.createdAt)}</p>
         </div>
         <span class="status-badge status-${listing.status}">${listing.status === 'deleted' ? 'hidden' : listing.status}</span>
         <div class="listing-actions">
@@ -949,10 +949,19 @@
     const remaining = available - soldQty;
 
     try {
+      // Record the sale itself (units + buyer + when) so a PARTIAL sale is
+      // visible instead of the listing just silently dropping a unit. The
+      // running soldCount + salesHistory show "X sold" even while the listing
+      // is still active with units left; the listing only flips to 'sold'
+      // once the last unit is gone.
+      const saleEntry = { at: Date.now(), buyerId: buyer.id, buyerName: buyer.fullName || buyer.email, units: soldQty };
+      const prevSales = Array.isArray(listing.salesHistory) ? listing.salesHistory : [];
       const update = {
         soldAt: firebase.firestore.FieldValue.serverTimestamp(),
         soldToUserId: buyer.id,
-        soldToName: buyer.fullName || buyer.email
+        soldToName: buyer.fullName || buyer.email,
+        soldCount: (listing.soldCount || 0) + soldQty,
+        salesHistory: [...prevSales.slice(-49), saleEntry] // keep last 50 sales
       };
       if (remaining <= 0) {
         // Last unit(s) gone - the listing is fully sold and leaves the market.

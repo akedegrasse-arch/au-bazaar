@@ -929,6 +929,10 @@ window.AUBazaar = {
         }
       }
 
+      // Remember this device's token locally so a later status check can
+      // still identify the device even if getToken() briefly fails.
+      try { localStorage.setItem('aub_push_token', token); } catch (e) {}
+
       setupForegroundMessageListener(msg);
       showToast('Push notifications enabled on this device!', 'success');
       return true;
@@ -964,6 +968,7 @@ window.AUBazaar = {
       // Clear the legacy single-token field too if present.
       await userRef.update({ fcmToken: firebase.firestore.FieldValue.delete() }).catch(() => {});
     }
+    try { localStorage.removeItem('aub_push_token'); } catch (e) {}
     showToast('Push notifications disabled', 'success');
   },
   isPushNotificationEnabled: function() {
@@ -985,7 +990,11 @@ window.AUBazaar = {
       await (navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
         || navigator.serviceWorker.register('/firebase-messaging-sw.js'));
       const registration = await navigator.serviceWorker.ready;
-      const token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration }).catch(() => null);
+      let token = await msg.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration }).catch(() => null);
+      // A transient getToken() failure shouldn't make an actually-enabled
+      // device read as OFF ("it disabled itself"). Fall back to the token we
+      // remembered when it was enabled, and still verify it against Firestore.
+      if (!token) { try { token = localStorage.getItem('aub_push_token'); } catch (e) {} }
       if (!token) return 'off';
       const doc = await db.collection('users').doc(auth.currentUser.uid).get();
       const data = doc.exists ? doc.data() : {};
