@@ -656,7 +656,10 @@
         userId: user.uid, userName: uName, keyword,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      AUBazaar.showToast(`Done! We'll notify you when a "${keyword}" is posted.`, 'success');
+      AUBazaar.showToast(`Saved! We'll notify you when a "${keyword}" is posted. Remove it anytime under "My Alerts".`, 'success');
+      // The alert is delivered as a notification, so this is the perfect
+      // moment to nudge a buyer to turn notifications on (once per device).
+      AUBazaar.maybePromptNotifications('when an item you want is posted');
     } catch (e) {
       console.error('Failed to save alert:', e);
       AUBazaar.showToast('Could not save your alert. Please try again.', 'error');
