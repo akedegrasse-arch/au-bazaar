@@ -70,7 +70,11 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
   const senderDoc = await db.collection('users').doc(message.senderId).get();
   const senderName = (senderDoc.data() && senderDoc.data().fullName) || 'Someone';
 
-  const body = message.type === 'sale_claim'
+  // A "wishlist_alert" is a system-generated notice that an item the receiver
+  // asked to be alerted about was just posted - it links to the LISTING and
+  // gets its own title, rather than reading as a normal chat message.
+  const isWishlist = message.type === 'wishlist_alert';
+  const body = (message.type === 'sale_claim' || isWishlist)
     ? message.content
     : (message.content && message.content.length > 100 ? message.content.slice(0, 100) + '...' : message.content) || 'Sent you a message';
 
@@ -84,10 +88,12 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
     response = await admin.messaging().sendEachForMulticast({
       tokens,
       data: {
-        title: `New message from ${senderName}`,
+        title: isWishlist ? '🔔 An item you wanted was just posted' : `New message from ${senderName}`,
         body: String(body || ''),
-        link: 'https://aubazaar-12d35.web.app/messages',
-        tag: `aubazaar-${message.senderId}`
+        link: (isWishlist && message.listingId)
+          ? `https://aubazaar-12d35.web.app/listing/${message.listingId}`
+          : 'https://aubazaar-12d35.web.app/messages',
+        tag: isWishlist ? `aubazaar-wishlist-${message.listingId}` : `aubazaar-${message.senderId}`
       },
       webpush: {
         // High urgency + a day-long TTL so the push is delivered promptly
@@ -235,6 +241,72 @@ exports.onFlaggedListing = onDocumentCreated('listings/{listingId}', async (even
     'https://aubazaar-12d35.web.app/admin',
     'aubazaar-admin-flagged-' + event.params.listingId
   );
+});
+
+// New listing -> notify anyone who saved a "notify me when X is posted"
+// alert whose keyword matches the listing. We create a message from the
+// seller to the waiting buyer (so it lands in their inbox + unread badge and
+// they can reply to the seller); the existing onNewMessage trigger then sends
+// the tailored "an item you wanted was just posted" push, linking to the
+// listing. Runs on every new listing but no-ops unless something matches.
+exports.onNewListingWishlist = onDocumentCreated('listings/{listingId}', async (event) => {
+  const listing = event.data && event.data.data();
+  if (!listing) return;
+  if (listing.status && listing.status !== 'active') return; // ignore drafts/hidden
+  const sellerId = listing.sellerId;
+  if (!sellerId) return;
+
+  const text = [listing.title, listing.description, listing.category, listing.deviceType]
+    .filter(Boolean).join(' ').toLowerCase();
+  if (!text) return;
+
+  // Bounded scan of saved alerts (kept small for a campus marketplace).
+  const alertsSnap = await db.collection('wishlist_alerts').limit(1000).get();
+  if (alertsSnap.empty) return;
+
+  const listingId = event.params.listingId;
+  const title = listing.title || 'an item';
+  const priceText = (typeof listing.price === 'number') ? ` ($${listing.price.toFixed(2)})` : '';
+
+  // One notice per user, even if several of their alerts match this listing.
+  const notified = new Set();
+  for (const doc of alertsSnap.docs) {
+    const a = doc.data() || {};
+    const kw = (a.keyword || '').toLowerCase().trim();
+    if (!kw || !a.userId) continue;
+    if (a.userId === sellerId) continue;         // don't alert the seller about their own post
+    if (notified.has(a.userId)) continue;
+    // Whole-word / phrase match (same idea as the flagged-keyword filter) so
+    // "tv" doesn't fire on "brativa" and a phrase like "air fryer" matches.
+    const pattern = new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if (!pattern.test(text)) continue;
+    notified.add(a.userId);
+
+    const buyerId = a.userId;
+    const convId = [sellerId, buyerId].sort().join('_');
+    const content = `🔔 A "${kw}" you asked to be alerted about was just posted: "${title}"${priceText}. Tap the listing to view it, or reply here to reach the seller.`;
+    try {
+      await db.collection('conversations').doc(convId).set({
+        participants: [sellerId, buyerId],
+        lastMessage: content,
+        lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      await db.collection('messages').add({
+        conversationId: convId,
+        senderId: sellerId,
+        receiverId: buyerId,
+        listingId,
+        content,
+        type: 'wishlist_alert',
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      console.error('wishlist notify failed for', buyerId, e);
+    }
+  }
+  if (notified.size > 0) console.log(`Wishlist: notified ${notified.size} user(s) about listing ${listingId}.`);
 });
 
 // Permanently remove messages that were "deleted for everyone" more than 90

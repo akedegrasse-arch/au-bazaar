@@ -117,6 +117,14 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Saved-search / wishlist alerts. A user manages only their own; the
+    // Cloud Function that matches new listings to alerts reads them via the
+    // Admin SDK (bypasses rules), so no broad read is needed here.
+    match /wishlist_alerts/{alertId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
     // Payment receipts. A user can create their own receipt and read their
     // own; admins can read everyone's (to verify a payment if a dispute comes
     // up). No update/delete - a receipt is a permanent record.

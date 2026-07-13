@@ -432,6 +432,7 @@
           <div class="results-count" id="results-count">Loading...</div>
         </div>
         <div style="display:flex;align-items:center;gap:1rem">
+          <button class="btn btn-outline" onclick="openMyAlerts()" title="Items you're waiting for" style="white-space:nowrap"><i class="fas fa-bell"></i> My Alerts</button>
           <select class="sort-select" id="sort-select" onchange="applyFilters()">
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
@@ -609,7 +610,8 @@
         <div class="empty-state">
           <div class="empty-state-icon">🔍</div>
           <h3>No listings found</h3>
-          <p>Try adjusting your filters or search terms.</p>
+          <p>${currentFilters.search ? `Nobody has posted a "${(currentFilters.search + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')}" yet.` : 'Try adjusting your filters or search terms.'}</p>
+          ${currentFilters.search ? `<button class="btn btn-primary mt-2" onclick="createWishlistAlertFromSearch()"><i class="fas fa-bell"></i> Notify me when it's posted</button><div style="margin-top:0.6rem"></div>` : ''}
           <button class="btn btn-outline mt-2" onclick="clearAllFilters()">Clear Filters</button>
           <a href="/sell" class="btn btn-primary mt-2 ml-2">Post an Item</a>
         </div>
@@ -625,8 +627,80 @@
     renderPagination();
   }
 
+  // ---- Wishlist / "notify me when it's posted" alerts ----
+  async function createWishlistAlertFromSearch() {
+    await createWishlistAlert(currentFilters.search || '');
+  }
+
+  async function createWishlistAlert(rawKeyword) {
+    const user = AUBazaar.auth.currentUser;
+    if (!user) { window.location.href = '/login?redirect=/marketplace'; return; }
+    const keyword = (rawKeyword || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (keyword.length < 3) {
+      AUBazaar.showToast('Search for something a bit more specific first (at least 3 letters).', 'warning');
+      return;
+    }
+    try {
+      const existing = await AUBazaar.db.collection('wishlist_alerts').where('userId', '==', user.uid).get();
+      if (existing.docs.some(d => (d.data().keyword || '') === keyword)) {
+        AUBazaar.showToast('You already have an alert for that.', 'info');
+        return;
+      }
+      if (existing.size >= 20) {
+        AUBazaar.showToast('You have 20 alerts already (the max). Remove some in "My Alerts".', 'warning');
+        return;
+      }
+      const uDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
+      const uName = (uDoc.exists && uDoc.data().fullName) || user.email;
+      await AUBazaar.db.collection('wishlist_alerts').add({
+        userId: user.uid, userName: uName, keyword,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      AUBazaar.showToast(`Done! We'll notify you when a "${keyword}" is posted.`, 'success');
+    } catch (e) {
+      console.error('Failed to save alert:', e);
+      AUBazaar.showToast('Could not save your alert. Please try again.', 'error');
+    }
+  }
+
+  async function openMyAlerts() {
+    const user = AUBazaar.auth.currentUser;
+    if (!user) { window.location.href = '/login?redirect=/marketplace'; return; }
+    let snap;
+    try { snap = await AUBazaar.db.collection('wishlist_alerts').where('userId', '==', user.uid).get(); }
+    catch (e) { AUBazaar.showToast('Could not load your alerts.', 'error'); return; }
+    const alerts = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const rows = alerts.length ? alerts.map(a => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #eee">
+        <div style="min-width:0;word-break:break-word"><i class="fas fa-bell" style="color:var(--primary)"></i> <strong>${esc(a.keyword)}</strong></div>
+        <button class="btn btn-sm btn-outline" style="white-space:nowrap" onclick="removeAlert('${a.id}')"><i class="fas fa-trash"></i> Remove</button>
+      </div>`).join('') : '<p style="color:var(--gray);padding:10px 0">You have no alerts yet. Search for something — if it isn\'t here, you can ask to be notified when it\'s posted.</p>';
+
+    Swal.fire({
+      title: '🔔 My Alerts',
+      html: `<div style="text-align:left"><p style="color:#666;font-size:0.85rem;margin-bottom:6px">We'll notify you the moment a matching item is posted.</p>${rows}</div>`,
+      width: 480,
+      showConfirmButton: true,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#6c757d'
+    });
+  }
+
+  async function removeAlert(id) {
+    try {
+      await AUBazaar.db.collection('wishlist_alerts').doc(id).delete();
+      AUBazaar.showToast('Alert removed', 'success');
+      openMyAlerts();
+    } catch (e) {
+      AUBazaar.showToast('Could not remove alert', 'error');
+    }
+  }
+
   function createProductCard(listing) {
-    const image = listing.images && listing.images.length > 0 
+    const image = listing.images && listing.images.length > 0
       ? `<img src="${listing.images[0]}" alt="${listing.title}" onerror="this.style.display='none'">` 
       : AUBazaar.getCategoryIcon(listing.category);
     
