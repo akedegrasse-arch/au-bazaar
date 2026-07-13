@@ -1142,7 +1142,12 @@
         const goToListing = () => { window.location.href = `/listing/${docRef.id}`; };
         if (!userData.firstSaleTipShown) {
           AUBazaar.db.collection('users').doc(user.uid).set({ firstSaleTipShown: true }, { merge: true }).catch(() => {});
-          showFirstSaleTip(goToListing);
+          // After the first-sale tip, nudge them to turn on notifications so a
+          // buyer's message doesn't go unseen - then head to the listing.
+          showFirstSaleTip(async () => {
+            await AUBazaar.maybePromptNotifications("so you don't miss a buyer's message");
+            goToListing();
+          });
         } else if (recentCount === 2) {
           // recentCount was the count BEFORE this post; 2 -> this is the 3rd.
           showLastFreeReminder(goToListing);

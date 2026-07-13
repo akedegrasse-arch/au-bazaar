@@ -558,8 +558,10 @@
     const ownDoc = await AUBazaar.db.collection('users').doc(user.uid).get();
     currentUserData = ownDoc.exists ? ownDoc.data() : {};
 
-    // Request notification permission
-    await AUBazaar.requestNotificationPermission();
+    // First time on Messages: a well-timed nudge to fully enable push
+    // (permission + token registration), so replies actually reach them.
+    // Shown at most once per device; no-op if already on/blocked.
+    AUBazaar.maybePromptNotifications('when someone replies to your messages');
 
     loadConversations();
   });

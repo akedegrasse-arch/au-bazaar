@@ -974,6 +974,34 @@ window.AUBazaar = {
   isPushNotificationEnabled: function() {
     return typeof Notification !== 'undefined' && Notification.permission === 'granted';
   },
+  // A one-time, well-timed nudge to turn on notifications, shown at a
+  // high-intent moment (e.g. right after a first listing, or opening
+  // Messages) rather than on cold page load. Push can't be auto-enabled -
+  // browsers require the user to tap Allow - so this explains why and offers
+  // a single Enable button. Shows at most once per device (localStorage),
+  // never if already granted or blocked. `reason` tailors the one-liner.
+  maybePromptNotifications: async function(reason) {
+    if (typeof Notification === 'undefined') return;                 // unsupported
+    if (Notification.permission === 'granted') return;               // already on
+    if (Notification.permission === 'denied') return;                // blocked; banner explains how to unblock
+    if (typeof Swal === 'undefined') return;                         // no modal lib on this page
+    try { if (localStorage.getItem('aub_notif_prompted')) return; } catch (e) {}
+    try { localStorage.setItem('aub_notif_prompted', '1'); } catch (e) {}
+
+    const line = reason || 'so you know the moment someone messages you';
+    const result = await Swal.fire({
+      title: '🔔 Turn on notifications?',
+      html: `Get a notification <b>${line}</b> — even with AUBazaar closed.<br><span style="color:#888;font-size:0.85rem">You can change this anytime in your dashboard settings.</span>`,
+      showCancelButton: true,
+      confirmButtonText: 'Enable notifications',
+      cancelButtonText: 'Maybe later',
+      confirmButtonColor: '#d32f2f',
+      cancelButtonColor: '#6c757d'
+    });
+    if (result.isConfirmed) {
+      await AUBazaar.enablePushNotifications();
+    }
+  },
   // The TRUTHFUL "is push on for this device" check. Browser permission alone
   // (isPushNotificationEnabled) is sticky and misleading - it stays 'granted'
   // forever even after you turn notifications off in-app, and it's 'granted'
