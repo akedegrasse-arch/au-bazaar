@@ -555,8 +555,9 @@ window.AUBazaar = {
         AUBazaar.showPaymentModal({
           amount: 0.50,
           description: 'One extra listing',
-          onSuccess: () => {
+          onSuccess: async (txnId, method) => {
             AUBazaar.showToast('Payment successful', 'success');
+            await AUBazaar.issueReceipt({ userId: user.uid, item: 'One extra listing', amount: 0.50, method, reference: txnId });
             resolve(true);
           }
         });
@@ -567,7 +568,7 @@ window.AUBazaar = {
         AUBazaar.showPaymentModal({
           amount: 3.00,
           description: 'Unlimited listings this month',
-          onSuccess: async (txnId) => {
+          onSuccess: async (txnId, method) => {
             const untilDate = new Date();
             untilDate.setMonth(untilDate.getMonth() + 1);
             await AUBazaar.db.collection('users').doc(user.uid).set({
@@ -575,6 +576,7 @@ window.AUBazaar = {
               unlimitedSellerPaymentRef: txnId
             }, { merge: true });
             AUBazaar.showToast('Unlimited plan activated', 'success');
+            await AUBazaar.issueReceipt({ userId: user.uid, item: 'Unlimited Seller Subscription (1 month)', amount: 3.00, method, reference: txnId, validFrom: new Date(), validUntil: untilDate });
             resolve(true);
           }
         });
@@ -743,11 +745,131 @@ window.AUBazaar = {
           statusDiv.innerHTML = `<div style="font-size:1.7rem;margin-bottom:8px">✅</div><strong>Payment Successful!</strong><br>Reference: ${txnId}`;
           setTimeout(() => {
             closeModal();
-            onSuccess(txnId);
+            onSuccess(txnId, providerName);
           }, 1200);
         }, 1800);
       }, 1500);
     }
+  },
+
+  // Issues a receipt for a completed payment: saves a durable copy to the
+  // `receipts` collection (proof the user/admin can look up later), then
+  // shows a branded receipt the buyer can download or print so they don't
+  // lose it. Returns a Promise that resolves when the receipt is closed, so
+  // callers can wait before navigating away.
+  // details: { userId, item, amount, method, reference, validFrom, validUntil }
+  issueReceipt: async function(details) {
+    // Pull the buyer's profile for the "billed to" block.
+    let name = '', email = (auth.currentUser && auth.currentUser.email) || '', studentId = '';
+    try {
+      const uDoc = await AUBazaar.db.collection('users').doc(details.userId).get();
+      const u = uDoc.exists ? uDoc.data() : {};
+      name = u.fullName || '';
+      email = u.email || email;
+      studentId = u.studentId || '';
+    } catch (e) { /* profile read is best-effort */ }
+
+    const paidAtMs = Date.now();
+    const reference = details.reference || ('AUB' + paidAtMs);
+    const validFromMs = details.validFrom ? new Date(details.validFrom).getTime() : null;
+    const validUntilMs = details.validUntil ? new Date(details.validUntil).getTime() : null;
+    const amount = Number(details.amount) || 0;
+    const method = details.method || 'Online';
+    const item = details.item || 'AUBazaar payment';
+
+    // Durable server-side copy (best-effort - the visible receipt still shows
+    // even if this write fails).
+    try {
+      await AUBazaar.db.collection('receipts').add({
+        userId: details.userId, name, email, studentId,
+        item, amount, method, reference,
+        validFromMs, validUntilMs,
+        paidAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) { console.error('Failed to save receipt:', e); }
+
+    const fmtDateTime = (ms) => {
+      if (!ms) return '-';
+      const d = new Date(ms);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+        ', ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    };
+    const fmtDay = (ms) => ms ? new Date(ms).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const validText = (validFromMs && validUntilMs)
+      ? `Valid ${fmtDay(validFromMs)} – ${fmtDay(validUntilMs)}`
+      : '';
+
+    const row = (label, value) => `<div style="display:flex;justify-content:space-between;gap:12px;font-size:0.85rem;margin-bottom:6px"><span style="color:#888">${label}</span><span style="text-align:right">${value}</span></div>`;
+    const inner = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:460px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #eee">
+        <div style="background:linear-gradient(135deg,#d32f2f,#8e0000);color:#fff;padding:20px 24px">
+          <div style="font-size:1.35rem;font-weight:800;letter-spacing:.5px">AUBazaar</div>
+          <div style="opacity:.9;font-size:.85rem;margin-top:2px">Payment Receipt</div>
+        </div>
+        <div style="padding:20px 24px">
+          ${row('Receipt no.', '<strong>' + esc(reference) + '</strong>')}
+          ${row('Date paid', esc(fmtDateTime(paidAtMs)))}
+          ${row('Payment method', esc(method))}
+          <div style="border-top:1px dashed #ddd;margin:14px 0"></div>
+          <div style="font-size:.7rem;text-transform:uppercase;color:#999;letter-spacing:.05em;margin-bottom:4px">Billed to</div>
+          <div style="font-weight:600">${esc(name) || '—'}</div>
+          ${email ? `<div style="font-size:.85rem;color:#555">${esc(email)}</div>` : ''}
+          ${studentId ? `<div style="font-size:.85rem;color:#555">ID: ${esc(studentId)}</div>` : ''}
+          <div style="border-top:1px dashed #ddd;margin:14px 0"></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px">
+            <div><div style="font-weight:600">${esc(item)}</div>${validText ? `<div style="font-size:.8rem;color:#555;margin-top:2px">${validText}</div>` : ''}</div>
+            <div style="font-weight:700;white-space:nowrap">$${amount.toFixed(2)}</div>
+          </div>
+          <div style="border-top:2px solid #eee;margin:14px 0 10px"></div>
+          <div style="display:flex;justify-content:space-between;font-size:1.05rem;font-weight:800"><span>Total paid</span><span>$${amount.toFixed(2)}</span></div>
+          <div style="margin-top:16px;font-size:.72rem;color:#999;text-align:center;line-height:1.5">Keep this receipt as proof of your AUBazaar payment.<br>A copy is saved to your account. Questions? Contact an admin through the app.</div>
+        </div>
+      </div>`;
+
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.id = 'aub-receipt-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+      overlay.innerHTML = `
+        <div style="max-width:460px;width:100%">
+          ${inner}
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <button id="aub-receipt-download" style="flex:1;padding:13px;background:#fff;color:#d32f2f;border:2px solid #d32f2f;border-radius:10px;font-weight:700;cursor:pointer"><span style="font-size:1rem">⬇</span> Download</button>
+            <button id="aub-receipt-print" style="flex:1;padding:13px;background:#fff;color:#333;border:2px solid #ccc;border-radius:10px;font-weight:600;cursor:pointer">🖨 Print</button>
+            <button id="aub-receipt-close" style="flex:1;padding:13px;background:#d32f2f;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">Done</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AUBazaar Receipt ${esc(reference)}</title></head><body style="margin:0;padding:24px;background:#f4f4f4">${inner}</body></html>`;
+
+      const done = () => { overlay.remove(); resolve(); };
+      overlay.querySelector('#aub-receipt-close').addEventListener('click', done);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) done(); });
+
+      overlay.querySelector('#aub-receipt-download').addEventListener('click', () => {
+        const blob = new Blob([fullDoc], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AUBazaar-Receipt-${reference}.html`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Receipt downloaded', 'success');
+      });
+
+      overlay.querySelector('#aub-receipt-print').addEventListener('click', () => {
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow.document;
+        doc.open(); doc.write(fullDoc); doc.close();
+        iframe.contentWindow.focus();
+        setTimeout(() => { iframe.contentWindow.print(); setTimeout(() => iframe.remove(), 1500); }, 300);
+      });
+    });
   },
   // Real push notifications - work even with the app fully closed, via a
   // Cloud Function that sends through FCM whenever a new message is

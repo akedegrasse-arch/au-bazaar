@@ -397,15 +397,16 @@
     AUBazaar.showPaymentModal({
       amount: 3.00,
       description: 'Unlimited listings this month',
-      onSuccess: function(txnId) {
+      onSuccess: function(txnId, method) {
         const untilDate = new Date();
         untilDate.setMonth(untilDate.getMonth() + 1);
         db.collection('users').doc(currentUserRef.uid).set({
           unlimitedSellerUntil: untilDate,
           unlimitedSellerPaymentRef: txnId
-        }, { merge: true }).then(function() {
+        }, { merge: true }).then(async function() {
           AUBazaar.showToast('Unlimited plan activated!', 'success');
-          setTimeout(function() { window.location.href = '/dashboard'; }, 1500);
+          await AUBazaar.issueReceipt({ userId: currentUserRef.uid, item: 'Unlimited Seller Subscription (1 month)', amount: 3.00, method, reference: txnId, validFrom: new Date(), validUntil: untilDate });
+          setTimeout(function() { window.location.href = '/dashboard'; }, 800);
         }).catch(function(e) {
           AUBazaar.showToast('Failed to activate plan: ' + e.message, 'error');
         });

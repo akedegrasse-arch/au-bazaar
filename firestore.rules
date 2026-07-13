@@ -117,6 +117,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Payment receipts. A user can create their own receipt and read their
+    // own; admins can read everyone's (to verify a payment if a dispute comes
+    // up). No update/delete - a receipt is a permanent record.
+    match /receipts/{receiptId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
     // Audit trail for the admin data export feature - only admins can
     // create an entry (i.e. only by actually running an export) or read
     // the log of past exports. No update/delete - it's an audit trail,
