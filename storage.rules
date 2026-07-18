@@ -13,10 +13,19 @@ service firebase.storage {
       allow write, delete: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allow authenticated users to upload chat images
-    match /chat-images/{conversationId}/{allPaths=**} {
-      allow read: if true;
-      allow write, delete: if request.auth != null;
+    // Chat images. Storage rules can't read Firestore, so they can't verify
+    // "is this person in the conversation" - instead new uploads are pathed
+    // under the uploader's UID and write/delete is scoped to that UID, so no
+    // one can overwrite or delete someone else's image (previously ANY signed-
+    // in user could delete images from ANY conversation). Read stays open
+    // because images are shown via tokenized download URLs.
+    match /chat-images/{conversationId} {
+      match /{allPaths=**} {
+        allow read: if true;
+      }
+      match /{userId}/{fileName} {
+        allow write, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }

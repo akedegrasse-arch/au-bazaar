@@ -1077,7 +1077,7 @@
     AUBazaar.showToast('Uploading image...', 'info');
     
     try {
-      const storageRef = AUBazaar.storage.ref().child(`chat-images/${activeConversation.id}/${Date.now()}-${file.name}`);
+      const storageRef = AUBazaar.storage.ref().child(`chat-images/${activeConversation.id}/${currentUser.uid}/${Date.now()}-${file.name}`);
       await storageRef.put(file);
       const imageUrl = await storageRef.getDownloadURL();
       
