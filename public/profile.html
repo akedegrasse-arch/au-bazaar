@@ -571,6 +571,12 @@
         .where('status', '==', 'active')
         .get();
 
+      // The header stat should reflect what's actually shown - the seller's
+      // ACTIVE listings - not the lifetime "totalListings" counter (which
+      // never goes down when items sell or are removed).
+      const statEl = document.getElementById('stat-listings');
+      if (statEl) statEl.textContent = snapshot.size;
+
       if (snapshot.empty) {
         grid.innerHTML = '';
         empty.classList.remove('hidden');

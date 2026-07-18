@@ -512,9 +512,15 @@
     container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
     
     try {
-      let query = AUBazaar.db.collection('listings').where('status', '==', 'active');
-      
-      const snapshot = await query.get();
+      // Load the most recent active listings rather than the ENTIRE catalog
+      // (which every visitor would otherwise download). 200 is generous for a
+      // campus; if the marketplace ever outgrows it, this is where a
+      // "load more" cursor (startAfter) would go.
+      const snapshot = await AUBazaar.db.collection('listings')
+        .where('status', '==', 'active')
+        .orderBy('createdAt', 'desc')
+        .limit(200)
+        .get();
       allListings = [];
       snapshot.forEach(doc => allListings.push({ id: doc.id, ...doc.data() }));
       
