@@ -16,6 +16,18 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// Offline data cache. Keep a local copy of everything the app has already
+// loaded, so previously-seen listings/messages still work with no connection,
+// and actions taken offline (post, message, mark sold) are queued and
+// auto-synced the moment the connection returns. Must be enabled before any
+// other Firestore call runs.
+db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+  // 'failed-precondition' = another tab already holds the cache;
+  // 'unimplemented' = a browser without IndexedDB. Either way the app still
+  // works normally online - it just won't have the offline cache.
+  console.warn('Firestore offline cache unavailable:', err && err.code);
+});
+
 // PWA installability - injected here rather than added to every page's
 // <head> individually. Needs both a manifest link and a registered
 // service worker present to qualify for the browser's install prompt.
