@@ -747,10 +747,18 @@
 
   async function loadUsers() {
     try {
-      const snapshot = await AUBazaar.db.collection('users').orderBy('createdAt', 'desc').get();
+      // Public profiles + the private docs (email, studentId, phone) that only
+      // admins can read - merged by id so the table shows the full details.
+      const [snapshot, privSnap] = await Promise.all([
+        AUBazaar.db.collection('users').orderBy('createdAt', 'desc').get(),
+        AUBazaar.db.collection('users_private').get().catch(() => null)
+      ]);
+      const privById = {};
+      if (privSnap) privSnap.forEach(d => { privById[d.id] = d.data(); });
+
       allUsers = [];
-      snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
-      
+      snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data(), ...(privById[doc.id] || {}) }));
+
       document.getElementById('users-count').textContent = allUsers.length + ' users';
       renderUsersTable(allUsers);
       renderRecentUsers(allUsers.slice(0, 5));
@@ -2092,9 +2100,15 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
 
     try {
-      // Get all users
-      const usersSnap = await firebase.firestore().collection('users').get();
-      const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Get all users (merge private fields - email/studentId/phone - so the
+      // admin export stays complete).
+      const [usersSnap, privSnap] = await Promise.all([
+        firebase.firestore().collection('users').get(),
+        firebase.firestore().collection('users_private').get().catch(() => null)
+      ]);
+      const privById = {};
+      if (privSnap) privSnap.forEach(d => { privById[d.id] = d.data(); });
+      const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), ...(privById[doc.id] || {}) }));
 
       // Get all listings
       const listingsSnap = await firebase.firestore().collection('listings').get();

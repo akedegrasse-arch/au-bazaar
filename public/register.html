@@ -236,9 +236,7 @@
       } else {
         await userRef.set({
           fullName: fullName,
-          studentId: studentId,
           department: roleDetail,
-          email: user.email,
           photoURL: user.photoURL,
           role: selectedRole || 'student',
           status: 'active',
@@ -249,6 +247,12 @@
           favorites: [],
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        // Private, PII fields go in a separate doc that only the owner and
+        // admins can read - keeps email/ID out of the public profile.
+        await AUBazaar.db.collection('users_private').doc(user.uid).set({
+          email: user.email,
+          studentId: studentId
         });
       }
 

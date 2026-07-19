@@ -516,6 +516,14 @@
           role: 'student'
         };
       }
+
+      // Merge in the user's own private fields (email, studentId, phone),
+      // which live in a separate non-public doc, so the Edit Profile form
+      // can display and edit them.
+      try {
+        const priv = await AUBazaar.db.collection('users_private').doc(currentUser.uid).get();
+        if (priv.exists) userData = { ...userData, ...priv.data() };
+      } catch (e) { /* best-effort */ }
       
       // Update localStorage with user data (don't overwrite if already seller)
       const currentRole = localStorage.getItem('role');
@@ -1420,18 +1428,23 @@
         return;
       }
 
+      // Public profile fields go in the users doc; PII (studentId, phone) go
+      // in the private doc that only the owner and admins can read.
       const updates = {
         fullName: fullName,
-        phone: document.getElementById('profile-phone').value.trim(),
-        studentId: studentId,
         department: department,
         bio: document.getElementById('profile-bio').value.trim(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
-      
+      const privateUpdates = {
+        studentId: studentId,
+        phone: document.getElementById('profile-phone').value.trim()
+      };
+
       // Use set with merge: true to create document if it doesn't exist
       // This prevents "Failed to update profile" error when user document is missing
       await AUBazaar.db.collection('users').doc(currentUser.uid).set(updates, { merge: true });
+      await AUBazaar.db.collection('users_private').doc(currentUser.uid).set(privateUpdates, { merge: true });
       
       if (updates.fullName) {
         await currentUser.updateProfile({ displayName: updates.fullName });
