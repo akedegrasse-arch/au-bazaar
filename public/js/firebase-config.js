@@ -191,6 +191,8 @@ auth.onAuthStateChanged(async (user) => {
     window.currentUser = null;
     setMobileQuickAuthVisible(false);
     updateNavbarForGuest();
+    // No signed-in user -> clear the app-icon badge.
+    if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
   }
 });
 
@@ -260,6 +262,14 @@ function renderUnreadMessagesBadge(count) {
       badge.style.display = 'none';
     }
   });
+
+  // Mirror the same count onto the INSTALLED app's home-screen/taskbar icon
+  // (PWA App Badging API) - a red dot/count on the app logo. Only shows for
+  // an installed PWA on supported platforms; a harmless no-op in a browser tab.
+  if ('setAppBadge' in navigator) {
+    if (count > 0) navigator.setAppBadge(count).catch(() => {});
+    else navigator.clearAppBadge().catch(() => {});
+  }
 }
 
 // Updated: accepts userData to avoid second Firestore read

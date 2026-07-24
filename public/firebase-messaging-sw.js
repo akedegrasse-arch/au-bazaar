@@ -40,6 +40,13 @@ try {
       data: { url: d.link || '/messages' }
     };
     self.registration.showNotification(title, options);
+
+    // Also put a badge on the installed app's icon. The worker doesn't know
+    // the exact unread count, so show a dot; opening the app recomputes the
+    // real count (and clears it once messages are read).
+    if (self.navigator && self.navigator.setAppBadge) {
+      self.navigator.setAppBadge().catch(() => {});
+    }
   });
 } catch (e) {
   // Firebase messaging couldn't load (most likely offline). Push won't work
